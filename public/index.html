@@ -618,6 +618,13 @@ footer{background:var(--g100);border-top:1px solid var(--g200);padding:48px 24px
     <div class="dest" data-dest="Tlemcen"><img src="https://images.unsplash.com/photo-1555993539-1732b0258235?w=600&q=80" alt="Tlemcen"/><div class="dest-lbl"><strong>Tlemcen</strong><span>78 logements</span></div></div>
   </div>
 
+  <!-- SECTION ÉTABLISSEMENTS PARTENAIRES -->
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
+    <h2 class="sec-title" style="margin:0">🏨 Établissements partenaires</h2>
+    <button onclick="openEtablissements()" style="border:none;background:none;font-size:14px;font-weight:600;color:var(--red);cursor:pointer;padding:6px 0">Voir tous →</button>
+  </div>
+  <div class="pub-grid" id="home-etab-grid" style="margin-bottom:48px"><div class="empty-state">Chargement…</div></div>
+
   <div class="banner">
     <div><h2 data-i18n="banner.title">Vous avez un logement à louer ?</h2><p data-i18n="banner.sub">Rejoignez des milliers d'hôtes algériens. Inscription gratuite, paiement sécurisé SATIM.</p></div>
     <button class="banner-btn" id="banner-host-btn" data-i18n="banner.btn">Devenir hôte →</button>
@@ -3075,6 +3082,43 @@ function openEtablissements() {
   loadPublicites();
 }
 
+async function loadHomeEtab() {
+  const grid = document.getElementById('home-etab-grid');
+  if (!grid) return;
+  try {
+    const data = await apiFetch('/publicites');
+    const top  = data.slice(0, 4);
+    if (!top.length) { grid.style.display = 'none'; grid.previousElementSibling.style.display = 'none'; return; }
+    const typeIcon  = { hotel:'🏨', camping:'🏕️', complexe:'🌴' };
+    const typeLabel = { hotel:'Hôtel', camping:'Camping', complexe:'Complexe touristique' };
+    grid.innerHTML = top.map(p => {
+      const stars = p.etoiles > 0 ? '<span style="color:#f59e0b;letter-spacing:1px">' + '★'.repeat(Math.min(p.etoiles, 5)) + '</span>' : '';
+      const badge = p.forfait === 'vedette'
+        ? '<div class="pub-badge vedette">🔥 VEDETTE</div>'
+        : p.forfait === 'premium' ? '<div class="pub-badge premium">⭐ PREMIUM</div>' : '';
+      const img = p.logo
+        ? `<img src="${p.logo}" alt="${p.nom}" onerror="this.parentNode.innerHTML='<div class=pub-card-img-ph>${typeIcon[p.type]||'🏢'}</div>'">`
+        : `<div class="pub-card-img-ph">${typeIcon[p.type]||'🏢'}</div>`;
+      const btns = [
+        p.telephone ? `<a class="pub-btn" href="tel:${p.telephone}">📞 ${p.telephone}</a>` : '',
+        p.site_web  ? `<a class="pub-btn" href="${p.site_web}" target="_blank" rel="noopener">🌐 Site web</a>` : '',
+      ].filter(Boolean).join('');
+      return `<div class="pub-card">
+        <div class="pub-card-img">${img}${badge}</div>
+        <div class="pub-card-body">
+          <div class="pub-card-type">${typeIcon[p.type]||'🏢'} ${typeLabel[p.type]||p.type} ${stars}</div>
+          <div class="pub-card-nom">${p.nom}</div>
+          <div class="pub-card-loc">📍 ${p.wilaya}${p.ville?' · '+p.ville:''}</div>
+          ${p.description?`<div class="pub-card-desc">${p.description}</div>`:''}
+          <div class="pub-card-actions">${btns}</div>
+        </div>
+      </div>`;
+    }).join('');
+  } catch(e) {
+    if (grid) grid.innerHTML = '';
+  }
+}
+
 async function loadPublicites() {
   const grid = document.getElementById('pub-grid');
   grid.innerHTML = '<div class="empty-state">Chargement…</div>';
@@ -3468,6 +3512,7 @@ document.addEventListener('DOMContentLoaded', function() {
   // Init
   refreshAuthUI();
   loadListings('all');
+  loadHomeEtab();
   setInterval(checkUnread, 30000);
 });
 </script>
