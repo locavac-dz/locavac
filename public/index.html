@@ -756,12 +756,12 @@ footer{background:var(--g100);border-top:1px solid var(--g200);padding:48px 24px
       <div style="background:var(--g50);border-radius:12px;padding:14px;margin-top:16px" id="prof-id-section">
         <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
           <span style="font-size:20px">🪪</span>
-          <div><strong>Vérification d'identité</strong><p style="font-size:12px;color:var(--g600);margin:0">Requise pour publier des annonces. CNI, passeport ou permis de conduire.</p></div>
+          <div><strong>Vérification d'identité</strong><p style="font-size:12px;color:var(--g600);margin:0">Requise pour publier des annonces. CNI algérienne uniquement (recto-verso).</p></div>
           <span id="prof-id-badge" style="margin-left:auto;font-size:12px;font-weight:700;padding:4px 10px;border-radius:12px"></span>
         </div>
         <div id="prof-id-upload-wrap">
           <input type="file" id="prof-id-file" accept="image/*,application/pdf" style="display:none"/>
-          <button class="btn-sm" id="prof-id-upload-btn" style="font-size:13px">📎 Envoyer un document</button>
+          <button class="btn-sm" id="prof-id-upload-btn" style="font-size:13px">📎 Envoyer ma CNI algérienne</button>
           <span id="prof-id-filename" style="font-size:12px;color:var(--g600);margin-left:8px"></span>
         </div>
       </div>
@@ -1746,7 +1746,7 @@ const LEGAL_CONTENT = {
       <h3 style="margin:16px 0 8px">2. Données collectées</h3>
       <ul style="margin:8px 0 8px 20px">
         <li>Données d'identification : nom, prénom, email, téléphone</li>
-        <li>Documents d'identité (CNI/passeport) pour la vérification des hôtes</li>
+        <li>CNI algérienne pour la vérification automatique des hôtes</li>
         <li>Données de paiement (non stockées en clair — aucune carte bancaire conservée)</li>
         <li>Données de navigation : adresse IP, cookies de session</li>
         <li>Contenu généré : annonces, messages, avis</li>
@@ -1832,7 +1832,7 @@ const LEGAL_CONTENT = {
         </div>
         <div style="display:flex;gap:14px;align-items:flex-start">
           <span style="background:var(--accent);color:#fff;border-radius:50%;width:32px;height:32px;display:flex;align-items:center;justify-content:center;font-weight:700;flex-shrink:0">2</span>
-          <div><strong>Vérifiez votre identité</strong><p style="margin:4px 0 0;color:var(--g600);font-size:13px">Upload de votre CNI ou passeport pour rassurer vos voyageurs. Validation par notre équipe sous 48 h.</p></div>
+          <div><strong>Vérifiez votre identité</strong><p style="margin:4px 0 0;color:var(--g600);font-size:13px">Uploadez votre CNI algérienne (recto-verso). Vérification automatique et instantanée.</p></div>
         </div>
         <div style="display:flex;gap:14px;align-items:flex-start">
           <span style="background:var(--accent);color:#fff;border-radius:50%;width:32px;height:32px;display:flex;align-items:center;justify-content:center;font-weight:700;flex-shrink:0">3</span>
@@ -1952,7 +1952,7 @@ async function loadAdmUsers() {
             ${u.is_host   ? '<span class="admin-badge host">Hôte</span> '  : ''}
             ${u.verified  ? '<span class="admin-badge verified">✅</span> ': ''}
             ${u.banned    ? '<span class="admin-badge banned">Banni</span>': ''}
-            ${u.id_verified ? '<span class="admin-badge verified">🪪✅</span>' : (u.id_document ? '<span style="background:#fef9c3;color:#854d0e;font-size:10px;padding:2px 6px;border-radius:6px;font-weight:700">🪪⏳</span>' : '')}
+            ${u.id_verified ? '<span class="admin-badge verified">🪪✅</span>' : ''}
           </td>
           <td style="text-align:center">${u.listings_count}</td>
           <td style="text-align:center">${u.reservations_count}</td>
@@ -1961,7 +1961,6 @@ async function loadAdmUsers() {
             <div class="admin-actions">
               ${!u.is_admin ? `<button class="btn-adm blue" data-uid="${u.id}" data-action="admin" data-val="true">+Admin</button>` : `<button class="btn-adm gray" data-uid="${u.id}" data-action="admin" data-val="false">-Admin</button>`}
               ${!u.verified ? `<button class="btn-adm green" data-uid="${u.id}" data-action="verify" data-val="true">Vérifier</button>` : ''}
-              ${u.id_document && !u.id_verified ? `<button class="btn-adm green" data-uid="${u.id}" data-action="id_verify" data-val="true" title="Voir doc: ${u.id_document}">🪪 Valider</button>` : ''}
               ${!u.banned  ? `<button class="btn-adm red" data-uid="${u.id}" data-action="ban" data-val="true">Bannir</button>` : `<button class="btn-adm green" data-uid="${u.id}" data-action="ban" data-val="false">Débannir</button>`}
               <button class="btn-adm red" data-uid="${u.id}" data-action="delete">🗑</button>
             </div>
@@ -2158,8 +2157,6 @@ async function openProfile() {
   if (user.id_verified) {
     badge.textContent = '✅ Vérifié'; badge.style.cssText = 'background:#dcfce7;color:#15803d;margin-left:auto;font-size:12px;font-weight:700;padding:4px 10px;border-radius:12px';
     document.getElementById('prof-id-upload-wrap').innerHTML = '<p style="font-size:12px;color:#15803d;margin:0">✅ Votre identité a été vérifiée par Locavac.</p>';
-  } else if (user.id_document) {
-    badge.textContent = '⏳ En attente'; badge.style.cssText = 'background:#fef9c3;color:#854d0e;margin-left:auto;font-size:12px;font-weight:700;padding:4px 10px;border-radius:12px';
   } else {
     badge.textContent = '❌ Non vérifié'; badge.style.cssText = 'background:#fee2e2;color:#b91c1c;margin-left:auto;font-size:12px;font-weight:700;padding:4px 10px;border-radius:12px';
   }
@@ -3074,10 +3071,11 @@ document.addEventListener('DOMContentLoaded', function() {
         const fd = new FormData(); fd.append('document', this.files[0]);
         const data = await fetch('/api/upload/identity', { method:'POST', headers:{'Authorization':'Bearer '+localStorage.getItem('token')}, body: fd }).then(r=>r.json());
         if (data.error) throw new Error(data.error);
-        document.getElementById('prof-id-filename').textContent = '✅ ' + this.files[0].name + ' envoyé';
-        document.getElementById('prof-id-badge').textContent = '⏳ En attente';
-        document.getElementById('prof-id-badge').style.cssText = 'background:#fef9c3;color:#854d0e;margin-left:auto;font-size:12px;font-weight:700;padding:4px 10px;border-radius:12px';
-        toast('Document envoyé. Vérification sous 24h.');
+        document.getElementById('prof-id-filename').textContent = '';
+        document.getElementById('prof-id-badge').textContent = '✅ Vérifié';
+        document.getElementById('prof-id-badge').style.cssText = 'background:#dcfce7;color:#15803d;margin-left:auto;font-size:12px;font-weight:700;padding:4px 10px;border-radius:12px';
+        document.getElementById('prof-id-upload-wrap').innerHTML = '<p style="font-size:12px;color:#15803d;margin:0">✅ Votre identité a été vérifiée par Locavac.</p>';
+        toast('✅ CNI vérifiée. Identité confirmée !');
       } catch(e) { toast('❌ ' + e.message); }
       finally { idBtn.disabled = false; idBtn.textContent = '📎 Envoyer un document'; }
     });

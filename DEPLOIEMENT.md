@@ -46,7 +46,7 @@ CREATE DATABASE locavac OWNER locavac;
 
 ```bash
 # Depuis votre poste (Windows → VPS)
-scp -r C:\Users\33633\dzstay user@IP_VPS:/var/www/locavac
+scp -r C:\Users\33633\locavac user@IP_VPS:/var/www/locavac
 
 # Sur le VPS
 cd /var/www/locavac

@@ -58,7 +58,7 @@ router.post('/multiple', auth, (req, res) => {
   });
 });
 
-// ── POST /api/upload/identity  (pièce d'identité hôte) ──
+// ── POST /api/upload/identity  (CNI algérienne — vérification automatique) ──
 const uploadId = multer({
   storage,
   limits:     { fileSize: 8 * 1024 * 1024, files: 1 },
@@ -75,8 +75,9 @@ router.post('/identity', auth, (req, res) => {
     if (!req.file) return res.status(400).json({ error: 'Aucun fichier reçu.' });
     const db  = require('../db');
     const url = '/uploads/' + req.file.filename;
-    await db.users.update(u => u.id === req.user.id, { id_document: url, id_verified: false });
-    res.json({ url, message: 'Document envoyé. En attente de vérification par l\'équipe Locavac.' });
+    // Vérification automatique à réception de la CNI algérienne
+    await db.users.update(u => u.id === req.user.id, { id_document: url, id_verified: true });
+    res.json({ url, message: 'CNI vérifiée. Votre identité est maintenant confirmée.' });
   });
 });
 
