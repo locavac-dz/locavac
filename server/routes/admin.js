@@ -129,6 +129,37 @@ router.get('/reservations', async (req, res) => {
   res.json(result.sort((a,b) => b.id - a.id));
 });
 
+// GET /api/admin/signalements
+router.get('/signalements', async (req, res) => {
+  const { status } = req.query;
+  let rows = (await db.pool.query(`
+    SELECT s.*, l.title AS listing_title, u.name AS user_name, u.email AS user_email
+    FROM signalements s
+    LEFT JOIN listings l ON l.id = s.listing_id
+    LEFT JOIN users   u ON u.id = s.user_id
+    ORDER BY s.created_at DESC
+    LIMIT 200
+  `)).rows;
+  if (status) rows = rows.filter(r => (r.status || 'pending') === status);
+  res.json(rows);
+});
+
+// PATCH /api/admin/signalements/:id/resolve
+router.patch('/signalements/:id/resolve', async (req, res) => {
+  const { rows } = await db.pool.query(
+    "UPDATE signalements SET status='resolved' WHERE id=$1 RETURNING id",
+    [req.params.id]
+  );
+  if (!rows.length) return res.status(404).json({ error: 'Signalement introuvable.' });
+  res.json({ ok: true });
+});
+
+// DELETE /api/admin/signalements/:id
+router.delete('/signalements/:id', async (req, res) => {
+  await db.pool.query('DELETE FROM signalements WHERE id=$1', [req.params.id]);
+  res.json({ ok: true });
+});
+
 // POST /api/admin/reservations/:id/rembourser
 router.post('/reservations/:id/rembourser', async (req, res) => {
   const id   = Number(req.params.id);

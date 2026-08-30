@@ -687,7 +687,7 @@ footer{background:var(--g100);border-top:1px solid var(--g200);padding:48px 24px
         <option>Naâma</option><option>Aïn Témouchent</option><option>Ghardaïa</option><option>Relizane</option>
         <option>Timimoun</option><option>Bordj Badji Mokhtar</option><option>Ouled Djellal</option>
         <option>Béni Abbès</option><option>In Salah</option><option>In Guezzam</option>
-        <option>Touggourt</option><option>Djanet</option><option>El M'Ghair</option><option>El Menia</option>
+        <option>Touggourt</option><option>Djanet</option><option>El M'Ghair</option><option>El Meniaa</option>
       </select>
     </div>
     <div class="pub-grid" id="pub-grid"><div class="empty-state">Chargement…</div></div>
@@ -1176,6 +1176,7 @@ footer{background:var(--g100);border-top:1px solid var(--g200);padding:48px 24px
         <div class="admin-tab" data-admtab="reservations">📅 Réservations</div>
         <div class="admin-tab" data-admtab="agent">🤖 Agent IA</div>
         <div class="admin-tab" data-admtab="pubs">🏨 Publicités</div>
+        <div class="admin-tab" data-admtab="signalements">⚑ Signalements</div>
       </div>
 
       <!-- Overview -->
@@ -1247,6 +1248,19 @@ footer{background:var(--g100);border-top:1px solid var(--g200);padding:48px 24px
           <button class="btn-adm" onclick="loadAdmPubs()" style="margin-left:auto">↻ Actualiser</button>
         </div>
         <div id="adm-pubs-body"><div class="empty-state">Chargement…</div></div>
+      </div>
+
+      <!-- Signalements -->
+      <div class="admin-panel" id="admp-signalements">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px">
+          <select id="adm-sig-status" style="width:200px" onchange="loadAdmSignalements()">
+            <option value="">Tous les signalements</option>
+            <option value="pending">En attente</option>
+            <option value="resolved">Traités</option>
+          </select>
+          <button class="btn-adm" onclick="loadAdmSignalements()" style="margin-left:auto">↻ Actualiser</button>
+        </div>
+        <div id="adm-sig-wrap"><div class="empty-state">Chargement…</div></div>
       </div>
     </div>
   </div>
@@ -2179,6 +2193,7 @@ function showAdmTab(name) {
   if (name === 'reservations') loadAdmResas();
   if (name === 'agent')        loadAdmAgent();
   if (name === 'pubs')         loadAdmPubs();
+  if (name === 'signalements') loadAdmSignalements();
 }
 
 async function loadAdmStats() {
@@ -3329,6 +3344,51 @@ function contactPubForfait(forfait) {
   const subject = encodeURIComponent('Demande forfait publicité ' + forfait + ' — Locavac');
   const body    = encodeURIComponent('Bonjour,\n\nJe souhaite annoncer mon établissement sur Locavac avec le forfait ' + forfait + '.\n\nNom de l\'établissement :\nType :\nWilaya :\nTéléphone :\n\nMerci de me recontacter.');
   window.open('mailto:commercial@locavac.dz?subject=' + subject + '&body=' + body);
+}
+
+async function loadAdmSignalements() {
+  const wrap   = document.getElementById('adm-sig-wrap');
+  const status = document.getElementById('adm-sig-status').value;
+  wrap.innerHTML = '<div class="empty-state">Chargement…</div>';
+  try {
+    const rows = await apiFetch('/admin/signalements' + (status ? '?status=' + status : ''));
+    if (!rows.length) { wrap.innerHTML = '<div class="empty-state">Aucun signalement.</div>'; return; }
+    const motifLabel = m => ({ frauduleuse:'Annonce frauduleuse', photos:'Photos trompeuses', prix:'Prix incorrect', comportement:'Comportement inapproprié', autre:'Autre' }[m] || m);
+    wrap.innerHTML = `<div class="admin-table-wrap"><table class="admin-table">
+      <thead><tr><th>ID</th><th>Annonce</th><th>Motif</th><th>Message</th><th>Signalé par</th><th>Date</th><th>Actions</th></tr></thead>
+      <tbody>${rows.map(r => `
+        <tr>
+          <td style="color:var(--g400)">#${r.id}</td>
+          <td><a href="#" onclick="openListing(${r.listing_id});return false" style="font-weight:600;color:var(--g800)">${r.listing_title||'#'+r.listing_id}</a></td>
+          <td><span class="admin-badge host">${motifLabel(r.motif)}</span></td>
+          <td style="font-size:12px;max-width:200px;word-break:break-word">${r.message||'—'}</td>
+          <td style="font-size:12px">${r.user_name||'Anonyme'}${r.user_email?`<br><span style="color:var(--g400)">${r.user_email}</span>`:''}</td>
+          <td style="font-size:11px;color:var(--g400);white-space:nowrap">${new Date(r.created_at).toLocaleString('fr-DZ')}</td>
+          <td style="white-space:nowrap">
+            ${r.status!=='resolved'?`<button class="btn-adm" style="font-size:11px;padding:4px 10px" onclick="resolveSignalement(${r.id})">✓ Traité</button>`:'<span style="color:var(--g400);font-size:11px">Traité</span>'}
+            <button class="btn-adm" style="font-size:11px;padding:4px 10px;background:#dc2626;color:#fff;margin-left:4px" onclick="deleteSignalement(${r.id})">🗑</button>
+          </td>
+        </tr>`).join('')}
+      </tbody>
+    </table></div>`;
+  } catch(e) { wrap.innerHTML = `<div class="empty-state" style="color:var(--red)">${e.message}</div>`; }
+}
+
+async function resolveSignalement(id) {
+  try {
+    await apiFetch('/admin/signalements/' + id + '/resolve', { method: 'PATCH' });
+    toast('✅ Signalement marqué comme traité.');
+    loadAdmSignalements();
+  } catch(e) { toast('❌ ' + e.message); }
+}
+
+async function deleteSignalement(id) {
+  if (!confirm('Supprimer ce signalement ?')) return;
+  try {
+    await apiFetch('/admin/signalements/' + id, { method: 'DELETE' });
+    toast('Signalement supprimé.');
+    loadAdmSignalements();
+  } catch(e) { toast('❌ ' + e.message); }
 }
 
 async function loadAdmPubs() {

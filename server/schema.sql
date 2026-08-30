@@ -107,8 +107,10 @@ CREATE TABLE IF NOT EXISTS signalements (
   user_id    INTEGER,
   motif      TEXT,
   message    TEXT,
+  status     TEXT DEFAULT 'pending',
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
+ALTER TABLE signalements ADD COLUMN IF NOT EXISTS status TEXT DEFAULT 'pending';
 
 -- Lot 5 : pages publicitaires établissements (hôtels / campings / complexes)
 CREATE TABLE IF NOT EXISTS publicites (
