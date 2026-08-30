@@ -37,6 +37,11 @@ router.get('/:id', async (req, res) => {
 router.post('/', auth, adminOnly, async (req, res) => {
   const { nom, type, wilaya, ville, description, logo, images,
           telephone, email_contact, site_web, adresse, etoiles, forfait, expire_le } = req.body;
+  const VALID_TYPES    = ['hotel', 'camping', 'complexe'];
+  const VALID_FORFAITS = ['basic', 'premium', 'vedette'];
+  if (!nom?.trim())               return res.status(400).json({ error: 'Le nom est requis.' });
+  if (!VALID_TYPES.includes(type)) return res.status(400).json({ error: 'Type invalide (hotel, camping, complexe).' });
+  if (!wilaya?.trim())            return res.status(400).json({ error: 'La wilaya est requise.' });
   const { rows } = await pool.query(
     `INSERT INTO publicites
        (nom,type,wilaya,ville,description,logo,images,telephone,email_contact,site_web,adresse,etoiles,forfait,expire_le)

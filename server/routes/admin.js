@@ -132,15 +132,18 @@ router.get('/reservations', async (req, res) => {
 // GET /api/admin/signalements
 router.get('/signalements', async (req, res) => {
   const { status } = req.query;
-  let rows = (await db.pool.query(`
+  const params = [];
+  let where = '';
+  if (status) { params.push(status); where = `WHERE s.status = $1`; }
+  const rows = (await db.pool.query(`
     SELECT s.*, l.title AS listing_title, u.name AS user_name, u.email AS user_email
     FROM signalements s
     LEFT JOIN listings l ON l.id = s.listing_id
     LEFT JOIN users   u ON u.id = s.user_id
+    ${where}
     ORDER BY s.created_at DESC
     LIMIT 200
-  `)).rows;
-  if (status) rows = rows.filter(r => (r.status || 'pending') === status);
+  `, params)).rows;
   res.json(rows);
 });
 

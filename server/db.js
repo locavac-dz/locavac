@@ -119,7 +119,7 @@ async function seed() {
   const hash = bcrypt.hashSync('demo1234', 10);
   await pool.query(
     `INSERT INTO users (name, email, password, is_host, is_admin, verified)
-     VALUES ($1,$2,$3,true,true,true) ON CONFLICT (email) DO NOTHING`,
+     VALUES ($1,$2,$3,true,false,true) ON CONFLICT (email) DO NOTHING`,
     ['Locavac Demo', 'demo@locavac.dz', hash]
   );
   const hostRow = await pool.query(`SELECT id FROM users WHERE email = 'demo@locavac.dz'`);

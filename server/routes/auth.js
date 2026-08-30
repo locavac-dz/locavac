@@ -29,7 +29,7 @@ router.post('/register', async (req, res) => {
   if (await db.users.findOne(u => u.email === email))
     return res.status(409).json({ error: 'Cet email est déjà utilisé.' });
   const user = await db.users.insert({
-    name, email, password: bcrypt.hashSync(password, 10),
+    name, email, password: await bcrypt.hash(password, 10),
     phone: phone || null, is_host: false,
   });
   res.status(201).json({ token: sign(user), user: safe(user) });
@@ -41,8 +41,10 @@ router.post('/login', async (req, res) => {
   if (!email || !password)
     return res.status(400).json({ error: 'Email et mot de passe requis.' });
   const user = await db.users.findOne(u => u.email === email);
-  if (!user || !bcrypt.compareSync(password, user.password))
+  if (!user || !await bcrypt.compare(password, user.password))
     return res.status(401).json({ error: 'Email ou mot de passe incorrect.' });
+  if (user.banned)
+    return res.status(403).json({ error: 'Ce compte a été suspendu. Contactez le support.' });
   res.json({ token: sign(user), user: safe(user) });
 });
 

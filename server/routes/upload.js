@@ -84,9 +84,13 @@ router.post('/identity', auth, (req, res) => {
 // ── DELETE /api/upload  (supprimer une photo) ───────────
 router.delete('/', auth, (req, res) => {
   const { filename } = req.body;
-  if (!filename || filename.includes('..') || filename.includes('/'))
+  // Valide le format généré par le serveur : timestamp_hexhex.ext
+  if (!filename || !/^[\d]+_[0-9a-f]{16}\.(jpg|jpeg|png|webp|pdf)$/i.test(filename))
     return res.status(400).json({ error: 'Nom de fichier invalide.' });
-  const fp = path.join(UPLOAD_DIR, filename);
+  const fp = path.resolve(UPLOAD_DIR, filename);
+  // Vérification anti path-traversal : le fichier doit être dans UPLOAD_DIR
+  if (!fp.startsWith(path.resolve(UPLOAD_DIR)))
+    return res.status(400).json({ error: 'Accès refusé.' });
   if (!fs.existsSync(fp)) return res.status(404).json({ error: 'Fichier introuvable.' });
   fs.unlinkSync(fp);
   res.json({ ok: true });
