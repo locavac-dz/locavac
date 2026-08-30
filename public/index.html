@@ -1214,15 +1214,17 @@ footer{background:var(--g100);border-top:1px solid var(--g200);padding:48px 24px
 
       <!-- Réservations -->
       <div class="admin-panel" id="admp-reservations">
-        <div class="admin-search">
+        <div class="admin-search" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
           <select id="adm-resa-status" style="width:180px">
             <option value="">Toutes les réservations</option>
             <option value="confirmed">Confirmées</option>
             <option value="pending">En attente</option>
             <option value="cancelled">Annulées</option>
           </select>
+          <button class="btn-adm" onclick="exportResasCSV()" style="margin-left:auto">📥 Exporter CSV</button>
+          <button class="btn-adm" onclick="loadAdmResas()">↻ Actualiser</button>
         </div>
-        <div class="admin-table-wrap"><div class="empty-state" id="adm-resas-body">Chargement…</div></div>
+        <div id="adm-resas-wrap"><div class="empty-state">Chargement…</div></div>
       </div>
 
       <!-- Agent IA -->
@@ -2321,18 +2323,20 @@ async function handleAdmListingAction(btn) {
   } catch(e) { toast('Erreur: ' + e.message); }
 }
 
+let lastAdmResas = [];
+
 async function loadAdmResas() {
   const status = document.getElementById('adm-resa-status').value;
-  const el     = document.getElementById('adm-resas-body');
-  el.innerHTML = '<div class="empty-state">Chargement…</div>';
+  const wrap   = document.getElementById('adm-resas-wrap');
+  wrap.innerHTML = '<div class="empty-state">Chargement…</div>';
   try {
-    const resas = await apiFetch('/admin/reservations' + (status ? '?status=' + status : ''));
-    if (!resas.length) { el.innerHTML = '<div class="empty-state">Aucune réservation trouvée.</div>'; return; }
+    lastAdmResas = await apiFetch('/admin/reservations' + (status ? '?status=' + status : ''));
+    if (!lastAdmResas.length) { wrap.innerHTML = '<div class="empty-state">Aucune réservation trouvée.</div>'; return; }
     const statusLabel = s => s === 'confirmed' ? '✅ Confirmée' : s === 'pending' ? '⏳ En attente' : '❌ Annulée';
     const statusClass = s => s === 'confirmed' ? 'active' : s === 'pending' ? 'host' : 'banned';
-    el.outerHTML = `<div class="admin-table-wrap"><table class="admin-table">
-      <thead><tr><th>ID</th><th>Logement</th><th>Voyageur</th><th>Dates</th><th>Montant</th><th>Statut</th></tr></thead>
-      <tbody>${resas.map(r => `
+    wrap.innerHTML = `<div class="admin-table-wrap"><table class="admin-table">
+      <thead><tr><th>ID</th><th>Logement</th><th>Voyageur</th><th>Dates</th><th>Montant</th><th>Statut</th><th>Actions</th></tr></thead>
+      <tbody>${lastAdmResas.map(r => `
         <tr>
           <td style="color:var(--g400)">#${r.id}</td>
           <td><strong>${r.listing_title||'—'}</strong><br><span style="font-size:11px;color:var(--g400)">${r.listing_location||''}</span></td>
@@ -2340,10 +2344,47 @@ async function loadAdmResas() {
           <td style="font-size:12px;white-space:nowrap">${r.check_in} →<br>${r.check_out}</td>
           <td style="font-weight:600;white-space:nowrap">${Number(r.total_price).toLocaleString('fr-DZ')} DZD</td>
           <td><span class="admin-badge ${statusClass(r.status)}">${statusLabel(r.status)}</span></td>
+          <td>${r.status !== 'cancelled' ? `<button class="btn-adm" style="background:#dc2626;color:#fff;font-size:11px;padding:4px 10px" data-rid="${r.id}" onclick="rembourserResa(${r.id})">↩ Rembourser</button>` : '<span style="color:var(--g400);font-size:11px">—</span>'}</td>
         </tr>`).join('')}
       </tbody>
     </table></div>`;
-  } catch(e) { document.getElementById('adm-resas-body').innerHTML = `<div class="empty-state" style="color:var(--red)">${e.message}</div>`; }
+  } catch(e) { wrap.innerHTML = `<div class="empty-state" style="color:var(--red)">${e.message}</div>`; }
+}
+
+async function rembourserResa(id) {
+  if (!confirm('Confirmer le remboursement et l\'annulation de la réservation #' + id + ' ?')) return;
+  try {
+    await apiFetch('/admin/reservations/' + id + '/rembourser', { method: 'POST' });
+    toast('✅ Remboursement enregistré — réservation #' + id + ' annulée.');
+    loadAdmResas();
+  } catch(e) { toast('❌ ' + e.message); }
+}
+
+function exportResasCSV() {
+  if (!lastAdmResas.length) { toast('Aucune donnée à exporter.'); return; }
+  const headers = ['ID','Logement','Localisation','Voyageur','Email','Arrivée','Départ','Montant (DZD)','Statut'];
+  const rows = lastAdmResas.map(r => [
+    r.id,
+    '"' + (r.listing_title||'').replace(/"/g,'""') + '"',
+    '"' + (r.listing_location||'').replace(/"/g,'""') + '"',
+    '"' + (r.guest_name||'').replace(/"/g,'""') + '"',
+    r.guest_email||'',
+    r.check_in,
+    r.check_out,
+    r.total_price,
+    r.status,
+  ].join(','));
+  const csv  = [headers.join(','), ...rows].join('\n');
+  const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href     = url;
+  a.download = 'reservations_' + new Date().toISOString().slice(0,10) + '.csv';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  toast('📥 Export CSV téléchargé.');
 }
 
 // ── AGENT IA ──────────────────────────────────────────────

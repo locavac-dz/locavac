@@ -129,4 +129,17 @@ router.get('/reservations', async (req, res) => {
   res.json(result.sort((a,b) => b.id - a.id));
 });
 
+// POST /api/admin/reservations/:id/rembourser
+router.post('/reservations/:id/rembourser', async (req, res) => {
+  const id   = Number(req.params.id);
+  const resa = await db.reservations.findOne(r => r.id === id);
+  if (!resa) return res.status(404).json({ error: 'Réservation introuvable.' });
+  if (resa.status === 'cancelled') return res.status(400).json({ error: 'Déjà annulée.' });
+  await db.reservations.update(r => r.id === id, { status: 'cancelled' });
+  if (resa.payment_id) {
+    await db.payments.update(p => p.id === resa.payment_id, { status: 'refunded' });
+  }
+  res.json({ ok: true });
+});
+
 module.exports = router;
