@@ -1,13 +1,41 @@
 require('dotenv').config({ path: require('path').join(__dirname, '..', '.env') });
 require('express-async-errors');
 
-const express = require('express');
-const cors    = require('cors');
-const path    = require('path');
-const db      = require('./db');
+const express   = require('express');
+const cors      = require('cors');
+const path      = require('path');
+const rateLimit = require('express-rate-limit');
+const db        = require('./db');
 
 const app = express();
-app.use(cors());
+
+// ── CORS ────────────────────────────────────────────────────────
+const ALLOWED_ORIGINS = (process.env.CORS_ORIGINS || 'http://localhost:3000')
+  .split(',').map(o => o.trim());
+
+app.use(cors({
+  origin: (origin, cb) => {
+    // Requêtes sans origin (curl, mobile natif, même serveur)
+    if (!origin) return cb(null, true);
+    if (ALLOWED_ORIGINS.includes(origin)) return cb(null, true);
+    cb(new Error('CORS: origine non autorisée — ' + origin));
+  },
+  credentials: true,
+}));
+
+// ── Rate limiting ────────────────────────────────────────────────
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 20,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Trop de tentatives. Réessayez dans 15 minutes.' },
+  skip: () => process.env.NODE_ENV === 'test',
+});
+// Appliqué uniquement sur login et register
+app.use('/api/auth/login',    authLimiter);
+app.use('/api/auth/register', authLimiter);
+
 app.use(express.json());
 app.use(express.static(path.join(__dirname, '..', 'public')));
 
