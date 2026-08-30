@@ -1555,7 +1555,14 @@ let currentHostId    = null;
 let currentPhotos    = [];
 let currentPhotoIdx  = 0;
 let selectedRevStars = 0;
-let liked            = new Set();
+const LIKED_KEY = 'locavac_liked';
+function likedLoad() {
+  try { return new Set(JSON.parse(localStorage.getItem(LIKED_KEY)) || []); } catch { return new Set(); }
+}
+function likedSave(s) {
+  try { localStorage.setItem(LIKED_KEY, JSON.stringify([...s])); } catch {}
+}
+let liked = likedLoad();
 let currentCat       = 'all';
 let allListings      = [];
 let map              = null;
@@ -1820,7 +1827,8 @@ function renderGrid(data, checkIn = '', checkOut = '') {
       e.stopPropagation();
       const id = Number(btn.dataset.wid);
       if (liked.has(id)) { liked.delete(id); btn.textContent='♡'; btn.classList.remove('liked'); toast('Retiré des favoris'); }
-      else { liked.add(id); btn.textContent='❤'; btn.classList.add('liked'); toast('Ajouté aux favoris ❤'); }
+      else               { liked.add(id);    btn.textContent='❤'; btn.classList.add('liked');    toast('Ajouté aux favoris ❤'); }
+      likedSave(liked);
     });
   });
 }
