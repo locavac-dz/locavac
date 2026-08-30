@@ -2,6 +2,10 @@
 
 **Plateforme de location de vacances en Algérie**
 
+[![Release](https://img.shields.io/github/v/release/locavac-dz/locavac?label=version&color=e11d48)](https://github.com/locavac-dz/locavac/releases/latest)
+[![License](https://img.shields.io/badge/licence-propri%C3%A9taire-lightgrey)](https://github.com/locavac-dz/locavac)
+[![Node](https://img.shields.io/badge/node-20%2B-green)](https://nodejs.org)
+
 Locavac connecte les voyageurs algériens avec des hôtes locaux pour des séjours authentiques — des plages de la Méditerranée au désert du Sahara.
 
 ---
