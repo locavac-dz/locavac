@@ -22,6 +22,7 @@ app.use('/api/availability', require('./routes/availability'));
 app.use('/api/stats',        require('./routes/stats'));
 app.use('/api/admin',        require('./routes/admin'));
 app.use('/api/agent',        require('./routes/agent'));
+app.use('/api/publicites',   require('./routes/publicites'));
 
 app.get('/api/health', (_, res) => res.json({ ok: true, message: 'Locavac API opérationnelle 🇩🇿' }));
 app.get('*', (_, res) => res.sendFile(path.join(__dirname, '..', 'public', 'index.html')));
