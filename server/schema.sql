@@ -100,6 +100,16 @@ ALTER TABLE users ADD COLUMN IF NOT EXISTS ccp  TEXT;
 ALTER TABLE users ADD COLUMN IF NOT EXISTS id_document TEXT;
 ALTER TABLE users ADD COLUMN IF NOT EXISTS id_verified  BOOLEAN DEFAULT false;
 
+-- Lot 5b : signalements d'annonces
+CREATE TABLE IF NOT EXISTS signalements (
+  id         SERIAL PRIMARY KEY,
+  listing_id INTEGER REFERENCES listings(id) ON DELETE CASCADE,
+  user_id    INTEGER,
+  motif      TEXT,
+  message    TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
 -- Lot 5 : pages publicitaires établissements (hôtels / campings / complexes)
 CREATE TABLE IF NOT EXISTS publicites (
   id              SERIAL PRIMARY KEY,

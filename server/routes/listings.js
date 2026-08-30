@@ -107,6 +107,17 @@ router.delete('/:id', auth, async (req, res) => {
   res.json({ ok: true });
 });
 
+// POST /api/listings/:id/signaler — public (optionnellement authentifié)
+router.post('/:id/signaler', async (req, res) => {
+  const { motif, message } = req.body;
+  if (!motif) return res.status(400).json({ error: 'Motif requis.' });
+  await db.pool.query(
+    'INSERT INTO signalements (listing_id, user_id, motif, message) VALUES ($1,$2,$3,$4)',
+    [req.params.id, req.user?.id || null, motif, message || null]
+  );
+  res.json({ ok: true });
+});
+
 // POST /api/listings/:id/photos
 router.post('/:id/photos', auth, async (req, res) => {
   const listing = await db.listings.findOne(l => l.id === Number(req.params.id));

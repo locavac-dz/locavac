@@ -815,6 +815,23 @@ footer{background:var(--g100);border-top:1px solid var(--g200);padding:48px 24px
         <div style="margin-top:16px">
           <button class="btn-sm" id="m-contact-host" style="width:100%;padding:12px;font-size:14px">💬 Contacter l'hôte</button>
         </div>
+        <div style="margin-top:10px;text-align:center">
+          <button onclick="toggleSignaler()" style="background:none;border:none;color:var(--g400);font-size:12px;cursor:pointer;text-decoration:underline;padding:4px">⚑ Signaler cette annonce</button>
+        </div>
+        <div id="signaler-form" style="display:none;margin-top:10px;background:var(--g50);border-radius:10px;padding:14px;border:1px solid var(--g200)">
+          <p style="font-size:13px;font-weight:600;margin-bottom:10px;color:var(--g700)">Signaler un problème</p>
+          <div class="fg"><label>Motif</label>
+            <select id="sig-motif">
+              <option value="frauduleuse">Annonce frauduleuse</option>
+              <option value="photos">Photos trompeuses</option>
+              <option value="prix">Prix incorrect</option>
+              <option value="comportement">Comportement inapproprié</option>
+              <option value="autre">Autre</option>
+            </select>
+          </div>
+          <div class="fg"><textarea id="sig-message" placeholder="Décrivez le problème…" rows="3" style="resize:vertical"></textarea></div>
+          <button onclick="submitSignalement()" style="width:100%;padding:10px;background:var(--g800);color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer">Envoyer le signalement</button>
+        </div>
       </div>
 
       <!-- Avis -->
@@ -3180,6 +3197,27 @@ async function loadHomeEtab() {
   }
 }
 
+function toggleSignaler() {
+  const f = document.getElementById('signaler-form');
+  f.style.display = f.style.display === 'none' ? 'block' : 'none';
+}
+
+async function submitSignalement() {
+  const motif   = document.getElementById('sig-motif').value;
+  const message = document.getElementById('sig-message').value.trim();
+  try {
+    await apiFetch('/listings/' + currentListingId + '/signaler', {
+      method: 'POST',
+      body: JSON.stringify({ motif, message })
+    });
+    document.getElementById('signaler-form').style.display = 'none';
+    document.getElementById('sig-message').value = '';
+    toast('✅ Signalement envoyé. Merci pour votre vigilance.');
+  } catch(e) {
+    toast('❌ ' + e.message);
+  }
+}
+
 async function loadDestCounts() {
   try {
     const data = await apiFetch('/listings');
@@ -3442,9 +3480,19 @@ document.addEventListener('DOMContentLoaded', function() {
 
   // Destinations
   document.querySelectorAll('.dest').forEach(el => {
-    el.addEventListener('click', function() {
-      document.getElementById('hs-q').value = this.dataset.dest;
-      doSearch();
+    el.addEventListener('click', async function() {
+      const w = this.dataset.dest;
+      document.getElementById('hs-q').value = w;
+      try {
+        allListings = await apiFetch('/listings?wilaya=' + encodeURIComponent(w));
+      } catch {
+        allListings = STATIC.filter(l => l.wilaya === w || (l.location||'').includes(w));
+      }
+      renderGrid(allListings, document.getElementById('f-in')?.value, document.getElementById('f-out')?.value);
+      updateMapMarkers(allListings);
+      const n = allListings.length;
+      toast(n + ' logement' + (n !== 1 ? 's' : '') + ' à ' + w);
+      document.getElementById('sec-title').scrollIntoView({ behavior: 'smooth' });
     });
   });
 
