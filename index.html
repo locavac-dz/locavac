@@ -1,0 +1,929 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>DzStay — Location de vacances en Algérie</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --red: #E8261A;
+      --red-dark: #C0241A;
+      --gray-50: #f9f9f9;
+      --gray-100: #f1f1f1;
+      --gray-200: #e0e0e0;
+      --gray-400: #999;
+      --gray-600: #555;
+      --gray-800: #222;
+      --shadow: 0 2px 16px rgba(0,0,0,.12);
+      --shadow-lg: 0 8px 40px rgba(0,0,0,.18);
+      --radius: 16px;
+    }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      color: var(--gray-800);
+      background: #fff;
+    }
+
+    /* ─── HEADER ─────────────────────────────────────────── */
+    header {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: #fff;
+      border-bottom: 1px solid var(--gray-200);
+    }
+
+    .header-inner {
+      max-width: 1280px;
+      margin: 0 auto;
+      padding: 0 24px;
+      height: 80px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+    }
+
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      text-decoration: none;
+      flex-shrink: 0;
+    }
+    .logo-icon {
+      width: 36px;
+      height: 36px;
+      background: var(--red);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #fff;
+      font-size: 18px;
+    }
+    .logo-text {
+      font-size: 22px;
+      font-weight: 700;
+      color: var(--red);
+      letter-spacing: -.5px;
+    }
+
+    /* search pill */
+    .search-pill {
+      display: flex;
+      align-items: center;
+      border: 1.5px solid var(--gray-200);
+      border-radius: 40px;
+      box-shadow: var(--shadow);
+      cursor: pointer;
+      transition: box-shadow .2s;
+      background: #fff;
+    }
+    .search-pill:hover { box-shadow: var(--shadow-lg); }
+    .search-pill .seg {
+      padding: 12px 20px;
+      font-size: 14px;
+      font-weight: 500;
+      border-right: 1px solid var(--gray-200);
+    }
+    .search-pill .seg:last-of-type { border-right: none; }
+    .search-pill .seg span {
+      display: block;
+      font-size: 11px;
+      font-weight: 400;
+      color: var(--gray-400);
+    }
+    .search-btn {
+      background: var(--red);
+      border: none;
+      color: #fff;
+      width: 42px;
+      height: 42px;
+      border-radius: 50%;
+      margin: 4px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+      transition: background .2s;
+    }
+    .search-btn:hover { background: var(--red-dark); }
+
+    .header-actions { display: flex; align-items: center; gap: 8px; }
+    .btn-host {
+      border: none;
+      background: none;
+      font-size: 14px;
+      font-weight: 500;
+      padding: 10px 16px;
+      border-radius: 24px;
+      cursor: pointer;
+      transition: background .2s;
+    }
+    .btn-host:hover { background: var(--gray-100); }
+    .btn-user {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      border: 1.5px solid var(--gray-200);
+      border-radius: 24px;
+      padding: 6px 12px 6px 16px;
+      cursor: pointer;
+      transition: box-shadow .2s;
+      background: #fff;
+    }
+    .btn-user:hover { box-shadow: var(--shadow); }
+    .hamburger { font-size: 16px; }
+    .avatar {
+      width: 32px;
+      height: 32px;
+      background: var(--gray-400);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #fff;
+      font-size: 14px;
+    }
+
+    /* ─── HERO ───────────────────────────────────────────── */
+    .hero {
+      position: relative;
+      height: 540px;
+      background: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      color: #fff;
+    }
+    .hero-bg {
+      position: absolute;
+      inset: 0;
+      background: url('https://images.unsplash.com/photo-1499678329028-101435549a4e?w=1600&q=80') center/cover no-repeat;
+      opacity: .55;
+    }
+    .hero-content { position: relative; z-index: 1; padding: 24px; }
+    .hero-content h1 {
+      font-size: clamp(28px, 5vw, 52px);
+      font-weight: 700;
+      line-height: 1.1;
+      margin-bottom: 12px;
+      text-shadow: 0 2px 8px rgba(0,0,0,.5);
+    }
+    .hero-content p {
+      font-size: 18px;
+      opacity: .9;
+      margin-bottom: 32px;
+      text-shadow: 0 1px 4px rgba(0,0,0,.5);
+    }
+
+    /* hero search */
+    .hero-search {
+      background: #fff;
+      border-radius: 16px;
+      display: flex;
+      align-items: center;
+      box-shadow: var(--shadow-lg);
+      overflow: hidden;
+      max-width: 780px;
+      margin: 0 auto;
+    }
+    .hero-search .field {
+      flex: 1;
+      padding: 18px 22px;
+      border-right: 1px solid var(--gray-200);
+    }
+    .hero-search .field label {
+      display: block;
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .5px;
+      color: var(--gray-800);
+      margin-bottom: 4px;
+    }
+    .hero-search .field input,
+    .hero-search .field select {
+      border: none;
+      outline: none;
+      font-size: 14px;
+      color: var(--gray-600);
+      width: 100%;
+      font-family: inherit;
+      background: transparent;
+    }
+    .hero-search .field:last-of-type { border-right: none; }
+    .hero-search-btn {
+      background: var(--red);
+      border: none;
+      color: #fff;
+      padding: 18px 28px;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      transition: background .2s;
+      white-space: nowrap;
+    }
+    .hero-search-btn:hover { background: var(--red-dark); }
+
+    /* ─── CATEGORIES ─────────────────────────────────────── */
+    .categories-wrap {
+      position: sticky;
+      top: 80px;
+      z-index: 90;
+      background: #fff;
+      border-bottom: 1px solid var(--gray-200);
+    }
+    .categories {
+      max-width: 1280px;
+      margin: 0 auto;
+      padding: 0 24px;
+      display: flex;
+      gap: 32px;
+      overflow-x: auto;
+      scrollbar-width: none;
+    }
+    .categories::-webkit-scrollbar { display: none; }
+    .cat-item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+      padding: 14px 4px;
+      cursor: pointer;
+      flex-shrink: 0;
+      opacity: .6;
+      border-bottom: 2px solid transparent;
+      transition: all .2s;
+    }
+    .cat-item:hover { opacity: 1; }
+    .cat-item.active { opacity: 1; border-bottom-color: var(--gray-800); }
+    .cat-icon { font-size: 24px; }
+    .cat-label { font-size: 12px; font-weight: 500; white-space: nowrap; }
+
+    /* ─── MAIN GRID ──────────────────────────────────────── */
+    main {
+      max-width: 1280px;
+      margin: 0 auto;
+      padding: 32px 24px 64px;
+    }
+
+    .section-title {
+      font-size: 22px;
+      font-weight: 700;
+      margin-bottom: 20px;
+    }
+
+    .listings-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 24px;
+      margin-bottom: 48px;
+    }
+
+    /* card */
+    .card {
+      cursor: pointer;
+      border-radius: var(--radius);
+      overflow: hidden;
+      transition: transform .2s, box-shadow .2s;
+    }
+    .card:hover { transform: translateY(-4px); box-shadow: var(--shadow-lg); }
+
+    .card-img-wrap {
+      position: relative;
+      padding-top: 66%;
+      background: var(--gray-100);
+      border-radius: var(--radius);
+      overflow: hidden;
+    }
+    .card-img-wrap img {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      transition: transform .4s;
+    }
+    .card:hover .card-img-wrap img { transform: scale(1.04); }
+
+    .badge {
+      position: absolute;
+      top: 12px;
+      left: 12px;
+      background: #fff;
+      font-size: 11px;
+      font-weight: 700;
+      padding: 4px 10px;
+      border-radius: 20px;
+      box-shadow: 0 1px 6px rgba(0,0,0,.2);
+    }
+    .badge.new { background: var(--gray-800); color: #fff; }
+
+    .wish-btn {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      background: none;
+      border: none;
+      font-size: 22px;
+      cursor: pointer;
+      color: rgba(255,255,255,.8);
+      text-shadow: 0 1px 4px rgba(0,0,0,.5);
+      transition: color .2s, transform .2s;
+      line-height: 1;
+    }
+    .wish-btn:hover { color: var(--red); transform: scale(1.15); }
+    .wish-btn.liked { color: var(--red); text-shadow: none; }
+
+    .card-body { padding: 12px 0 0; }
+    .card-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; }
+    .card-title { font-size: 15px; font-weight: 600; flex: 1; }
+    .card-rating { display: flex; align-items: center; gap: 4px; font-size: 14px; font-weight: 500; }
+    .card-rating span { color: var(--gray-600); font-size: 13px; }
+    .card-sub { font-size: 14px; color: var(--gray-600); margin-top: 2px; }
+    .card-dates { font-size: 14px; color: var(--gray-600); }
+    .card-price { margin-top: 6px; font-size: 15px; }
+    .card-price strong { font-weight: 700; }
+    .card-price .night { color: var(--gray-600); font-weight: 400; }
+
+    /* dots nav */
+    .dots {
+      position: absolute;
+      bottom: 10px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      gap: 4px;
+    }
+    .dot { width: 6px; height: 6px; border-radius: 50%; background: rgba(255,255,255,.6); }
+    .dot.active { background: #fff; }
+
+    /* ─── DESTINATIONS ───────────────────────────────────── */
+    .destinations-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 16px;
+      margin-bottom: 48px;
+    }
+    .dest-card {
+      position: relative;
+      border-radius: var(--radius);
+      overflow: hidden;
+      cursor: pointer;
+      aspect-ratio: 3/4;
+    }
+    .dest-card img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      transition: transform .4s;
+    }
+    .dest-card:hover img { transform: scale(1.06); }
+    .dest-card::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(to top, rgba(0,0,0,.65) 0%, transparent 60%);
+    }
+    .dest-label {
+      position: absolute;
+      bottom: 16px;
+      left: 16px;
+      z-index: 1;
+      color: #fff;
+    }
+    .dest-label strong { display: block; font-size: 18px; font-weight: 700; }
+    .dest-label span { font-size: 13px; opacity: .85; }
+
+    /* ─── BANNER ─────────────────────────────────────────── */
+    .banner {
+      background: linear-gradient(135deg, #1a1a2e, #16213e);
+      border-radius: 24px;
+      padding: 56px 48px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 32px;
+      margin-bottom: 48px;
+      color: #fff;
+    }
+    .banner h2 { font-size: 32px; font-weight: 700; margin-bottom: 12px; }
+    .banner p { font-size: 16px; opacity: .8; max-width: 420px; line-height: 1.6; }
+    .banner-btn {
+      background: #fff;
+      color: var(--gray-800);
+      border: none;
+      padding: 16px 32px;
+      border-radius: 12px;
+      font-size: 16px;
+      font-weight: 700;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: transform .2s, box-shadow .2s;
+    }
+    .banner-btn:hover { transform: scale(1.03); box-shadow: 0 4px 20px rgba(255,255,255,.3); }
+
+    /* ─── FOOTER ─────────────────────────────────────────── */
+    footer {
+      background: var(--gray-100);
+      border-top: 1px solid var(--gray-200);
+      padding: 48px 24px 32px;
+    }
+    .footer-inner {
+      max-width: 1280px;
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 32px;
+      margin-bottom: 40px;
+    }
+    .footer-col h4 { font-size: 13px; font-weight: 700; margin-bottom: 14px; text-transform: uppercase; letter-spacing: .5px; }
+    .footer-col a { display: block; font-size: 14px; color: var(--gray-600); text-decoration: none; margin-bottom: 10px; transition: color .2s; }
+    .footer-col a:hover { color: var(--gray-800); }
+    .footer-bottom {
+      max-width: 1280px;
+      margin: 0 auto;
+      padding-top: 24px;
+      border-top: 1px solid var(--gray-200);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 12px;
+      font-size: 14px;
+      color: var(--gray-600);
+    }
+    .footer-bottom .logo-text { font-size: 16px; }
+    .social { display: flex; gap: 16px; }
+    .social a { color: var(--gray-600); text-decoration: none; font-size: 20px; transition: color .2s; }
+    .social a:hover { color: var(--gray-800); }
+
+    /* ─── MODAL ──────────────────────────────────────────── */
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,.5);
+      z-index: 200;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+    }
+    .modal-overlay.open { display: flex; }
+    .modal {
+      background: #fff;
+      border-radius: 20px;
+      width: 100%;
+      max-width: 560px;
+      padding: 32px;
+      position: relative;
+      animation: slideUp .3s ease;
+    }
+    @keyframes slideUp { from { transform: translateY(40px); opacity: 0; } to { transform: none; opacity: 1; } }
+    .modal-close {
+      position: absolute;
+      top: 16px;
+      right: 16px;
+      background: none;
+      border: none;
+      font-size: 22px;
+      cursor: pointer;
+      color: var(--gray-600);
+      line-height: 1;
+    }
+    .modal h2 { font-size: 22px; font-weight: 700; margin-bottom: 4px; }
+    .modal .subtitle { color: var(--gray-600); font-size: 14px; margin-bottom: 24px; }
+    .modal-img { width: 100%; border-radius: 12px; margin-bottom: 20px; aspect-ratio: 16/9; object-fit: cover; }
+    .detail-row { display: flex; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid var(--gray-100); font-size: 14px; }
+    .detail-row:last-of-type { border-bottom: none; }
+    .detail-row .label { color: var(--gray-600); }
+    .detail-row .val { font-weight: 600; }
+    .modal-price { font-size: 26px; font-weight: 700; margin: 20px 0; }
+    .modal-price small { font-size: 14px; color: var(--gray-600); font-weight: 400; }
+    .modal-book-btn {
+      width: 100%;
+      background: var(--red);
+      color: #fff;
+      border: none;
+      padding: 16px;
+      border-radius: 12px;
+      font-size: 16px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: background .2s;
+    }
+    .modal-book-btn:hover { background: var(--red-dark); }
+
+    /* ─── TOAST ──────────────────────────────────────────── */
+    .toast {
+      position: fixed;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%) translateY(80px);
+      background: var(--gray-800);
+      color: #fff;
+      padding: 14px 24px;
+      border-radius: 12px;
+      font-size: 14px;
+      font-weight: 500;
+      z-index: 300;
+      transition: transform .3s;
+      white-space: nowrap;
+    }
+    .toast.show { transform: translateX(-50%) translateY(0); }
+
+    /* ─── RESPONSIVE ─────────────────────────────────────── */
+    @media (max-width: 768px) {
+      .search-pill { display: none; }
+      .hero-search { flex-direction: column; border-radius: 12px; }
+      .hero-search .field { border-right: none; border-bottom: 1px solid var(--gray-200); width: 100%; }
+      .hero-search .field:last-of-type { border-bottom: none; }
+      .hero-search-btn { width: 100%; justify-content: center; border-radius: 0 0 12px 12px; }
+      .banner { flex-direction: column; padding: 36px 24px; text-align: center; }
+      .banner p { max-width: 100%; }
+      .hero { height: 480px; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ─── HEADER ──────────────────────────────────────────── -->
+<header>
+  <div class="header-inner">
+    <a class="logo" href="#">
+      <div class="logo-icon">⌂</div>
+      <span class="logo-text">DzStay</span>
+    </a>
+
+    <div class="search-pill">
+      <div class="seg">Où ?<span>Destination</span></div>
+      <div class="seg">Arrivée<span>Ajouter dates</span></div>
+      <div class="seg">Départ<span>Ajouter dates</span></div>
+      <div class="seg">Voyageurs<span>Ajouter invités</span></div>
+      <button class="search-btn" aria-label="Rechercher">🔍</button>
+    </div>
+
+    <div class="header-actions">
+      <button class="btn-host">Devenez hôte</button>
+      <div class="btn-user">
+        <span class="hamburger">☰</span>
+        <div class="avatar">👤</div>
+      </div>
+    </div>
+  </div>
+</header>
+
+<!-- ─── HERO ────────────────────────────────────────────── -->
+<section class="hero">
+  <div class="hero-bg"></div>
+  <div class="hero-content">
+    <h1>Découvrez l'Algérie<br>comme jamais avant</h1>
+    <p>Des Aurès au Sahara, du Tell à la Méditerranée — votre prochaine aventure commence ici</p>
+
+    <div class="hero-search">
+      <div class="field">
+        <label>Destination</label>
+        <input type="text" placeholder="Alger, Oran, Tlemcen…" />
+      </div>
+      <div class="field">
+        <label>Arrivée</label>
+        <input type="date" />
+      </div>
+      <div class="field">
+        <label>Départ</label>
+        <input type="date" />
+      </div>
+      <div class="field">
+        <label>Voyageurs</label>
+        <select>
+          <option>1 voyageur</option>
+          <option>2 voyageurs</option>
+          <option>3 voyageurs</option>
+          <option>4+ voyageurs</option>
+        </select>
+      </div>
+      <button class="hero-search-btn" onclick="toast('Recherche en cours…')">🔍 Rechercher</button>
+    </div>
+  </div>
+</section>
+
+<!-- ─── CATEGORIES ───────────────────────────────────────── -->
+<div class="categories-wrap">
+  <div class="categories" id="cats">
+    <div class="cat-item active" onclick="filterCat(this,'all')"><span class="cat-icon">🏠</span><span class="cat-label">Tout</span></div>
+    <div class="cat-item" onclick="filterCat(this,'plage')"><span class="cat-icon">🏖️</span><span class="cat-label">Plages</span></div>
+    <div class="cat-item" onclick="filterCat(this,'sahara')"><span class="cat-icon">🏜️</span><span class="cat-label">Sahara</span></div>
+    <div class="cat-item" onclick="filterCat(this,'montagne')"><span class="cat-icon">⛰️</span><span class="cat-label">Montagnes</span></div>
+    <div class="cat-item" onclick="filterCat(this,'villa')"><span class="cat-icon">🏡</span><span class="cat-label">Villas</span></div>
+    <div class="cat-item" onclick="filterCat(this,'riad')"><span class="cat-icon">🕌</span><span class="cat-label">Riads</span></div>
+    <div class="cat-item" onclick="filterCat(this,'piscine')"><span class="cat-icon">🏊</span><span class="cat-label">Avec piscine</span></div>
+    <div class="cat-item" onclick="filterCat(this,'maison')"><span class="cat-icon">🌿</span><span class="cat-label">Maisons de campagne</span></div>
+    <div class="cat-item" onclick="filterCat(this,'chalet')"><span class="cat-icon">🌲</span><span class="cat-label">Chalets</span></div>
+    <div class="cat-item" onclick="filterCat(this,'camping')"><span class="cat-icon">⛺</span><span class="cat-label">Camping</span></div>
+  </div>
+</div>
+
+<!-- ─── MAIN ─────────────────────────────────────────────── -->
+<main>
+
+  <h2 class="section-title">Logements populaires</h2>
+  <div class="listings-grid" id="grid"></div>
+
+  <!-- Destinations -->
+  <h2 class="section-title">Explorez par destination</h2>
+  <div class="destinations-grid">
+    <div class="dest-card" onclick="toast('Alger — 342 logements')">
+      <img src="https://images.unsplash.com/photo-1580418827493-f2b22c0a76cb?w=600&q=80" alt="Alger" />
+      <div class="dest-label"><strong>Alger</strong><span>342 logements</span></div>
+    </div>
+    <div class="dest-card" onclick="toast('Oran — 187 logements')">
+      <img src="https://images.unsplash.com/photo-1509233725247-49e657c54213?w=600&q=80" alt="Oran" />
+      <div class="dest-label"><strong>Oran</strong><span>187 logements</span></div>
+    </div>
+    <div class="dest-card" onclick="toast('Constantine — 94 logements')">
+      <img src="https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=600&q=80" alt="Constantine" />
+      <div class="dest-label"><strong>Constantine</strong><span>94 logements</span></div>
+    </div>
+    <div class="dest-card" onclick="toast('Tamanrasset — 52 logements')">
+      <img src="https://images.unsplash.com/photo-1509316785289-025f5b846b35?w=600&q=80" alt="Tamanrasset" />
+      <div class="dest-label"><strong>Tamanrasset</strong><span>52 logements</span></div>
+    </div>
+    <div class="dest-card" onclick="toast('Tlemcen — 78 logements')">
+      <img src="https://images.unsplash.com/photo-1555993539-1732b0258235?w=600&q=80" alt="Tlemcen" />
+      <div class="dest-label"><strong>Tlemcen</strong><span>78 logements</span></div>
+    </div>
+  </div>
+
+  <!-- Banner -->
+  <div class="banner">
+    <div>
+      <h2>Vous avez un logement à louer ?</h2>
+      <p>Rejoignez des milliers d'hôtes algériens et commencez à générer des revenus dès aujourd'hui. Inscription gratuite, paiement sécurisé.</p>
+    </div>
+    <button class="btn-host banner-btn" onclick="toast('Redirection vers l\'espace hôte…')">Devenir hôte →</button>
+  </div>
+
+</main>
+
+<!-- ─── FOOTER ───────────────────────────────────────────── -->
+<footer>
+  <div class="footer-inner">
+    <div class="footer-col">
+      <h4>DzStay</h4>
+      <a href="#">À propos</a>
+      <a href="#">Presse</a>
+      <a href="#">Investisseurs</a>
+      <a href="#">Carrières</a>
+    </div>
+    <div class="footer-col">
+      <h4>Communauté</h4>
+      <a href="#">Blog</a>
+      <a href="#">Forum</a>
+      <a href="#">Partenaires</a>
+      <a href="#">Accessibilité</a>
+    </div>
+    <div class="footer-col">
+      <h4>Hôtes</h4>
+      <a href="#">Devenir hôte</a>
+      <a href="#">AirCover hôtes</a>
+      <a href="#">Ressources</a>
+      <a href="#">Forum communautaire</a>
+    </div>
+    <div class="footer-col">
+      <h4>Assistance</h4>
+      <a href="#">Centre d'aide</a>
+      <a href="#">Sécurité</a>
+      <a href="#">Contactez-nous</a>
+      <a href="#">Comment DzStay fonctionne</a>
+    </div>
+  </div>
+  <div class="footer-bottom">
+    <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;">
+      <span class="logo-text">DzStay</span>
+      <span>© 2026 DzStay, Inc. · Politique de confidentialité · Conditions · Plan du site</span>
+    </div>
+    <div class="social">
+      <a href="#" title="Facebook">𝕗</a>
+      <a href="#" title="Instagram">📸</a>
+      <a href="#" title="Twitter">𝕏</a>
+    </div>
+  </div>
+</footer>
+
+<!-- ─── MODAL ────────────────────────────────────────────── -->
+<div class="modal-overlay" id="modal" onclick="closeModal(event)">
+  <div class="modal">
+    <button class="modal-close" onclick="document.getElementById('modal').classList.remove('open')">✕</button>
+    <img class="modal-img" id="modal-img" src="" alt="" />
+    <h2 id="modal-title"></h2>
+    <p class="subtitle" id="modal-loc"></p>
+    <div id="modal-details"></div>
+    <div class="modal-price" id="modal-price"></div>
+    <button class="modal-book-btn" onclick="toast('Réservation en cours — paiement sécurisé 🔒'); document.getElementById(\'modal\').classList.remove(\'open\')">Réserver maintenant</button>
+  </div>
+</div>
+
+<!-- ─── TOAST ────────────────────────────────────────────── -->
+<div class="toast" id="toast"></div>
+
+<script>
+const listings = [
+  {
+    id: 1, cat: 'plage',
+    title: 'Villa pieds dans l\'eau à Tipaza',
+    location: 'Tipaza, Alger',
+    dates: '15 – 22 juin',
+    price: 12500, rating: 4.97, reviews: 128,
+    badge: 'Coup de cœur',
+    host: 'Fatima',
+    guests: 6, beds: 3, baths: 2,
+    img: 'https://images.unsplash.com/photo-1564013799919-ab600027ffc6?w=600&q=80',
+    desc: 'Vue imprenable sur la Méditerranée, terrasse privée, accès direct à la plage. Parfait pour un séjour en famille ou entre amis.'
+  },
+  {
+    id: 2, cat: 'sahara',
+    title: 'Camp de luxe sous les étoiles',
+    location: 'Tamanrasset, Sahara',
+    dates: '1 – 7 déc.',
+    price: 18000, rating: 5.0, reviews: 54,
+    badge: 'Nouveau',
+    host: 'Youssef',
+    guests: 4, beds: 2, baths: 1,
+    img: 'https://images.unsplash.com/photo-1451337516015-6b6e9a44a8a3?w=600&q=80',
+    desc: 'Nuits féériques dans le Grand Erg Occidental. Bivouac équipé, dîner traditionnel, balade en dromadaire incluse.'
+  },
+  {
+    id: 3, cat: 'villa',
+    title: 'Somptueuse villa avec piscine',
+    location: 'Oran, Aïn El Turk',
+    dates: '10 – 17 août',
+    price: 22000, rating: 4.92, reviews: 89,
+    badge: null,
+    host: 'Rachid',
+    guests: 10, beds: 5, baths: 3,
+    img: 'https://images.unsplash.com/photo-1580587771525-78b9dba3b914?w=600&q=80',
+    desc: 'Immense villa avec piscine chauffée, jardin méditerranéen et vue panoramique sur la baie d\'Oran.'
+  },
+  {
+    id: 4, cat: 'riad',
+    title: 'Riad authentique en Médina',
+    location: 'Tlemcen, Centre historique',
+    dates: '5 – 10 avr.',
+    price: 8500, rating: 4.88, reviews: 212,
+    badge: 'Coup de cœur',
+    host: 'Meriem',
+    guests: 4, beds: 2, baths: 1,
+    img: 'https://images.unsplash.com/photo-1512917774080-9991f1c4c750?w=600&q=80',
+    desc: 'Riad traditionnel du XVIIe siècle, patio central avec fontaine, décoration zellige et bois sculpté.'
+  },
+  {
+    id: 5, cat: 'montagne',
+    title: 'Chalet en bois dans les Aurès',
+    location: 'Batna, Parc national Belezma',
+    dates: '20 – 27 janv.',
+    price: 9800, rating: 4.95, reviews: 67,
+    badge: null,
+    host: 'Djamel',
+    guests: 8, beds: 4, baths: 2,
+    img: 'https://images.unsplash.com/photo-1449158743715-0a90ebb6d2d8?w=600&q=80',
+    desc: 'Chaleureux chalet niché au cœur des Aurès, cheminée, forêt de cèdres centenaires à portée de pas.'
+  },
+  {
+    id: 6, cat: 'plage',
+    title: 'Appartement vue mer à Skikda',
+    location: 'Skikda, Front de mer',
+    dates: '3 – 10 juil.',
+    price: 7200, rating: 4.80, reviews: 144,
+    badge: null,
+    host: 'Nadia',
+    guests: 4, beds: 2, baths: 1,
+    img: 'https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=600&q=80',
+    desc: 'Appartement moderne avec balcon face à la mer, accès direct à une plage de sable fin.'
+  },
+  {
+    id: 7, cat: 'maison',
+    title: 'Maison de charme à la campagne',
+    location: 'Médéa, Tablat',
+    dates: '12 – 19 mai',
+    price: 5500, rating: 4.76, reviews: 33,
+    badge: 'Nouveau',
+    host: 'Lyes',
+    guests: 6, beds: 3, baths: 2,
+    img: 'https://images.unsplash.com/photo-1605276374104-dee2a0ed3cd6?w=600&q=80',
+    desc: 'Vaste ferme rénovée, potager bio, vue sur les oliveraies. Idéal pour se ressourcer loin de l\'agitation.'
+  },
+  {
+    id: 8, cat: 'piscine',
+    title: 'Villa piscine & jardin tropical',
+    location: 'Annaba, El Bouni',
+    dates: '18 – 25 août',
+    price: 16500, rating: 4.91, reviews: 77,
+    badge: null,
+    host: 'Sofia',
+    guests: 8, beds: 4, baths: 3,
+    img: 'https://images.unsplash.com/photo-1613490493576-7fde63acd811?w=600&q=80',
+    desc: 'Luxueuse villa dotée d\'une grande piscine à débordement, barbecue et terrasse ombragée.'
+  }
+];
+
+let liked = new Set();
+let currentCat = 'all';
+
+function renderGrid(cat) {
+  const grid = document.getElementById('grid');
+  const data = cat === 'all' ? listings : listings.filter(l => l.cat === cat);
+  grid.innerHTML = data.map(l => `
+    <div class="card" onclick="openModal(${l.id})">
+      <div class="card-img-wrap">
+        <img src="${l.img}" alt="${l.title}" loading="lazy" />
+        ${l.badge ? `<div class="badge${l.badge==='Nouveau'?' new':''}">${l.badge}</div>` : ''}
+        <button class="wish-btn ${liked.has(l.id)?'liked':''}" onclick="toggleLike(event,${l.id})">
+          ${liked.has(l.id)?'❤':'♡'}
+        </button>
+        <div class="dots"><span class="dot active"></span><span class="dot"></span><span class="dot"></span></div>
+      </div>
+      <div class="card-body">
+        <div class="card-header">
+          <div class="card-title">${l.title}</div>
+          <div class="card-rating">⭐ ${l.rating} <span>(${l.reviews})</span></div>
+        </div>
+        <div class="card-sub">${l.location}</div>
+        <div class="card-dates">${l.dates}</div>
+        <div class="card-price"><strong>${l.price.toLocaleString('fr-DZ')} DZD</strong> <span class="night">/ nuit</span></div>
+      </div>
+    </div>
+  `).join('');
+}
+
+function filterCat(el, cat) {
+  currentCat = cat;
+  document.querySelectorAll('.cat-item').forEach(c => c.classList.remove('active'));
+  el.classList.add('active');
+  renderGrid(cat);
+}
+
+function toggleLike(e, id) {
+  e.stopPropagation();
+  const btn = e.currentTarget;
+  if (liked.has(id)) {
+    liked.delete(id);
+    btn.innerHTML = '♡';
+    btn.classList.remove('liked');
+    toast('Retiré des favoris');
+  } else {
+    liked.add(id);
+    btn.innerHTML = '❤';
+    btn.classList.add('liked');
+    toast('Ajouté aux favoris ❤');
+  }
+}
+
+function openModal(id) {
+  const l = listings.find(x => x.id === id);
+  if (!l) return;
+  document.getElementById('modal-img').src = l.img;
+  document.getElementById('modal-title').textContent = l.title;
+  document.getElementById('modal-loc').textContent = `📍 ${l.location} · Hôte : ${l.host}`;
+  document.getElementById('modal-details').innerHTML = `
+    <div class="detail-row"><span class="label">Voyageurs</span><span class="val">${l.guests} pers. max</span></div>
+    <div class="detail-row"><span class="label">Chambres</span><span class="val">${l.beds} chambre(s)</span></div>
+    <div class="detail-row"><span class="label">Salles de bain</span><span class="val">${l.baths}</span></div>
+    <div class="detail-row"><span class="label">Note</span><span class="val">⭐ ${l.rating} (${l.reviews} avis)</span></div>
+    <div class="detail-row"><span class="label">Description</span><span class="val" style="max-width:300px;text-align:right;line-height:1.5">${l.desc}</span></div>
+  `;
+  document.getElementById('modal-price').innerHTML = `${l.price.toLocaleString('fr-DZ')} DZD <small>/ nuit</small>`;
+  document.getElementById('modal').classList.add('open');
+}
+
+function closeModal(e) {
+  if (e.target === document.getElementById('modal')) {
+    document.getElementById('modal').classList.remove('open');
+  }
+}
+
+let toastTimer;
+function toast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.remove('show'), 2800);
+}
+
+renderGrid('all');
+</script>
+</body>
+</html>

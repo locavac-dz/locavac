@@ -1,0 +1,11 @@
+node_modules/
+.env
+.env.production
+backups/
+public/uploads/*
+!public/uploads/.gitkeep
+logs/
+*.log
+server.log
+server.err
+locavac.json
