@@ -611,12 +611,15 @@ footer{background:var(--g100);border-top:1px solid var(--g200);padding:48px 24px
   <div class="grid" id="grid"></div>
 
   <h2 class="sec-title">Explorez par destination</h2>
-  <div class="dest-grid">
-    <div class="dest" data-dest="Alger"><img src="https://images.unsplash.com/photo-1580418827493-f2b22c0a76cb?w=600&q=80" alt="Alger"/><div class="dest-lbl"><strong>Alger</strong><span>342 logements</span></div></div>
-    <div class="dest" data-dest="Oran"><img src="https://images.unsplash.com/photo-1509233725247-49e657c54213?w=600&q=80" alt="Oran"/><div class="dest-lbl"><strong>Oran</strong><span>187 logements</span></div></div>
-    <div class="dest" data-dest="Constantine"><img src="https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=600&q=80" alt="Constantine"/><div class="dest-lbl"><strong>Constantine</strong><span>94 logements</span></div></div>
-    <div class="dest" data-dest="Tamanrasset"><img src="https://images.unsplash.com/photo-1509316785289-025f5b846b35?w=600&q=80" alt="Tamanrasset"/><div class="dest-lbl"><strong>Tamanrasset</strong><span>52 logements</span></div></div>
-    <div class="dest" data-dest="Tlemcen"><img src="https://images.unsplash.com/photo-1555993539-1732b0258235?w=600&q=80" alt="Tlemcen"/><div class="dest-lbl"><strong>Tlemcen</strong><span>78 logements</span></div></div>
+  <div class="dest-grid" id="dest-grid">
+    <div class="dest" data-dest="Alger"><img src="https://images.unsplash.com/photo-1548013146-72479768bada?w=600&q=80" alt="Alger"/><div class="dest-lbl"><strong>Alger</strong><span id="dest-count-Alger">…</span></div></div>
+    <div class="dest" data-dest="Oran"><img src="https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=600&q=80" alt="Oran"/><div class="dest-lbl"><strong>Oran</strong><span id="dest-count-Oran">…</span></div></div>
+    <div class="dest" data-dest="Béjaïa"><img src="https://images.unsplash.com/photo-1510414842594-a61c69b5ae57?w=600&q=80" alt="Béjaïa"/><div class="dest-lbl"><strong>Béjaïa</strong><span id="dest-count-Béjaïa">…</span></div></div>
+    <div class="dest" data-dest="Constantine"><img src="https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=600&q=80" alt="Constantine"/><div class="dest-lbl"><strong>Constantine</strong><span id="dest-count-Constantine">…</span></div></div>
+    <div class="dest" data-dest="Tamanrasset"><img src="https://images.unsplash.com/photo-1509316785289-025f5b846b35?w=600&q=80" alt="Tamanrasset"/><div class="dest-lbl"><strong>Tamanrasset</strong><span id="dest-count-Tamanrasset">…</span></div></div>
+    <div class="dest" data-dest="Tlemcen"><img src="https://images.unsplash.com/photo-1533130061792-64b345e4a833?w=600&q=80" alt="Tlemcen"/><div class="dest-lbl"><strong>Tlemcen</strong><span id="dest-count-Tlemcen">…</span></div></div>
+    <div class="dest" data-dest="Tizi Ouzou"><img src="https://images.unsplash.com/photo-1500382017468-9049fed747ef?w=600&q=80" alt="Tizi Ouzou"/><div class="dest-lbl"><strong>Tizi Ouzou</strong><span id="dest-count-Tizi Ouzou">…</span></div></div>
+    <div class="dest" data-dest="Annaba"><img src="https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=600&q=80" alt="Annaba"/><div class="dest-lbl"><strong>Annaba</strong><span id="dest-count-Annaba">…</span></div></div>
   </div>
 
   <!-- SECTION ÉTABLISSEMENTS PARTENAIRES -->
@@ -3177,6 +3180,22 @@ async function loadHomeEtab() {
   }
 }
 
+async function loadDestCounts() {
+  try {
+    const data = await apiFetch('/listings');
+    const counts = {};
+    data.forEach(l => { counts[l.wilaya] = (counts[l.wilaya] || 0) + 1; });
+    document.querySelectorAll('.dest[data-dest]').forEach(card => {
+      const w = card.dataset.dest;
+      const n = counts[w] || 0;
+      const span = card.querySelector('.dest-lbl span');
+      if (span) span.textContent = n + ' logement' + (n !== 1 ? 's' : '');
+    });
+  } catch(e) {
+    document.querySelectorAll('.dest-lbl span').forEach(s => { s.textContent = ''; });
+  }
+}
+
 async function loadPublicites() {
   const grid = document.getElementById('pub-grid');
   grid.innerHTML = '<div class="empty-state">Chargement…</div>';
@@ -3571,6 +3590,7 @@ document.addEventListener('DOMContentLoaded', function() {
   refreshAuthUI();
   loadListings('all');
   loadHomeEtab();
+  loadDestCounts();
   setInterval(checkUnread, 30000);
 });
 </script>
