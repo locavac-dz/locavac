@@ -9,7 +9,7 @@ async function withHost(listing) {
 
 // GET /api/listings
 router.get('/', async (req, res) => {
-  const { wilaya, category, guests, min_price, max_price, q, check_in, check_out, amenities } = req.query;
+  const { wilaya, category, guests, min_price, max_price, q, check_in, check_out, amenities, min_beds } = req.query;
   const wantedAmenities = amenities ? amenities.split(',').map(a => a.trim()).filter(Boolean) : [];
 
   let unavailableIds = new Set();
@@ -29,6 +29,7 @@ router.get('/', async (req, res) => {
     if (guests    && l.guests   <  Number(guests))    return false;
     if (min_price && l.price    <  Number(min_price)) return false;
     if (max_price && l.price    >  Number(max_price)) return false;
+    if (min_beds  && l.beds     <  Number(min_beds))  return false;
     if (check_in && check_out  && unavailableIds.has(Number(l.id))) return false;
     if (wantedAmenities.length) {
       const la = Array.isArray(l.amenities) ? l.amenities : (l.amenities ? JSON.parse(l.amenities) : []);

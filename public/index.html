@@ -426,6 +426,17 @@ footer{background:var(--g100);border-top:1px solid var(--g200);padding:48px 24px
 .btn-clear-dates{background:none;border:1.5px solid var(--g200);border-radius:8px;padding:6px 12px;font-size:12px;font-weight:600;cursor:pointer;color:var(--g600);transition:all .2s;white-space:nowrap}
 .btn-clear-dates:hover{border-color:var(--red);color:var(--red)}
 
+/* ── FILTRES RAPIDES (wilaya, prix, voyageurs, chambres) ── */
+.quick-filter-bar{display:flex;align-items:center;gap:8px;margin-bottom:12px;flex-wrap:wrap}
+.qf-group{display:flex;align-items:center;gap:6px;background:var(--g50);border:1.5px solid var(--g200);border-radius:10px;padding:6px 10px;font-size:12px;white-space:nowrap}
+.qf-group label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--g500)}
+.qf-group select,.qf-group input[type=number]{border:none;background:transparent;font-size:13px;font-weight:600;font-family:inherit;color:var(--g800);outline:none;width:auto;min-width:0}
+.qf-group select{max-width:130px}
+.qf-group input[type=number]{width:68px}
+.qf-sep{color:var(--g300);font-size:11px}
+.btn-clear-qf{background:none;border:1.5px solid var(--g200);border-radius:8px;padding:6px 12px;font-size:12px;font-weight:600;cursor:pointer;color:var(--g600);transition:all .2s;white-space:nowrap}
+.btn-clear-qf:hover{border-color:var(--red);color:var(--red)}
+
 /* ── FILTRAGE ÉQUIPEMENTS ── */
 .amenity-filter-bar{display:flex;align-items:center;gap:10px;margin-bottom:16px;flex-wrap:wrap}
 .amenity-chips{display:flex;gap:8px;flex-wrap:wrap;flex:1;min-width:0}
@@ -630,6 +641,30 @@ footer{background:var(--g100);border-top:1px solid var(--g200);padding:48px 24px
     <input type="date" id="f-out"/>
     <button class="btn-clear-dates" id="btn-clear-dates">✕ Effacer les dates</button>
     <span id="date-avail-count" style="font-size:13px;font-weight:600;color:var(--g600);margin-left:auto"></span>
+  </div>
+  <div class="quick-filter-bar" id="quick-filter-bar">
+    <div class="qf-group">
+      <label>Wilaya</label>
+      <select id="f-wilaya">
+        <option value="">Toutes</option>
+        <option>Adrar</option><option>Chlef</option><option>Laghouat</option><option>Oum El Bouaghi</option><option>Batna</option><option>Béjaïa</option><option>Biskra</option><option>Béchar</option><option>Blida</option><option>Bouira</option><option>Tamanrasset</option><option>Tébessa</option><option>Tlemcen</option><option>Tiaret</option><option>Tizi Ouzou</option><option>Alger</option><option>Djelfa</option><option>Jijel</option><option>Sétif</option><option>Saïda</option><option>Skikda</option><option>Sidi Bel Abbès</option><option>Annaba</option><option>Guelma</option><option>Constantine</option><option>Médéa</option><option>Mostaganem</option><option>M'Sila</option><option>Mascara</option><option>Ouargla</option><option>Oran</option><option>El Bayadh</option><option>Illizi</option><option>Bordj Bou Arréridj</option><option>Boumerdès</option><option>El Tarf</option><option>Tindouf</option><option>Tissemsilt</option><option>El Oued</option><option>Khenchela</option><option>Souk Ahras</option><option>Tipaza</option><option>Mila</option><option>Aïn Defla</option><option>Naâma</option><option>Aïn Témouchent</option><option>Ghardaïa</option><option>Relizane</option><option>Timimoun</option><option>Bordj Badji Mokhtar</option><option>Ouled Djellal</option><option>Béni Abbès</option><option>In Salah</option><option>In Guezzam</option><option>Touggourt</option><option>Djanet</option><option>El M'Ghair</option><option>El Meniaa</option>
+      </select>
+    </div>
+    <div class="qf-group">
+      <label>Prix (DZD)</label>
+      <input type="number" id="f-min-price" placeholder="Min" min="0" step="500"/>
+      <span class="qf-sep">–</span>
+      <input type="number" id="f-max-price" placeholder="Max" min="0" step="500"/>
+    </div>
+    <div class="qf-group">
+      <label>Voyageurs</label>
+      <input type="number" id="f-guests" placeholder="Min" min="1" max="30"/>
+    </div>
+    <div class="qf-group">
+      <label>Chambres</label>
+      <input type="number" id="f-beds" placeholder="Min" min="1" max="20"/>
+    </div>
+    <button class="btn-clear-qf" id="btn-clear-qf" style="display:none">✕ Filtres</button>
   </div>
   <div class="amenity-filter-bar" id="amenity-filter-bar">
     <div class="amenity-chips" id="amenity-chips"></div>
@@ -1882,6 +1917,16 @@ async function loadListings(cat) {
     if (cat && cat !== 'all') params.set('category', cat);
     if (checkIn)  params.set('check_in',  checkIn);
     if (checkOut) params.set('check_out', checkOut);
+    const fWilaya   = document.getElementById('f-wilaya')?.value;
+    const fMinPrice = document.getElementById('f-min-price')?.value;
+    const fMaxPrice = document.getElementById('f-max-price')?.value;
+    const fGuests   = document.getElementById('f-guests')?.value;
+    const fBeds     = document.getElementById('f-beds')?.value;
+    if (fWilaya)   params.set('wilaya',    fWilaya);
+    if (fMinPrice) params.set('min_price', fMinPrice);
+    if (fMaxPrice) params.set('max_price', fMaxPrice);
+    if (fGuests)   params.set('guests',    fGuests);
+    if (fBeds)     params.set('min_beds',  fBeds);
     const selAmenities = getSelectedAmenities();
     if (selAmenities.length) params.set('amenities', selAmenities.join(','));
     const qs = params.toString() ? '?' + params.toString() : '';
@@ -3786,6 +3831,27 @@ document.addEventListener('DOMContentLoaded', function() {
 
   // Équipements
   initAmenityUI();
+
+  // Filtres rapides (wilaya, prix, voyageurs, chambres)
+  function qfChanged() {
+    const hasVal = ['f-wilaya','f-min-price','f-max-price','f-guests','f-beds']
+      .some(id => { const el = document.getElementById(id); return el && el.value; });
+    const btn = document.getElementById('btn-clear-qf');
+    if (btn) btn.style.display = hasVal ? 'inline-flex' : 'none';
+    loadListings(currentCat);
+  }
+  ['f-wilaya','f-min-price','f-max-price','f-guests','f-beds'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.addEventListener('change', qfChanged);
+  });
+  document.getElementById('btn-clear-qf')?.addEventListener('click', () => {
+    ['f-wilaya','f-min-price','f-max-price','f-guests','f-beds'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.value = '';
+    });
+    document.getElementById('btn-clear-qf').style.display = 'none';
+    loadListings(currentCat);
+  });
 
   // Profil
   document.getElementById('prof-save-btn').addEventListener('click', () => saveProfile());
