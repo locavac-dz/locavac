@@ -9,7 +9,8 @@ async function withHost(listing) {
 
 // GET /api/listings
 router.get('/', async (req, res) => {
-  const { wilaya, category, guests, min_price, max_price, q, check_in, check_out } = req.query;
+  const { wilaya, category, guests, min_price, max_price, q, check_in, check_out, amenities } = req.query;
+  const wantedAmenities = amenities ? amenities.split(',').map(a => a.trim()).filter(Boolean) : [];
 
   let unavailableIds = new Set();
   if (check_in && check_out && check_in < check_out) {
@@ -29,6 +30,10 @@ router.get('/', async (req, res) => {
     if (min_price && l.price    <  Number(min_price)) return false;
     if (max_price && l.price    >  Number(max_price)) return false;
     if (check_in && check_out  && unavailableIds.has(Number(l.id))) return false;
+    if (wantedAmenities.length) {
+      const la = Array.isArray(l.amenities) ? l.amenities : (l.amenities ? JSON.parse(l.amenities) : []);
+      if (!wantedAmenities.every(a => la.includes(a))) return false;
+    }
     if (q) {
       const s = q.toLowerCase();
       if (!l.title.toLowerCase().includes(s) &&
@@ -61,17 +66,19 @@ router.get('/:id', async (req, res) => {
 
 // POST /api/listings
 router.post('/', auth, async (req, res) => {
-  const { title, description, location, wilaya, category, price, guests, beds, baths, image, photos, lat, lng } = req.body;
+  const { title, description, location, wilaya, category, price, guests, beds, baths, image, photos, lat, lng, amenities } = req.body;
   if (!title || !location || !wilaya || !category || !price)
     return res.status(400).json({ error: 'Champs obligatoires manquants.' });
-  const finalImage  = image || (Array.isArray(photos) && photos[0]) || '';
-  const finalPhotos = Array.isArray(photos) && photos.length ? photos : (finalImage ? [finalImage] : []);
+  const finalImage    = image || (Array.isArray(photos) && photos[0]) || '';
+  const finalPhotos   = Array.isArray(photos) && photos.length ? photos : (finalImage ? [finalImage] : []);
+  const finalAmenities = Array.isArray(amenities) ? amenities : [];
   const { cancellation_policy } = req.body;
   const VALID_POLICIES = ['flexible', 'moderee', 'stricte'];
   const listing = await db.listings.insert({
     host_id: req.user.id, title, description: description || '', location, wilaya,
     category, price: Number(price), guests: guests || 1, beds: beds || 1, baths: baths || 1,
     image: finalImage, photos: JSON.stringify(finalPhotos),
+    amenities: JSON.stringify(finalAmenities),
     lat: lat ? Number(lat) : null, lng: lng ? Number(lng) : null,
     rating: 0, reviews: 0, available: true,
     cancellation_policy: VALID_POLICIES.includes(cancellation_policy) ? cancellation_policy : 'flexible',
@@ -85,7 +92,7 @@ router.put('/:id', auth, async (req, res) => {
   const listing = await db.listings.findOne(l => l.id === Number(req.params.id));
   if (!listing) return res.status(404).json({ error: 'Annonce introuvable.' });
   if (listing.host_id !== req.user.id) return res.status(403).json({ error: 'Accès refusé.' });
-  const { title, description, price, available, cancellation_policy } = req.body;
+  const { title, description, price, available, cancellation_policy, amenities } = req.body;
   const VALID_POLICIES = ['flexible', 'moderee', 'stricte'];
   const changes = {};
   if (title               !== undefined) changes.title               = title;
@@ -94,6 +101,7 @@ router.put('/:id', auth, async (req, res) => {
   if (available           !== undefined) changes.available           = available;
   if (cancellation_policy !== undefined && VALID_POLICIES.includes(cancellation_policy))
     changes.cancellation_policy = cancellation_policy;
+  if (Array.isArray(amenities)) changes.amenities = JSON.stringify(amenities);
   await db.listings.update(l => l.id === listing.id, changes);
   res.json({ ok: true });
 });

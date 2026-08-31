@@ -112,6 +112,9 @@ CREATE TABLE IF NOT EXISTS signalements (
 );
 ALTER TABLE signalements ADD COLUMN IF NOT EXISTS status TEXT DEFAULT 'pending';
 
+-- Lot 6 : équipements / commodités des logements
+ALTER TABLE listings ADD COLUMN IF NOT EXISTS amenities JSONB DEFAULT '[]';
+
 -- Lot 5 : pages publicitaires établissements (hôtels / campings / complexes)
 CREATE TABLE IF NOT EXISTS publicites (
   id              SERIAL PRIMARY KEY,

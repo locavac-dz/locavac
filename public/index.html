@@ -425,6 +425,30 @@ footer{background:var(--g100);border-top:1px solid var(--g200);padding:48px 24px
 .date-filter-bar input[type=date]:focus{border-color:var(--red)}
 .btn-clear-dates{background:none;border:1.5px solid var(--g200);border-radius:8px;padding:6px 12px;font-size:12px;font-weight:600;cursor:pointer;color:var(--g600);transition:all .2s;white-space:nowrap}
 .btn-clear-dates:hover{border-color:var(--red);color:var(--red)}
+
+/* ── FILTRAGE ÉQUIPEMENTS ── */
+.amenity-filter-bar{display:flex;align-items:center;gap:10px;margin-bottom:16px;flex-wrap:wrap}
+.amenity-chips{display:flex;gap:8px;flex-wrap:wrap;flex:1;min-width:0}
+.amenity-chip{display:inline-flex;align-items:center;gap:5px;padding:6px 13px;border-radius:24px;border:1.5px solid var(--g200);font-size:12px;font-weight:600;cursor:pointer;transition:all .2s;white-space:nowrap;background:#fff;user-select:none}
+.amenity-chip:hover{border-color:var(--g500);background:var(--g50)}
+.amenity-chip.active{border-color:var(--g900);background:var(--g900);color:#fff}
+.btn-clear-amenities{background:none;border:1.5px solid var(--g200);border-radius:8px;padding:6px 12px;font-size:12px;font-weight:600;cursor:pointer;color:var(--g600);transition:all .2s;white-space:nowrap}
+.btn-clear-amenities:hover{border-color:var(--red);color:var(--red)}
+/* équipements dans la fiche */
+.amenities-section{margin:14px 0 4px}
+.amenities-section-title{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--g500);margin-bottom:8px}
+.amenities-grid{display:flex;flex-wrap:wrap;gap:8px}
+.amenity-badge{display:inline-flex;align-items:center;gap:5px;padding:5px 11px;border-radius:20px;background:var(--g50);border:1.5px solid var(--g200);font-size:12px;font-weight:600;color:var(--g700)}
+/* équipements sur les cartes */
+.card-amenities{display:flex;gap:6px;margin-top:5px;flex-wrap:wrap}
+.card-amenity-icon{font-size:14px;line-height:1;title:attr(title)}
+/* checklist équipements dans le formulaire */
+.amenity-checklist{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:8px;margin-top:8px}
+.amenity-check-item{display:flex;align-items:center;gap:8px;padding:8px 10px;border:1.5px solid var(--g200);border-radius:10px;cursor:pointer;transition:all .2s;font-size:13px;font-weight:500}
+.amenity-check-item:hover{border-color:var(--g500);background:var(--g50)}
+.amenity-check-item input{accent-color:var(--g900);width:15px;height:15px;cursor:pointer;flex-shrink:0}
+.amenity-check-item.checked{border-color:var(--g900);background:#f0f0f0}
+
 .avail-badge{display:inline-block;background:#e6f9f0;color:#0a7c47;font-size:11px;font-weight:700;padding:3px 8px;border-radius:8px;margin-top:4px}
 .unavail-badge{display:inline-block;background:#fee2e2;color:#b91c1c;font-size:11px;font-weight:700;padding:3px 8px;border-radius:8px;margin-top:4px}
 .date-summary{font-size:13px;color:var(--g600);margin-bottom:16px;display:none}
@@ -606,6 +630,10 @@ footer{background:var(--g100);border-top:1px solid var(--g200);padding:48px 24px
     <input type="date" id="f-out"/>
     <button class="btn-clear-dates" id="btn-clear-dates">✕ Effacer les dates</button>
     <span id="date-avail-count" style="font-size:13px;font-weight:600;color:var(--g600);margin-left:auto"></span>
+  </div>
+  <div class="amenity-filter-bar" id="amenity-filter-bar">
+    <div class="amenity-chips" id="amenity-chips"></div>
+    <button class="btn-clear-amenities" id="btn-clear-amenities" style="display:none">✕ Équipements</button>
   </div>
   <p class="date-summary" id="date-summary"></p>
   <div class="grid" id="grid"></div>
@@ -995,6 +1023,10 @@ footer{background:var(--g100);border-top:1px solid var(--g200);padding:48px 24px
         <div class="row2"><div class="fg"><label>Latitude</label><input type="number" id="h-lat" placeholder="36.73" step="0.0001"/></div><div class="fg"><label>Longitude</label><input type="number" id="h-lng" placeholder="3.08" step="0.0001"/></div></div>
         <div class="fg"><label>Description</label><textarea id="h-desc" placeholder="Décrivez votre logement…" rows="3"></textarea></div>
         <div class="fg"><label>Politique d'annulation</label><select id="h-cancel"><option value="flexible">🟢 Flexible — gratuit jusqu'à 24h avant</option><option value="moderee">🟡 Modérée — 100% jusqu'à 5j, 50% jusqu'à 2j</option><option value="stricte">🔴 Stricte — 50% jusqu'à 7j, aucun après</option></select></div>
+        <div class="fg">
+          <label>Équipements &amp; commodités</label>
+          <div class="amenity-checklist" id="h-amenity-list"></div>
+        </div>
         <div class="fg">
           <label>Photos du logement</label>
           <div class="upload-zone" id="upload-zone">
@@ -1771,6 +1803,74 @@ function doLogout() {
   refreshAuthUI(); toast(t('toast.logout'));
 }
 
+// ── ÉQUIPEMENTS ────────────────────────────────────────────
+const AMENITIES_DEF = [
+  { id:'wifi',        icon:'📶', label:'Wifi' },
+  { id:'clim',        icon:'❄️', label:'Climatisation' },
+  { id:'parking',     icon:'🅿️', label:'Parking' },
+  { id:'piscine',     icon:'🏊', label:'Piscine' },
+  { id:'lave_linge',  icon:'🫧', label:'Lave-linge' },
+  { id:'seche_linge', icon:'💨', label:'Sèche-linge' },
+  { id:'cuisine',     icon:'🍳', label:'Cuisine équipée' },
+  { id:'tv',          icon:'📺', label:'Télévision' },
+  { id:'terrasse',    icon:'🌿', label:'Terrasse / Balcon' },
+  { id:'barbecue',    icon:'🔥', label:'Barbecue' },
+  { id:'vue_mer',     icon:'🌊', label:'Vue mer' },
+  { id:'plage',       icon:'🏖️', label:'Accès plage' },
+  { id:'animaux',     icon:'🐾', label:'Animaux acceptés' },
+  { id:'jacuzzi',     icon:'🛁', label:'Jacuzzi' },
+  { id:'generateur',  icon:'⚡', label:'Groupe électrogène' },
+  { id:'gardien',     icon:'🔒', label:'Gardien / Sécurité' },
+];
+
+function initAmenityUI() {
+  const chips = document.getElementById('amenity-chips');
+  if (chips) {
+    chips.innerHTML = AMENITIES_DEF.map(a =>
+      `<div class="amenity-chip" data-amenity="${a.id}">${a.icon} ${a.label}</div>`
+    ).join('');
+    chips.querySelectorAll('.amenity-chip').forEach(chip => {
+      chip.addEventListener('click', () => {
+        chip.classList.toggle('active');
+        updateClearAmenityBtn();
+        loadListings(currentCat);
+      });
+    });
+  }
+  const clearBtn = document.getElementById('btn-clear-amenities');
+  if (clearBtn) {
+    clearBtn.addEventListener('click', () => {
+      document.querySelectorAll('#amenity-chips .amenity-chip').forEach(c => c.classList.remove('active'));
+      clearBtn.style.display = 'none';
+      loadListings(currentCat);
+    });
+  }
+  const formList = document.getElementById('h-amenity-list');
+  if (formList) {
+    formList.innerHTML = AMENITIES_DEF.map(a =>
+      `<label class="amenity-check-item">
+        <input type="checkbox" name="h-amenity" value="${a.id}"/>
+        <span>${a.icon} ${a.label}</span>
+      </label>`
+    ).join('');
+    formList.querySelectorAll('input[type=checkbox]').forEach(cb => {
+      cb.addEventListener('change', () => {
+        cb.closest('.amenity-check-item').classList.toggle('checked', cb.checked);
+      });
+    });
+  }
+}
+
+function updateClearAmenityBtn() {
+  const active = document.querySelectorAll('#amenity-chips .amenity-chip.active').length;
+  const btn = document.getElementById('btn-clear-amenities');
+  if (btn) btn.style.display = active ? 'inline-flex' : 'none';
+}
+
+function getSelectedAmenities() {
+  return [...document.querySelectorAll('#amenity-chips .amenity-chip.active')].map(c => c.dataset.amenity);
+}
+
 // ── LISTINGS ──────────────────────────────────────────────
 async function loadListings(cat) {
   const grid = document.getElementById('grid');
@@ -1782,6 +1882,8 @@ async function loadListings(cat) {
     if (cat && cat !== 'all') params.set('category', cat);
     if (checkIn)  params.set('check_in',  checkIn);
     if (checkOut) params.set('check_out', checkOut);
+    const selAmenities = getSelectedAmenities();
+    if (selAmenities.length) params.set('amenities', selAmenities.join(','));
     const qs = params.toString() ? '?' + params.toString() : '';
     allListings = await apiFetch('/listings' + qs);
   } catch {
@@ -1816,6 +1918,7 @@ function renderGrid(data, checkIn = '', checkOut = '') {
         <div class="card-hd"><div class="card-title">${l.title}</div><div class="card-rating">⭐ ${l.rating||'—'} <span>(${l.reviews||0})</span></div></div>
         <div class="card-sub">${l.location}</div>
         <div class="card-price"><strong>${Number(l.price).toLocaleString('fr-DZ')} DZD</strong> <span class="night">${t('card.night')}</span></div>
+        ${(()=>{ const la = Array.isArray(l.amenities) ? l.amenities : []; const top = la.slice(0,4).map(a=>{ const d=AMENITIES_DEF.find(x=>x.id===a); return d?`<span class="card-amenity-icon" title="${d.label}">${d.icon}</span>`:''; }).join(''); return top?`<div class="card-amenities">${top}</div>`:''; })()}
         ${totalPrice}
       </div>
     </div>`; }).join('');
@@ -1863,7 +1966,16 @@ async function openListing(id) {
     <div class="detail-row"><span class="lbl">Note</span><span class="val">⭐ ${l.rating||'—'} (${l.reviews||0} avis)</span></div>
     <div class="detail-row"><span class="lbl">Annulation</span><span class="val" title="${CANCEL_DESC[policy]}">${CANCEL_LABELS[policy]||policy}</span></div>
     ${l.description ? `<div class="detail-row"><span class="lbl">Description</span><span class="val">${l.description}</span></div>` : ''}
-    <div style="background:#f9f9f9;border-radius:8px;padding:10px 12px;margin-top:8px;font-size:12px;color:var(--g600)">ℹ️ ${CANCEL_DESC[policy]}</div>`;
+    <div style="background:#f9f9f9;border-radius:8px;padding:10px 12px;margin-top:8px;font-size:12px;color:var(--g600)">ℹ️ ${CANCEL_DESC[policy]}</div>
+    ${(()=>{
+      const la = Array.isArray(l.amenities) ? l.amenities : [];
+      if (!la.length) return '';
+      const badges = la.map(a => {
+        const d = AMENITIES_DEF.find(x => x.id === a);
+        return d ? `<div class="amenity-badge">${d.icon} ${d.label}</div>` : '';
+      }).join('');
+      return `<div class="amenities-section"><div class="amenities-section-title">Équipements</div><div class="amenities-grid">${badges}</div></div>`;
+    })()}`;
 
   // Dates : utiliser celles de la recherche si disponibles, sinon +1/+3 jours
   const filterIn  = document.getElementById('f-in')?.value;
@@ -2907,6 +3019,7 @@ async function publishListing() {
     lng:         Number(document.getElementById('h-lng').value)    || null,
     description:          document.getElementById('h-desc').value.trim(),
     cancellation_policy:  document.getElementById('h-cancel').value,
+    amenities:            [...document.querySelectorAll('#h-amenity-list input[type=checkbox]:checked')].map(cb => cb.value),
     image:                uploadedPhotoUrls[0] || '',
     photos:               uploadedPhotoUrls,
   };
@@ -2920,6 +3033,7 @@ async function publishListing() {
     document.getElementById('h-guests').value = '4';
     document.getElementById('h-beds').value   = '2';
     document.getElementById('h-baths').value  = '1';
+    document.querySelectorAll('#h-amenity-list input[type=checkbox]').forEach(cb => { cb.checked = false; cb.closest('.amenity-check-item').classList.remove('checked'); });
     resetUploadZone();
     closeOverlay('ov-dashboard');
     loadListings(currentCat);
@@ -3669,6 +3783,9 @@ document.addEventListener('DOMContentLoaded', function() {
 
   // Zone d'upload photos
   initUploadZone();
+
+  // Équipements
+  initAmenityUI();
 
   // Profil
   document.getElementById('prof-save-btn').addEventListener('click', () => saveProfile());
