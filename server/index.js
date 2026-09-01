@@ -37,6 +37,12 @@ app.use('/api/auth/login',    authLimiter);
 app.use('/api/auth/register', authLimiter);
 
 app.use(express.json());
+// Service Worker : no-cache obligatoire pour que le navigateur détecte les mises à jour
+app.get('/sw.js', (_, res) => {
+  res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+  res.setHeader('Service-Worker-Allowed', '/');
+  res.sendFile(path.join(__dirname, '..', 'public', 'sw.js'));
+});
 app.use(express.static(path.join(__dirname, '..', 'public')));
 
 app.use('/api/auth',         require('./routes/auth'));

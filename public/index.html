@@ -4,6 +4,15 @@
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
 <title>Locavac — Location de vacances en Algérie</title>
+<meta name="description" content="Trouvez et réservez des logements de vacances partout en Algérie — plages, Sahara, montagnes, riads."/>
+<meta name="theme-color" content="#E8261A"/>
+<meta name="mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-status-bar-style" content="default"/>
+<meta name="apple-mobile-web-app-title" content="Locavac"/>
+<link rel="manifest" href="/manifest.json"/>
+<link rel="icon" href="/icon.svg" type="image/svg+xml"/>
+<link rel="apple-touch-icon" href="/icon.svg"/>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Cairo:wght@300;400;500;600;700&family=Sora:wght@300;700;800&display=swap" rel="stylesheet"/>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 <style>
@@ -496,6 +505,9 @@ footer{background:var(--g100);border-top:1px solid var(--g200);padding:48px 24px
 
 /* ── TOAST ── */
 .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(80px);background:var(--g800);color:#fff;padding:13px 22px;border-radius:12px;font-size:14px;font-weight:500;z-index:9999;transition:transform .3s;white-space:nowrap;pointer-events:none}
+.offline-bar{display:none;position:fixed;top:0;left:0;right:0;background:#b45309;color:#fff;text-align:center;font-size:13px;font-weight:600;padding:8px;z-index:10000}
+.btn-install{display:none;align-items:center;gap:6px;background:var(--red);color:#fff;border:none;border-radius:20px;padding:6px 14px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;transition:opacity .2s}
+.btn-install:hover{opacity:.85}
 .toast.show{transform:translateX(-50%) translateY(0)}
 
 /* ── RESPONSIVE ── */
@@ -594,6 +606,7 @@ footer{background:var(--g100);border-top:1px solid var(--g200);padding:48px 24px
       </select>
       <button class="btn-host" id="btn-etab" onclick="openEtablissements()">🏨 Établissements</button>
       <button class="btn-host" id="btn-host" data-i18n="nav.host">Devenez hôte</button>
+      <button class="btn-install" id="btn-install" title="Installer l'application">📲 Installer</button>
       <div class="btn-user" id="btn-user">
         <span>☰</span>
         <div class="avatar" id="avatar">👤</div>
@@ -1402,6 +1415,7 @@ footer{background:var(--g100);border-top:1px solid var(--g200);padding:48px 24px
   </div>
 </div>
 
+<div class="offline-bar" id="offline-bar">📵 Vous êtes hors ligne — certaines fonctionnalités sont indisponibles</div>
 <div class="toast" id="toast"></div>
 
 <!-- ═══ SCRIPTS ═══ -->
@@ -4144,6 +4158,59 @@ document.addEventListener('DOMContentLoaded', function() {
   loadDestCounts();
   setInterval(checkUnread, 30000);
 });
+
+// ── PWA ───────────────────────────────────────────────────
+
+// Service Worker
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js').then(reg => {
+      // Nouvelle version disponible → propose le rechargement
+      reg.addEventListener('updatefound', () => {
+        const w = reg.installing;
+        if (!w) return;
+        w.addEventListener('statechange', () => {
+          if (w.state === 'installed' && navigator.serviceWorker.controller) {
+            toast('🔄 Mise à jour disponible — rechargez la page pour l\'appliquer.');
+          }
+        });
+      });
+    }).catch(e => console.warn('[SW]', e));
+  });
+}
+
+// Bouton "Installer l'application"
+let pwaPrompt = null;
+window.addEventListener('beforeinstallprompt', e => {
+  e.preventDefault();
+  pwaPrompt = e;
+  const btn = document.getElementById('btn-install');
+  if (btn) btn.style.display = 'inline-flex';
+});
+document.getElementById('btn-install')?.addEventListener('click', async () => {
+  if (!pwaPrompt) return;
+  pwaPrompt.prompt();
+  const { outcome } = await pwaPrompt.userChoice;
+  if (outcome === 'accepted') {
+    document.getElementById('btn-install').style.display = 'none';
+    pwaPrompt = null;
+    toast('✅ Locavac installé sur votre appareil !');
+  }
+});
+window.addEventListener('appinstalled', () => {
+  document.getElementById('btn-install').style.display = 'none';
+  pwaPrompt = null;
+});
+
+// Barre hors ligne
+function updateOnlineStatus() {
+  const bar = document.getElementById('offline-bar');
+  if (!bar) return;
+  bar.style.display = navigator.onLine ? 'none' : 'block';
+}
+window.addEventListener('online',  updateOnlineStatus);
+window.addEventListener('offline', updateOnlineStatus);
+updateOnlineStatus();
 </script>
 </body>
 </html>

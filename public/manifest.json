@@ -1,0 +1,29 @@
+{
+  "name": "Locavac — Location de vacances en Algérie",
+  "short_name": "Locavac",
+  "description": "Trouvez et réservez des logements de vacances partout en Algérie",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#E8261A",
+  "orientation": "portrait-primary",
+  "lang": "fr",
+  "categories": ["travel", "lifestyle"],
+  "icons": [
+    { "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" },
+    { "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "maskable" }
+  ],
+  "screenshots": [],
+  "shortcuts": [
+    {
+      "name": "Rechercher un logement",
+      "url": "/?action=search",
+      "description": "Trouver un logement"
+    },
+    {
+      "name": "Mes réservations",
+      "url": "/?action=reservations",
+      "description": "Voir mes réservations"
+    }
+  ]
+}

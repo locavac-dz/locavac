@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 192 192">
+  <rect width="192" height="192" rx="40" fill="#E8261A"/>
+  <!-- Pin body -->
+  <path d="M96 28C70.6 28 50 48.6 50 74C50 104.8 96 168 96 168C96 168 142 104.8 142 74C142 48.6 121.4 28 96 28Z" fill="white"/>
+  <!-- House roof -->
+  <polygon points="96,54 72,78 120,78" fill="#E8261A"/>
+  <!-- House body -->
+  <rect x="72" y="78" width="48" height="28" fill="#E8261A"/>
+  <!-- Door -->
+  <path d="M87 106 L87 92 Q96 84 105 92 L105 106" fill="white"/>
+  <!-- Window left -->
+  <rect x="75" y="81" width="10" height="8" rx="1" fill="white" opacity="0.5"/>
+  <!-- Window right -->
+  <rect x="107" y="81" width="10" height="8" rx="1" fill="white" opacity="0.5"/>
+</svg>
