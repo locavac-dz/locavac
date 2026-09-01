@@ -1,13 +1,15 @@
 require('dotenv').config({ path: require('path').join(__dirname, '..', '.env') });
 require('express-async-errors');
 
-const express   = require('express');
-const cors      = require('cors');
-const path      = require('path');
-const rateLimit = require('express-rate-limit');
-const db        = require('./db');
+const express     = require('express');
+const cors        = require('cors');
+const path        = require('path');
+const rateLimit   = require('express-rate-limit');
+const compression = require('compression');
+const db          = require('./db');
 
 const app = express();
+app.use(compression());
 
 // ── CORS ────────────────────────────────────────────────────────
 const ALLOWED_ORIGINS = (process.env.CORS_ORIGINS || 'http://localhost:3000')
@@ -56,6 +58,7 @@ app.use('/api/stats',        require('./routes/stats'));
 app.use('/api/admin',        require('./routes/admin'));
 app.use('/api/agent',        require('./routes/agent'));
 app.use('/api/publicites',   require('./routes/publicites'));
+app.use('/api/newsletter',   require('./routes/newsletter'));
 
 app.get('/api/health', (_, res) => res.json({ ok: true, message: 'Locavac API opérationnelle 🇩🇿' }));
 app.get('/404', (_, res) => res.sendFile(path.join(__dirname, '..', 'public', '404.html')));

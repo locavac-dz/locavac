@@ -37,8 +37,23 @@
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-:root{--red:#E8261A;--red-dk:#C0241A;--g50:#f9f9f9;--g100:#f1f1f1;--g200:#e0e0e0;--g400:#999;--g600:#555;--g800:#222;--sh:0 2px 16px rgba(0,0,0,.12);--shlg:0 8px 40px rgba(0,0,0,.18);--r:16px}
-body{font-family:'Inter',sans-serif;color:var(--g800);background:#fff}
+:root{
+  --red:#E8261A;--red-dk:#C0241A;
+  --g50:#f9f9f9;--g100:#f1f1f1;--g200:#e0e0e0;--g400:#999;--g600:#555;--g800:#222;
+  --bg:#fff;--surface:#fff;--surface2:#f9f9f9;--border:var(--g200);--text:var(--g800);--text2:var(--g600);
+  --sh:0 2px 16px rgba(0,0,0,.12);--shlg:0 8px 40px rgba(0,0,0,.18);--r:16px
+}
+[data-theme="dark"]{
+  --bg:#0f0f0f;--surface:#1a1a1a;--surface2:#242424;--border:#333;--text:#f0f0f0;--text2:#aaa;
+  --g50:#1a1a1a;--g100:#242424;--g200:#333;--g400:#666;--g600:#aaa;--g800:#f0f0f0;
+  --sh:0 2px 16px rgba(0,0,0,.4);--shlg:0 8px 40px rgba(0,0,0,.5)
+}
+@media(prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#0f0f0f;--surface:#1a1a1a;--surface2:#242424;--border:#333;--text:#f0f0f0;--text2:#aaa;
+  --g50:#1a1a1a;--g100:#242424;--g200:#333;--g400:#666;--g600:#aaa;--g800:#f0f0f0;
+  --sh:0 2px 16px rgba(0,0,0,.4);--shlg:0 8px 40px rgba(0,0,0,.5)
+}}
+body{font-family:'Inter',sans-serif;color:var(--text);background:var(--bg)}
 [dir="rtl"] body,[dir="rtl"]{font-family:'Cairo',sans-serif}
 [dir="rtl"] .hi{flex-direction:row-reverse}
 [dir="rtl"] .ha{flex-direction:row-reverse}
@@ -196,6 +211,36 @@ header{position:sticky;top:0;z-index:200;background:#fff;border-bottom:1px solid
 .how-step h3{font-size:16px;font-weight:700;margin-bottom:8px}
 .how-step p{font-size:13px;color:var(--g600);line-height:1.6}
 @media(max-width:640px){.how-steps{grid-template-columns:1fr}}
+
+/* ── DARK MODE TOGGLE ── */
+#dark-toggle{background:none;border:1.5px solid var(--border);border-radius:20px;padding:5px 10px;cursor:pointer;font-size:16px;color:var(--text);transition:background .2s}
+#dark-toggle:hover{background:var(--g100)}
+
+/* ── COOKIE BANNER ── */
+#cookie-banner{position:fixed;bottom:0;left:0;right:0;background:var(--surface);border-top:1px solid var(--border);padding:14px 24px;display:flex;align-items:center;justify-content:space-between;gap:16px;z-index:10000;box-shadow:0 -4px 20px rgba(0,0,0,.12);flex-wrap:wrap}
+#cookie-banner p{font-size:13px;color:var(--text2);flex:1;min-width:200px}
+.cookie-btns{display:flex;gap:8px;flex-shrink:0}
+.cookie-accept{background:var(--red);color:#fff;border:none;padding:8px 18px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer}
+.cookie-refuse{background:none;border:1.5px solid var(--border);color:var(--text2);padding:8px 18px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer}
+
+/* ── PRICE SLIDER ── */
+.price-slider-wrap{position:relative;height:28px;margin:8px 4px 4px}
+.price-slider-wrap input[type=range]{position:absolute;width:100%;height:4px;appearance:none;-webkit-appearance:none;background:transparent;pointer-events:none;top:50%;transform:translateY(-50%)}
+.price-slider-wrap input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;height:18px;border-radius:50%;background:var(--red);border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.25);pointer-events:auto;cursor:pointer}
+.price-slider-wrap input[type=range]::-moz-range-thumb{width:18px;height:18px;border-radius:50%;background:var(--red);border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.25);pointer-events:auto;cursor:pointer;border:none}
+.price-slider-track{position:absolute;height:4px;background:var(--g200);border-radius:2px;top:50%;transform:translateY(-50%);left:0;right:0}
+.price-slider-range{position:absolute;height:4px;background:var(--red);border-radius:2px;top:50%;transform:translateY(-50%)}
+.price-labels{display:flex;justify-content:space-between;font-size:12px;color:var(--text2);margin-top:4px}
+
+/* ── NEWSLETTER ── */
+.newsletter-section{background:var(--red);padding:40px 24px;text-align:center}
+.newsletter-section h3{font-size:20px;font-weight:700;color:#fff;margin-bottom:8px}
+.newsletter-section p{font-size:14px;color:rgba(255,255,255,.85);margin-bottom:20px}
+.newsletter-form{display:flex;gap:8px;max-width:440px;margin:0 auto;flex-wrap:wrap;justify-content:center}
+.newsletter-form input{flex:1;min-width:200px;padding:12px 16px;border-radius:10px;border:none;font-size:14px;outline:none;font-family:inherit}
+.newsletter-form button{padding:12px 22px;border-radius:10px;border:2px solid #fff;background:transparent;color:#fff;font-size:14px;font-weight:700;cursor:pointer;transition:background .2s}
+.newsletter-form button:hover{background:rgba(255,255,255,.15)}
+#nl-msg{font-size:13px;color:rgba(255,255,255,.9);margin-top:10px;min-height:18px}
 
 /* ── SHARE BUTTONS ── */
 .share-bar{display:flex;gap:8px;margin-top:12px}
@@ -788,6 +833,7 @@ footer{background:var(--g100);border-top:1px solid var(--g200);padding:48px 24px
       </select>
       <button class="btn-host" id="btn-etab" onclick="openEtablissements()">🌟 Les Incontournables</button>
       <button class="btn-host" id="btn-host" data-i18n="nav.host">Devenez hôte</button>
+      <button id="dark-toggle" title="Mode sombre / clair">🌙</button>
       <button class="btn-install" id="btn-install" title="Installer l'application">📲 Installer</button>
       <div class="btn-user" id="btn-user">
         <span>☰</span>
@@ -892,11 +938,14 @@ footer{background:var(--g100);border-top:1px solid var(--g200);padding:48px 24px
         <option>Adrar</option><option>Chlef</option><option>Laghouat</option><option>Oum El Bouaghi</option><option>Batna</option><option>Béjaïa</option><option>Biskra</option><option>Béchar</option><option>Blida</option><option>Bouira</option><option>Tamanrasset</option><option>Tébessa</option><option>Tlemcen</option><option>Tiaret</option><option>Tizi Ouzou</option><option>Alger</option><option>Djelfa</option><option>Jijel</option><option>Sétif</option><option>Saïda</option><option>Skikda</option><option>Sidi Bel Abbès</option><option>Annaba</option><option>Guelma</option><option>Constantine</option><option>Médéa</option><option>Mostaganem</option><option>M'Sila</option><option>Mascara</option><option>Ouargla</option><option>Oran</option><option>El Bayadh</option><option>Illizi</option><option>Bordj Bou Arréridj</option><option>Boumerdès</option><option>El Tarf</option><option>Tindouf</option><option>Tissemsilt</option><option>El Oued</option><option>Khenchela</option><option>Souk Ahras</option><option>Tipaza</option><option>Mila</option><option>Aïn Defla</option><option>Naâma</option><option>Aïn Témouchent</option><option>Ghardaïa</option><option>Relizane</option><option>Timimoun</option><option>Bordj Badji Mokhtar</option><option>Ouled Djellal</option><option>Béni Abbès</option><option>In Salah</option><option>In Guezzam</option><option>Touggourt</option><option>Djanet</option><option>El M'Ghair</option><option>El Meniaa</option>
       </select>
     </div>
-    <div class="qf-group">
-      <label>Prix (DZD)</label>
-      <input type="number" id="f-min-price" placeholder="Min" min="0" step="500"/>
-      <span class="qf-sep">–</span>
-      <input type="number" id="f-max-price" placeholder="Max" min="0" step="500"/>
+    <div class="qf-group" style="min-width:180px">
+      <label>Prix (DZD) — <span id="price-label">Tous</span></label>
+      <div class="price-slider-wrap">
+        <div class="price-slider-track"></div>
+        <div class="price-slider-range" id="price-slider-range"></div>
+        <input type="range" id="f-min-price" min="0" max="50000" step="500" value="0"/>
+        <input type="range" id="f-max-price" min="0" max="50000" step="500" value="50000"/>
+      </div>
     </div>
     <div class="qf-group">
       <label>Voyageurs</label>
@@ -1015,6 +1064,26 @@ footer{background:var(--g100);border-top:1px solid var(--g200);padding:48px 24px
     </div>
   </div>
 </section>
+
+<!-- NEWSLETTER -->
+<section class="newsletter-section">
+  <h3>📬 Restez informé des nouvelles annonces</h3>
+  <p>Recevez chaque semaine les meilleures offres de location en Algérie.</p>
+  <form class="newsletter-form" id="nl-form" onsubmit="submitNewsletter(event)">
+    <input type="email" id="nl-email" placeholder="votre@email.com" required/>
+    <button type="submit">S'inscrire</button>
+  </form>
+  <div id="nl-msg"></div>
+</section>
+
+<!-- COOKIE BANNER -->
+<div id="cookie-banner" style="display:none">
+  <p>🍪 Nous utilisons des cookies pour améliorer votre expérience. Vous pouvez accepter ou refuser les cookies non essentiels.</p>
+  <div class="cookie-btns">
+    <button class="cookie-refuse" onclick="refuseCookies()">Refuser</button>
+    <button class="cookie-accept" onclick="acceptCookies()">Accepter</button>
+  </div>
+</div>
 
 <!-- SCROLL TO TOP -->
 <button id="scroll-top" title="Haut de page" aria-label="Retour en haut">↑</button>
@@ -2337,6 +2406,81 @@ function clearRecentlyViewed() {
   if (section) section.style.display = 'none';
 }
 
+// ── DARK MODE ─────────────────────────────────────────────
+function initDarkMode() {
+  const btn = document.getElementById('dark-toggle');
+  const stored = (() => { try { return localStorage.getItem('locavac_theme'); } catch(e) { return null; } })();
+  if (stored) document.documentElement.setAttribute('data-theme', stored);
+  updateDarkBtn();
+  btn.addEventListener('click', () => {
+    const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+    const next = isDark ? 'light' : 'dark';
+    document.documentElement.setAttribute('data-theme', next);
+    try { localStorage.setItem('locavac_theme', next); } catch(e) {}
+    updateDarkBtn();
+  });
+}
+function updateDarkBtn() {
+  const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+  const btn = document.getElementById('dark-toggle');
+  if (btn) btn.textContent = isDark ? '☀️' : '🌙';
+}
+
+// ── COOKIE BANNER ─────────────────────────────────────────
+function initCookieBanner() {
+  try {
+    if (!localStorage.getItem('locavac_cookies')) {
+      setTimeout(() => { document.getElementById('cookie-banner').style.display = 'flex'; }, 1500);
+    }
+  } catch(e) {}
+}
+function acceptCookies() {
+  try { localStorage.setItem('locavac_cookies', 'accepted'); } catch(e) {}
+  document.getElementById('cookie-banner').style.display = 'none';
+  document.getElementById('scroll-top').style.bottom = '88px';
+}
+function refuseCookies() {
+  try { localStorage.setItem('locavac_cookies', 'refused'); } catch(e) {}
+  document.getElementById('cookie-banner').style.display = 'none';
+  document.getElementById('scroll-top').style.bottom = '88px';
+}
+
+// ── PRICE SLIDER ──────────────────────────────────────────
+function initPriceSlider() {
+  const minR = document.getElementById('f-min-price');
+  const maxR = document.getElementById('f-max-price');
+  const range = document.getElementById('price-slider-range');
+  const label = document.getElementById('price-label');
+  if (!minR || !maxR) return;
+  function updateSlider() {
+    const min = parseInt(minR.value), max = parseInt(maxR.value);
+    if (min > max - 500) { minR.value = max - 500; return; }
+    const pct = v => (v / 50000) * 100;
+    range.style.left  = pct(min) + '%';
+    range.style.width = (pct(max) - pct(min)) + '%';
+    label.textContent = (min === 0 && max === 50000)
+      ? 'Tous'
+      : `${Number(min).toLocaleString('fr-DZ')} – ${max === 50000 ? '50 000+' : Number(max).toLocaleString('fr-DZ')} DZD`;
+  }
+  minR.addEventListener('input', () => { updateSlider(); loadListings(currentCat || 'all'); });
+  maxR.addEventListener('input', () => { updateSlider(); loadListings(currentCat || 'all'); });
+  updateSlider();
+}
+
+// ── NEWSLETTER ────────────────────────────────────────────
+async function submitNewsletter(e) {
+  e.preventDefault();
+  const email = document.getElementById('nl-email').value.trim();
+  const msg   = document.getElementById('nl-msg');
+  try {
+    const r = await apiFetch('/newsletter', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ email }) });
+    msg.textContent = '✅ Merci ! Vous êtes bien inscrit(e).';
+    document.getElementById('nl-email').value = '';
+  } catch(err) {
+    msg.textContent = '❌ ' + (err.message || 'Erreur. Réessayez.');
+  }
+}
+
 // ── SKELETON ──────────────────────────────────────────────
 function skeletonCards(n = 8) {
   return Array.from({length: n}, () => `
@@ -2349,9 +2493,73 @@ function skeletonCards(n = 8) {
 }
 
 // ── LISTINGS ──────────────────────────────────────────────
+const PAGE_SIZE = 12;
+let listingsPage = 1;
+let allFilteredListings = [];
+
+function renderListingsPage() {
+  const grid = document.getElementById('grid');
+  const visible = allFilteredListings.slice(0, listingsPage * PAGE_SIZE);
+  const nights = (() => {
+    const ci = document.getElementById('f-in')?.value, co = document.getElementById('f-out')?.value;
+    return (ci && co) ? Math.round((new Date(co) - new Date(ci)) / 86400000) : 0;
+  })();
+  const liked = likedLoad();
+  grid.innerHTML = visible.map(l => {
+    const nightLabel = nights > 1 ? t('card.nights_pl') : t('card.nights');
+    const totalPrice = nights > 0 ? `<div class="avail-badge">${t('card.avail')} · ${nights} ${nightLabel} · ${Number(l.price * nights).toLocaleString('fr-DZ')} DZD</div>` : '';
+    return `
+    <div class="card" data-id="${l.id}">
+      <div class="card-img">
+        <img src="${(l.photos && l.photos[0]) || l.image || ''}" alt="${l.title}" loading="lazy" onerror="this.src='https://images.unsplash.com/photo-1564013799919-ab600027ffc6?w=600&q=80'"/>
+        ${l.rating >= 4.9 ? '<div class="badge">Coup de cœur</div>' : ''}
+        <button class="wish ${liked.has(l.id)?'liked':''}" data-wid="${l.id}">${liked.has(l.id)?'❤':'♡'}</button>
+      </div>
+      <div class="card-body">
+        <div class="card-hd"><div class="card-title">${l.title}</div><div class="card-rating">⭐ ${l.rating||'—'} <span>(${l.reviews||0})</span></div></div>
+        <div class="card-sub">${l.location}</div>
+        <div class="card-price"><strong>${Number(l.price).toLocaleString('fr-DZ')} DZD</strong> <span class="night">${t('card.night')}</span></div>
+        ${(()=>{ const la = Array.isArray(l.amenities) ? l.amenities : []; const top = la.slice(0,4).map(a=>{ const d=AMENITIES_DEF.find(x=>x.id===a); return d?`<span class="card-amenity-icon" title="${d.label}">${d.icon}</span>`:''; }).join(''); return top?`<div class="card-amenities">${top}</div>`:''; })()}
+        ${totalPrice}
+      </div>
+    </div>`;
+  }).join('');
+
+  // Bouton "Voir plus"
+  let moreBtn = document.getElementById('load-more-btn');
+  if (visible.length < allFilteredListings.length) {
+    if (!moreBtn) {
+      moreBtn = document.createElement('button');
+      moreBtn.id = 'load-more-btn';
+      moreBtn.style.cssText = 'display:block;margin:24px auto 0;padding:12px 32px;background:var(--surface);border:2px solid var(--border);border-radius:12px;font-size:14px;font-weight:700;cursor:pointer;color:var(--text);transition:background .2s';
+      moreBtn.addEventListener('click', () => { listingsPage++; renderListingsPage(); });
+    }
+    moreBtn.textContent = `Voir plus (${allFilteredListings.length - visible.length} restants)`;
+    grid.after(moreBtn);
+  } else {
+    if (moreBtn) moreBtn.remove();
+  }
+
+  grid.querySelectorAll('.card').forEach(c => {
+    c.addEventListener('click', e => { if (!e.target.closest('.wish')) openListing(Number(c.dataset.id)); });
+  });
+  grid.querySelectorAll('.wish').forEach(btn => {
+    btn.addEventListener('click', e => {
+      e.stopPropagation();
+      const id = Number(btn.dataset.wid);
+      liked.has(id) ? liked.delete(id) : liked.add(id);
+      likedSave(liked);
+      btn.classList.toggle('liked', liked.has(id));
+      btn.textContent = liked.has(id) ? '❤' : '♡';
+      toast(liked.has(id) ? 'Ajouté aux favoris ❤' : 'Retiré des favoris');
+    });
+  });
+}
+
 async function loadListings(cat) {
   const grid = document.getElementById('grid');
   grid.innerHTML = skeletonCards(8);
+  listingsPage = 1;
   const checkIn  = document.getElementById('f-in')?.value  || '';
   const checkOut = document.getElementById('f-out')?.value || '';
   try {
@@ -2392,37 +2600,8 @@ function renderGrid(data, checkIn = '', checkOut = '') {
     grid.innerHTML = `<p style="color:var(--g400);padding:32px;text-align:center;line-height:1.8">${msg}</p>`;
     return;
   }
-  const nights = (checkIn && checkOut) ? Math.round((new Date(checkOut) - new Date(checkIn)) / 86400000) : 0;
-  grid.innerHTML = data.map(l => {
-    const nightLabel = nights > 1 ? t('card.nights_pl') : t('card.nights');
-    const totalPrice = nights > 0 ? `<div class="avail-badge">${t('card.avail')} · ${nights} ${nightLabel} · ${Number(l.price * nights).toLocaleString('fr-DZ')} DZD</div>` : '';
-    return `
-    <div class="card" data-id="${l.id}">
-      <div class="card-img">
-        <img src="${(l.photos && l.photos[0]) || l.image || ''}" alt="${l.title}" loading="lazy" onerror="this.src='https://images.unsplash.com/photo-1564013799919-ab600027ffc6?w=600&q=80'"/>
-        ${l.rating >= 4.9 ? '<div class="badge">Coup de cœur</div>' : ''}
-        <button class="wish ${liked.has(l.id)?'liked':''}" data-wid="${l.id}">${liked.has(l.id)?'❤':'♡'}</button>
-      </div>
-      <div class="card-body">
-        <div class="card-hd"><div class="card-title">${l.title}</div><div class="card-rating">⭐ ${l.rating||'—'} <span>(${l.reviews||0})</span></div></div>
-        <div class="card-sub">${l.location}</div>
-        <div class="card-price"><strong>${Number(l.price).toLocaleString('fr-DZ')} DZD</strong> <span class="night">${t('card.night')}</span></div>
-        ${(()=>{ const la = Array.isArray(l.amenities) ? l.amenities : []; const top = la.slice(0,4).map(a=>{ const d=AMENITIES_DEF.find(x=>x.id===a); return d?`<span class="card-amenity-icon" title="${d.label}">${d.icon}</span>`:''; }).join(''); return top?`<div class="card-amenities">${top}</div>`:''; })()}
-        ${totalPrice}
-      </div>
-    </div>`; }).join('');
-  grid.querySelectorAll('.card').forEach(c => {
-    c.addEventListener('click', e => { if (!e.target.closest('.wish')) openListing(Number(c.dataset.id)); });
-  });
-  grid.querySelectorAll('.wish').forEach(btn => {
-    btn.addEventListener('click', e => {
-      e.stopPropagation();
-      const id = Number(btn.dataset.wid);
-      if (liked.has(id)) { liked.delete(id); btn.textContent='♡'; btn.classList.remove('liked'); toast('Retiré des favoris'); }
-      else               { liked.add(id);    btn.textContent='❤'; btn.classList.add('liked');    toast('Ajouté aux favoris ❤'); }
-      likedSave(liked);
-    });
-  });
+  allFilteredListings = data;
+  renderListingsPage();
 }
 
 // ── LISTING DETAIL ─────────────────────────────────────────
@@ -4534,6 +4713,9 @@ document.addEventListener('DOMContentLoaded', function() {
   loadDestCounts();
   loadStats();
   initAutocomplete();
+  initDarkMode();
+  initCookieBanner();
+  initPriceSlider();
   renderRecentlyViewed();
   setInterval(checkUnread, 30000);
 
