@@ -112,6 +112,9 @@ CREATE TABLE IF NOT EXISTS signalements (
 );
 ALTER TABLE signalements ADD COLUMN IF NOT EXISTS status TEXT DEFAULT 'pending';
 
+-- Lot 6b : langues parlées par l'hôte
+ALTER TABLE users ADD COLUMN IF NOT EXISTS languages TEXT[] DEFAULT '{}';
+
 -- Lot 6 : équipements / commodités des logements
 ALTER TABLE listings ADD COLUMN IF NOT EXISTS amenities JSONB DEFAULT '[]';
 

@@ -4,13 +4,25 @@ const auth   = require('../middleware/auth');
 
 async function withHost(listing) {
   const host = await db.users.findOne(u => u.id === listing.host_id);
-  return { ...listing, host_name: host ? host.name : 'Inconnu', host_phone: host ? host.phone : null };
+  return {
+    ...listing,
+    host_name:      host ? host.name      : 'Inconnu',
+    host_phone:     host ? host.phone     : null,
+    host_languages: host ? (host.languages || []) : [],
+  };
 }
 
 // GET /api/listings
 router.get('/', async (req, res) => {
-  const { wilaya, category, guests, min_price, max_price, q, check_in, check_out, amenities, min_beds } = req.query;
+  const { wilaya, category, guests, min_price, max_price, q, check_in, check_out, amenities, min_beds, host_lang } = req.query;
   const wantedAmenities = amenities ? amenities.split(',').map(a => a.trim()).filter(Boolean) : [];
+
+  // Pre-load users for host_lang filter (avoids N+1)
+  let hostLangMap = null;
+  if (host_lang) {
+    const allUsers = await db.users.find();
+    hostLangMap = new Map(allUsers.map(u => [u.id, u.languages || []]));
+  }
 
   let unavailableIds = new Set();
   if (check_in && check_out && check_in < check_out) {
@@ -34,6 +46,10 @@ router.get('/', async (req, res) => {
     if (wantedAmenities.length) {
       const la = Array.isArray(l.amenities) ? l.amenities : (l.amenities ? JSON.parse(l.amenities) : []);
       if (!wantedAmenities.every(a => la.includes(a))) return false;
+    }
+    if (host_lang && hostLangMap) {
+      const langs = hostLangMap.get(l.host_id) || [];
+      if (!langs.includes(host_lang)) return false;
     }
     if (q) {
       const s = q.toLowerCase();

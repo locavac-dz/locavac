@@ -57,12 +57,13 @@ router.get('/me', require('../middleware/auth'), async (req, res) => {
 
 // PUT /api/auth/profile
 router.put('/profile', require('../middleware/auth'), async (req, res) => {
-  const { name, phone, bio, avatar } = req.body;
+  const { name, phone, bio, avatar, languages } = req.body;
   const changes = {};
-  if (name   !== undefined) changes.name   = name.trim();
-  if (phone  !== undefined) changes.phone  = phone.trim() || null;
-  if (bio    !== undefined) changes.bio    = bio.trim();
-  if (avatar !== undefined) changes.avatar = avatar.trim();
+  if (name      !== undefined) changes.name      = name.trim();
+  if (phone     !== undefined) changes.phone     = phone.trim() || null;
+  if (bio       !== undefined) changes.bio       = bio.trim();
+  if (avatar    !== undefined) changes.avatar    = avatar.trim();
+  if (Array.isArray(languages)) changes.languages = languages;
   if (!Object.keys(changes).length)
     return res.status(400).json({ error: 'Aucun champ à modifier.' });
   await db.users.update(u => u.id === req.user.id, changes);

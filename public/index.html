@@ -664,6 +664,19 @@ footer{background:var(--g100);border-top:1px solid var(--g200);padding:48px 24px
       <label>Chambres</label>
       <input type="number" id="f-beds" placeholder="Min" min="1" max="20"/>
     </div>
+    <div class="qf-group">
+      <label>Langue hôte</label>
+      <select id="f-host-lang">
+        <option value="">Toutes</option>
+        <option value="ar">🇩🇿 Arabe</option>
+        <option value="ber">🇩🇿 Tamazight</option>
+        <option value="fr">🇫🇷 Français</option>
+        <option value="en">🇬🇧 Anglais</option>
+        <option value="es">🇪🇸 Espagnol</option>
+        <option value="tr">🇹🇷 Turc</option>
+        <option value="it">🇮🇹 Italien</option>
+      </select>
+    </div>
     <button class="btn-clear-qf" id="btn-clear-qf" style="display:none">✕ Filtres</button>
   </div>
   <div class="amenity-filter-bar" id="amenity-filter-bar">
@@ -1013,6 +1026,11 @@ footer{background:var(--g100);border-top:1px solid var(--g200);padding:48px 24px
           <input type="file" id="prof-avatar-file" accept="image/*" style="display:none"/>
           <button class="btn-sm" id="prof-avatar-upload-btn" style="white-space:nowrap">📷 Fichier</button>
         </div>
+      </div>
+      <!-- Langues parlées -->
+      <div class="fg">
+        <label>Langues parlées</label>
+        <div class="amenity-checklist" id="prof-lang-list"></div>
       </div>
       <!-- Vérification identité -->
       <div style="background:var(--g50);border-radius:12px;padding:14px;margin-top:16px" id="prof-id-section">
@@ -1838,6 +1856,17 @@ function doLogout() {
   refreshAuthUI(); toast(t('toast.logout'));
 }
 
+// ── LANGUES HÔTE ───────────────────────────────────────────
+const LANG_DEF = [
+  { id:'ar',  flag:'🇩🇿', label:'Arabe' },
+  { id:'ber', flag:'🇩🇿', label:'Tamazight' },
+  { id:'fr',  flag:'🇫🇷', label:'Français' },
+  { id:'en',  flag:'🇬🇧', label:'Anglais' },
+  { id:'es',  flag:'🇪🇸', label:'Espagnol' },
+  { id:'tr',  flag:'🇹🇷', label:'Turc' },
+  { id:'it',  flag:'🇮🇹', label:'Italien' },
+];
+
 // ── ÉQUIPEMENTS ────────────────────────────────────────────
 const AMENITIES_DEF = [
   { id:'wifi',        icon:'📶', label:'Wifi' },
@@ -1927,6 +1956,8 @@ async function loadListings(cat) {
     if (fMaxPrice) params.set('max_price', fMaxPrice);
     if (fGuests)   params.set('guests',    fGuests);
     if (fBeds)     params.set('min_beds',  fBeds);
+    const fHostLang = document.getElementById('f-host-lang')?.value;
+    if (fHostLang) params.set('host_lang', fHostLang);
     const selAmenities = getSelectedAmenities();
     if (selAmenities.length) params.set('amenities', selAmenities.join(','));
     const qs = params.toString() ? '?' + params.toString() : '';
@@ -2020,6 +2051,12 @@ async function openListing(id) {
         return d ? `<div class="amenity-badge">${d.icon} ${d.label}</div>` : '';
       }).join('');
       return `<div class="amenities-section"><div class="amenities-section-title">Équipements</div><div class="amenities-grid">${badges}</div></div>`;
+    })()}
+    ${(()=>{
+      const ll = Array.isArray(l.host_languages) ? l.host_languages : [];
+      if (!ll.length) return '';
+      const flags = ll.map(id => { const d = LANG_DEF.find(x => x.id === id); return d ? `<div class="amenity-badge">${d.flag} ${d.label}</div>` : ''; }).join('');
+      return `<div class="amenities-section"><div class="amenities-section-title">Langues de l'hôte</div><div class="amenities-grid">${flags}</div></div>`;
     })()}`;
 
   // Dates : utiliser celles de la recherche si disponibles, sinon +1/+3 jours
@@ -2640,6 +2677,24 @@ async function openProfile() {
     (user.verified ? '<span class="verified-badge">✅ Vérifié</span>' : '');
   renderProfileAvatar(user);
   document.getElementById('prof-err').classList.remove('show');
+  // Langues parlées — initialiser la checklist et pré-cocher
+  const langList = document.getElementById('prof-lang-list');
+  if (langList && !langList.children.length) {
+    langList.innerHTML = LANG_DEF.map(l =>
+      `<label class="amenity-check-item">
+        <input type="checkbox" name="prof-lang" value="${l.id}"/>
+        <span>${l.flag} ${l.label}</span>
+      </label>`
+    ).join('');
+    langList.querySelectorAll('input[type=checkbox]').forEach(cb => {
+      cb.addEventListener('change', () => cb.closest('.amenity-check-item').classList.toggle('checked', cb.checked));
+    });
+  }
+  const userLangs = Array.isArray(user.languages) ? user.languages : [];
+  langList.querySelectorAll('input[type=checkbox]').forEach(cb => {
+    cb.checked = userLangs.includes(cb.value);
+    cb.closest('.amenity-check-item').classList.toggle('checked', cb.checked);
+  });
   // Badge vérification identité
   const badge = document.getElementById('prof-id-badge');
   if (user.id_verified) {
@@ -2664,8 +2719,9 @@ async function saveProfile() {
   const body = {
     name:   document.getElementById('prof-name').value.trim(),
     phone:  document.getElementById('prof-phone').value.trim(),
-    bio:    document.getElementById('prof-bio').value.trim(),
-    avatar: document.getElementById('prof-avatar-url').value.trim(),
+    bio:       document.getElementById('prof-bio').value.trim(),
+    avatar:    document.getElementById('prof-avatar-url').value.trim(),
+    languages: [...document.querySelectorAll('#prof-lang-list input[type=checkbox]:checked')].map(cb => cb.value),
   };
   const btn = document.getElementById('prof-save-btn');
   btn.disabled = true; btn.textContent = 'Enregistrement…';
@@ -3833,22 +3889,19 @@ document.addEventListener('DOMContentLoaded', function() {
   initAmenityUI();
 
   // Filtres rapides (wilaya, prix, voyageurs, chambres)
+  const QF_IDS = ['f-wilaya','f-min-price','f-max-price','f-guests','f-beds','f-host-lang'];
   function qfChanged() {
-    const hasVal = ['f-wilaya','f-min-price','f-max-price','f-guests','f-beds']
-      .some(id => { const el = document.getElementById(id); return el && el.value; });
+    const hasVal = QF_IDS.some(id => { const el = document.getElementById(id); return el && el.value; });
     const btn = document.getElementById('btn-clear-qf');
     if (btn) btn.style.display = hasVal ? 'inline-flex' : 'none';
     loadListings(currentCat);
   }
-  ['f-wilaya','f-min-price','f-max-price','f-guests','f-beds'].forEach(id => {
+  QF_IDS.forEach(id => {
     const el = document.getElementById(id);
     if (el) el.addEventListener('change', qfChanged);
   });
   document.getElementById('btn-clear-qf')?.addEventListener('click', () => {
-    ['f-wilaya','f-min-price','f-max-price','f-guests','f-beds'].forEach(id => {
-      const el = document.getElementById(id);
-      if (el) el.value = '';
-    });
+    QF_IDS.forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
     document.getElementById('btn-clear-qf').style.display = 'none';
     loadListings(currentCat);
   });
