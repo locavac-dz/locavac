@@ -426,6 +426,19 @@ footer{background:var(--g100);border-top:1px solid var(--g200);padding:48px 24px
 .btn-clear-dates{background:none;border:1.5px solid var(--g200);border-radius:8px;padding:6px 12px;font-size:12px;font-weight:600;cursor:pointer;color:var(--g600);transition:all .2s;white-space:nowrap}
 .btn-clear-dates:hover{border-color:var(--red);color:var(--red)}
 
+/* ── MODAL LÉGALE ── */
+.legal-modal-header{background:linear-gradient(135deg,var(--red),#c0392b);padding:28px 24px 24px;border-radius:20px 20px 0 0;display:flex;align-items:center;gap:16px;color:#fff}
+.legal-modal-icon{font-size:36px;flex-shrink:0}
+.legal-modal-header h2{color:#fff;margin:0;font-size:20px}
+.legal-modal-header .sub{color:rgba(255,255,255,.75);margin:0}
+.legal-body{font-size:14px;line-height:1.75;color:var(--g700)}
+.legal-body h3{font-size:14px;font-weight:700;color:var(--g900);margin:20px 0 6px;padding:8px 12px;background:var(--g50);border-left:3px solid var(--red);border-radius:0 8px 8px 0}
+.legal-body p{margin:0 0 12px;color:var(--g600)}
+.legal-body p:last-child{margin-bottom:0}
+.legal-body ul{padding-left:20px;margin:0 0 12px}
+.legal-body li{margin-bottom:4px;color:var(--g600)}
+.legal-body strong{color:var(--g800)}
+
 /* ── FILTRES RAPIDES (wilaya, prix, voyageurs, chambres) ── */
 .quick-filter-bar{display:flex;align-items:center;gap:8px;margin-bottom:12px;flex-wrap:wrap}
 .qf-group{display:flex;align-items:center;gap:6px;background:var(--g50);border:1.5px solid var(--g200);border-radius:10px;padding:6px 10px;font-size:12px;white-space:nowrap}
@@ -854,10 +867,18 @@ footer{background:var(--g100);border-top:1px solid var(--g200);padding:48px 24px
 
 <!-- MODAL LÉGALE -->
 <div class="overlay" id="ov-legal">
-  <div class="modal" style="max-width:740px;max-height:85vh;overflow-y:auto">
-    <button class="x-btn" id="x-legal">✕</button>
-    <h2 id="legal-title" style="margin-bottom:20px"></h2>
-    <div id="legal-body" style="font-size:14px;line-height:1.7;color:var(--g700)"></div>
+  <div class="modal wide">
+    <button class="modal-x" id="x-legal">✕</button>
+    <div class="legal-modal-header">
+      <div class="legal-modal-icon">📋</div>
+      <div>
+        <h2 id="legal-title"></h2>
+        <p class="sub" id="legal-subtitle" style="margin-bottom:0"></p>
+      </div>
+    </div>
+    <div class="mp" style="padding-top:0">
+      <div id="legal-body" class="legal-body"></div>
+    </div>
   </div>
 </div>
 
@@ -2199,25 +2220,25 @@ async function openResas() {
 const LEGAL_CONTENT = {
   cgu: {
     title: 'Conditions Générales d\'Utilisation',
+    subtitle: 'Dernière mise à jour : 30 août 2026',
     body: `
-      <p><strong>Dernière mise à jour : 30 août 2026</strong></p>
-      <h3 style="margin:16px 0 8px">1. Objet</h3>
+      <h3>1. Objet</h3>
       <p>Les présentes CGU régissent l'utilisation de la plateforme Locavac (ci-après « la Plateforme »), service de mise en relation entre hôtes proposant des hébergements de vacances et voyageurs souhaitant les louer, opérant en République Algérienne Démocratique et Populaire.</p>
-      <h3 style="margin:16px 0 8px">2. Acceptation</h3>
+      <h3>2. Acceptation</h3>
       <p>L'accès et l'utilisation de la Plateforme impliquent l'acceptation pleine et entière des présentes CGU. Tout utilisateur mineur doit disposer de l'autorisation de son représentant légal.</p>
-      <h3 style="margin:16px 0 8px">3. Inscription et compte</h3>
+      <h3>3. Inscription et compte</h3>
       <p>L'inscription est obligatoire pour réserver ou publier une annonce. L'utilisateur s'engage à fournir des informations exactes et à maintenir la confidentialité de ses identifiants. Locavac se réserve le droit de suspendre tout compte en cas d'utilisation frauduleuse.</p>
-      <h3 style="margin:16px 0 8px">4. Responsabilités de l'hôte</h3>
+      <h3>4. Responsabilités de l'hôte</h3>
       <p>L'hôte est seul responsable de la conformité de son hébergement aux lois et règlements algériens applicables, notamment la loi n° 11-02 relative aux aires protégées et les dispositions du Code du tourisme. L'hôte garantit l'exactitude des informations publiées.</p>
-      <h3 style="margin:16px 0 8px">5. Paiement et commission</h3>
+      <h3>5. Paiement et commission</h3>
       <p>Locavac perçoit une commission de <strong>10 %</strong> sur chaque réservation confirmée. Les modes de paiement acceptés sont : CIB, Edahabia, BaridiMob, virement bancaire et espèces à l'arrivée. Les paiements sont effectués en dinars algériens (DZD).</p>
-      <h3 style="margin:16px 0 8px">6. Politique d'annulation</h3>
+      <h3>6. Politique d'annulation</h3>
       <p>Trois politiques sont disponibles : <strong>Flexible</strong> (remboursement intégral si annulation plus de 24 h avant l'arrivée), <strong>Modérée</strong> (remboursement intégral > 5 j, 50 % entre 2 et 5 j) et <strong>Stricte</strong> (50 % si annulation > 7 j, aucun remboursement ensuite). La politique applicable est indiquée sur chaque annonce.</p>
-      <h3 style="margin:16px 0 8px">7. Contenu interdit</h3>
+      <h3>7. Contenu interdit</h3>
       <p>Sont strictement interdits : les annonces discriminatoires, les contenus à caractère pornographique, les logements non conformes aux standards de sécurité, et tout usage contraire à l'ordre public algérien.</p>
-      <h3 style="margin:16px 0 8px">8. Résolution des litiges</h3>
+      <h3>8. Résolution des litiges</h3>
       <p>En cas de litige, les parties s'engagent à rechercher une solution amiable. À défaut, les tribunaux algériens compétents selon le lieu du siège social de Locavac seront saisis.</p>
-      <h3 style="margin:16px 0 8px">9. Modification des CGU</h3>
+      <h3>9. Modification des CGU</h3>
       <p>Locavac se réserve le droit de modifier les présentes CGU à tout moment. Les utilisateurs seront informés par email au moins 15 jours avant l'entrée en vigueur des modifications.</p>
     `,
   },
@@ -2225,9 +2246,9 @@ const LEGAL_CONTENT = {
     title: 'Politique de Confidentialité',
     body: `
       <p><strong>Dernière mise à jour : 30 août 2026</strong></p>
-      <h3 style="margin:16px 0 8px">1. Responsable du traitement</h3>
+      <h3>1. Responsable du traitement</h3>
       <p>Locavac, plateforme de location de vacances en Algérie. Contact DPO : <a href="mailto:privacy@locavac.dz">privacy@locavac.dz</a></p>
-      <h3 style="margin:16px 0 8px">2. Données collectées</h3>
+      <h3>2. Données collectées</h3>
       <ul style="margin:8px 0 8px 20px">
         <li>Données d'identification : nom, prénom, email, téléphone</li>
         <li>CNI algérienne pour la vérification automatique des hôtes</li>
@@ -2235,28 +2256,28 @@ const LEGAL_CONTENT = {
         <li>Données de navigation : adresse IP, cookies de session</li>
         <li>Contenu généré : annonces, messages, avis</li>
       </ul>
-      <h3 style="margin:16px 0 8px">3. Finalités du traitement</h3>
+      <h3>3. Finalités du traitement</h3>
       <p>Les données sont traitées pour : exécuter le service de réservation, vérifier l'identité des hôtes, envoyer des notifications transactionnelles, améliorer la Plateforme et se conformer aux obligations légales algériennes.</p>
-      <h3 style="margin:16px 0 8px">4. Base légale</h3>
+      <h3>4. Base légale</h3>
       <p>Le traitement de vos données repose sur deux cadres juridiques cumulatifs :</p>
       <ul style="margin:8px 0 8px 20px">
         <li><strong>Loi algérienne n° 18-07</strong> du 10 juin 2018 relative à la protection des données à caractère personnel (ANPDP)</li>
         <li><strong>RGPD</strong> (Règlement UE 2016/679) — applicable car le serveur est hébergé en <strong>France</strong>, territoire de l'Union Européenne</li>
       </ul>
       <p>La base légale du traitement est l'exécution du contrat (réservation) ou le consentement explicite de l'utilisateur.</p>
-      <h3 style="margin:16px 0 8px">5. Hébergement et transfert de données</h3>
+      <h3>5. Hébergement et transfert de données</h3>
       <p>Vos données sont stockées sur un serveur situé en <strong>France</strong>. Conformément à l'article 46 du RGPD, ce transfert depuis l'Algérie vers la France (pays adéquat au sein de l'UE) bénéficie d'un niveau de protection suffisant. Aucune donnée n'est transférée hors de l'UE sans garanties appropriées.</p>
-      <h3 style="margin:16px 0 8px">7. Conservation des données</h3>
+      <h3>7. Conservation des données</h3>
       <p>Les données de compte sont conservées pendant la durée d'activité du compte, puis 3 ans après la dernière connexion. Les données de transaction sont conservées 10 ans à des fins comptables et fiscales.</p>
-      <h3 style="margin:16px 0 8px">8. Vos droits</h3>
+      <h3>8. Vos droits</h3>
       <p>Conformément au RGPD et à la loi 18-07, vous disposez des droits d'accès, de rectification, d'effacement, de portabilité et d'opposition. Pour les exercer : <a href="mailto:privacy@locavac.dz">privacy@locavac.dz</a>. En cas de réclamation, vous pouvez saisir :</p>
       <ul style="margin:6px 0 6px 20px">
         <li><strong>ANPDP</strong> — Autorité Nationale de Protection des Données à Caractère Personnel (Algérie)</li>
         <li><strong>CNIL</strong> — Commission Nationale de l'Informatique et des Libertés (France), compétente pour les données hébergées sur le territoire français</li>
       </ul>
-      <h3 style="margin:16px 0 8px">9. Cookies</h3>
+      <h3>9. Cookies</h3>
       <p>La Plateforme utilise uniquement des cookies strictement nécessaires au fonctionnement (session JWT). Aucun cookie publicitaire ou de pistage tiers n'est utilisé.</p>
-      <h3 style="margin:16px 0 8px">10. Sécurité</h3>
+      <h3>10. Sécurité</h3>
       <p>Les données sont chiffrées en transit (HTTPS/TLS) et au repos. Les mots de passe sont hashés avec bcrypt. Les documents d'identité sont stockés dans un répertoire protégé, inaccessible publiquement.</p>
     `,
   },
@@ -2269,19 +2290,19 @@ const LEGAL_CONTENT = {
       Siège social : Alger, Algérie<br>
       Email : <a href="mailto:contact@locavac.dz">contact@locavac.dz</a></p>
 
-      <h3 style="margin:16px 0 8px">Hébergement</h3>
+      <h3>Hébergement</h3>
       <p>La Plateforme est hébergée sur un serveur VPS localisé en <strong>France</strong> (Union Européenne). En tant qu'hébergeur européen, les données sont soumises au Règlement Général sur la Protection des Données (RGPD — Règlement UE 2016/679) en sus de la loi algérienne n° 18-07 du 10 juin 2018.</p>
 
-      <h3 style="margin:16px 0 8px">Propriété intellectuelle</h3>
+      <h3>Propriété intellectuelle</h3>
       <p>L'ensemble des éléments de la Plateforme (logo, design, textes, code source) sont la propriété exclusive de Locavac et sont protégés par les dispositions du droit algérien relatif à la propriété intellectuelle (ordonnance n° 03-05 du 19 juillet 2003).</p>
 
-      <h3 style="margin:16px 0 8px">Limitation de responsabilité</h3>
+      <h3>Limitation de responsabilité</h3>
       <p>Locavac agit en qualité d'intermédiaire technique entre hôtes et voyageurs. La Plateforme ne peut être tenue responsable des dommages résultant de l'utilisation des hébergements proposés par les hôtes indépendants.</p>
 
-      <h3 style="margin:16px 0 8px">Droit applicable</h3>
+      <h3>Droit applicable</h3>
       <p>Les présentes mentions légales sont soumises au droit algérien. Tout litige relève de la compétence exclusive des tribunaux algériens.</p>
 
-      <h3 style="margin:16px 0 8px">Contact</h3>
+      <h3>Contact</h3>
       <p>Pour toute question : <a href="mailto:contact@locavac.dz">contact@locavac.dz</a></p>
     `,
   },
@@ -2338,8 +2359,9 @@ const LEGAL_CONTENT = {
 function openLegal(page) {
   const c = LEGAL_CONTENT[page];
   if (!c) return;
-  document.getElementById('legal-title').textContent = c.title;
-  document.getElementById('legal-body').innerHTML    = c.body;
+  document.getElementById('legal-title').textContent    = c.title;
+  document.getElementById('legal-subtitle').textContent = c.subtitle || '';
+  document.getElementById('legal-body').innerHTML       = c.body;
   openOverlay('ov-legal');
 }
 
