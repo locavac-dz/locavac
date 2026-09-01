@@ -33,9 +33,9 @@ async function sendMail({ to, subject, html }) {
 function wrap(content) {
   return `<!DOCTYPE html><html><body style="font-family:Arial,sans-serif;background:#f9f9f9;padding:0;margin:0">
 <div style="max-width:560px;margin:32px auto;background:#fff;border-radius:16px;overflow:hidden;box-shadow:0 2px 16px rgba(0,0,0,.1)">
-  <div style="background:#E8261A;padding:24px 32px;color:#fff">
-    <h1 style="margin:0;font-size:22px">⌂ Locavac</h1>
-    <p style="margin:4px 0 0;opacity:.85;font-size:13px">Location de vacances en Algérie</p>
+  <div style="background:#E8261A;padding:24px 32px;color:#fff;display:flex;align-items:center;gap:10px">
+    <span style="font-size:26px;font-weight:900;letter-spacing:-1px;font-family:Georgia,serif">loca</span><span style="display:inline-block;width:8px;height:8px;background:#fff;border-radius:50%;margin:0 1px 6px;flex-shrink:0"></span><span style="font-size:26px;font-weight:300;letter-spacing:-1px;font-family:Georgia,serif">vac</span>
+    <span style="margin-left:10px;font-size:12px;opacity:.8;font-weight:400">Location de vacances en Algérie</span>
   </div>
   <div style="padding:28px 32px">${content}</div>
   <div style="background:#f1f1f1;padding:16px 32px;font-size:12px;color:#999;text-align:center">
@@ -164,4 +164,59 @@ function mailVirementToHost({ hostName, hostEmail, guestName, listingTitle, amou
   });
 }
 
-module.exports = { sendMail, mailReservationCreated, mailReservationConfirmed, mailReservationCancelled, mailNewMessage, mailNewReservationToHost, mailPaymentConfirmedToGuest, mailVirementToHost };
+function mailWelcome({ name, email }) {
+  return sendMail({
+    to: email, subject: '🏡 Bienvenue sur Locavac !',
+    html: wrap(`
+      <h2 style="color:#222;margin-top:0">Bienvenue, ${name} ! 🎉</h2>
+      <p>Votre compte Locavac est prêt. Vous pouvez dès maintenant :</p>
+      <ul style="line-height:2;color:#444">
+        <li>🔍 Rechercher un logement parmi toutes les wilayas d'Algérie</li>
+        <li>📅 Réserver et payer en ligne en toute sécurité</li>
+        <li>🏠 Proposer votre propre logement à la location</li>
+      </ul>
+      <a href="https://locavac.dz" style="display:inline-block;background:#E8261A;color:#fff;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:700;margin-top:8px">Découvrir les logements →</a>
+      <p style="margin-top:20px;font-size:13px;color:#999">Besoin d'aide ? Contactez-nous à <a href="mailto:support@locavac.dz" style="color:#E8261A">support@locavac.dz</a></p>
+    `),
+  });
+}
+
+function mailCheckInReminder({ guestName, guestEmail, listingTitle, checkIn, hostName, hostPhone }) {
+  return sendMail({
+    to: guestEmail, subject: `📅 Rappel : arrivée demain — ${listingTitle}`,
+    html: wrap(`
+      <h2 style="color:#222;margin-top:0">Votre arrivée est demain ! 🏡</h2>
+      <p>Bonjour <strong>${guestName}</strong>,</p>
+      <p>Rappel : vous arrivez demain à <strong>${listingTitle}</strong>.</p>
+      <div style="background:#eff6ff;border-radius:10px;padding:16px;margin:20px 0">
+        <p style="margin:4px 0"><strong>📅 Arrivée :</strong> ${checkIn}</p>
+        <p style="margin:4px 0"><strong>👤 Hôte :</strong> ${hostName}</p>
+        ${hostPhone ? `<p style="margin:4px 0"><strong>📞 Contact hôte :</strong> ${hostPhone}</p>` : ''}
+      </div>
+      <p style="font-size:13px;color:#666">Pensez à confirmer votre heure d'arrivée avec l'hôte via la messagerie Locavac.</p>
+      <a href="https://locavac.dz" style="display:inline-block;background:#E8261A;color:#fff;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:700">Ouvrir la messagerie →</a>
+    `),
+  });
+}
+
+function mailReviewReminder({ guestName, guestEmail, listingTitle, listingId }) {
+  return sendMail({
+    to: guestEmail, subject: `⭐ Votre avis sur ${listingTitle}`,
+    html: wrap(`
+      <h2 style="color:#222;margin-top:0">Comment s'est passé votre séjour ?</h2>
+      <p>Bonjour <strong>${guestName}</strong>,</p>
+      <p>Votre séjour à <strong>${listingTitle}</strong> est maintenant terminé. Votre avis aide les autres voyageurs à choisir leur logement.</p>
+      <div style="text-align:center;margin:24px 0;font-size:32px">⭐ ⭐ ⭐ ⭐ ⭐</div>
+      <a href="https://locavac.dz" style="display:inline-block;background:#E8261A;color:#fff;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:700">Laisser un avis →</a>
+      <p style="margin-top:16px;font-size:12px;color:#999">Vous avez 30 jours pour déposer votre avis.</p>
+    `),
+  });
+}
+
+module.exports = {
+  sendMail,
+  mailReservationCreated, mailReservationConfirmed, mailReservationCancelled,
+  mailNewMessage, mailNewReservationToHost,
+  mailPaymentConfirmedToGuest, mailVirementToHost,
+  mailWelcome, mailCheckInReminder, mailReviewReminder,
+};

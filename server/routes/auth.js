@@ -2,6 +2,7 @@ const router = require('express').Router();
 const bcrypt = require('bcryptjs');
 const jwt    = require('jsonwebtoken');
 const db     = require('../db');
+const mailer = require('../mailer');
 
 function sign(user) {
   return jwt.sign(
@@ -32,6 +33,7 @@ router.post('/register', async (req, res) => {
     name, email, password: await bcrypt.hash(password, 10),
     phone: phone || null, is_host: false,
   });
+  mailer.mailWelcome({ name: user.name, email: user.email });
   res.status(201).json({ token: sign(user), user: safe(user) });
 });
 

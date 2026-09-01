@@ -118,6 +118,10 @@ ALTER TABLE users ADD COLUMN IF NOT EXISTS languages TEXT[] DEFAULT '{}';
 -- Lot 6 : équipements / commodités des logements
 ALTER TABLE listings ADD COLUMN IF NOT EXISTS amenities JSONB DEFAULT '[]';
 
+-- Emails transactionnels : flags anti-doublon pour les crons
+ALTER TABLE reservations ADD COLUMN IF NOT EXISTS checkin_reminded BOOLEAN DEFAULT false;
+ALTER TABLE reservations ADD COLUMN IF NOT EXISTS review_reminded  BOOLEAN DEFAULT false;
+
 -- Lot 5 : pages publicitaires établissements (hôtels / campings / complexes)
 CREATE TABLE IF NOT EXISTS publicites (
   id              SERIAL PRIMARY KEY,

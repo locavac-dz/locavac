@@ -68,6 +68,7 @@ db.connect()
       console.log(`\n🚀 Locavac démarré sur http://localhost:${PORT}`);
       console.log(`   API disponible sur http://localhost:${PORT}/api\n`);
       require('./agent').start();
+      require('./cron');
     });
   })
   .catch(err => {
