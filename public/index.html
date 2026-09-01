@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="fr" dir="ltr">
 <head>
 <meta charset="UTF-8"/>
@@ -224,13 +224,6 @@ header{position:sticky;top:0;z-index:200;background:#fff;border-bottom:1px solid
 .cookie-refuse{background:none;border:1.5px solid var(--border);color:var(--text2);padding:8px 18px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer}
 
 /* ── PRICE SLIDER ── */
-.price-slider-wrap{position:relative;height:28px;margin:8px 4px 4px}
-.price-slider-wrap input[type=range]{position:absolute;width:100%;height:4px;appearance:none;-webkit-appearance:none;background:transparent;pointer-events:none;top:50%;transform:translateY(-50%)}
-.price-slider-wrap input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;height:18px;border-radius:50%;background:var(--red);border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.25);pointer-events:auto;cursor:pointer}
-.price-slider-wrap input[type=range]::-moz-range-thumb{width:18px;height:18px;border-radius:50%;background:var(--red);border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.25);pointer-events:auto;cursor:pointer;border:none}
-.price-slider-track{position:absolute;height:4px;background:var(--g200);border-radius:2px;top:50%;transform:translateY(-50%);left:0;right:0}
-.price-slider-range{position:absolute;height:4px;background:var(--red);border-radius:2px;top:50%;transform:translateY(-50%)}
-.price-labels{display:flex;justify-content:space-between;font-size:12px;color:var(--text2);margin-top:4px}
 
 /* ── LIGHTBOX ── */
 #lightbox{position:fixed;inset:0;z-index:10000;background:rgba(0,0,0,.96);display:none;flex-direction:column;align-items:center;justify-content:center}
@@ -306,8 +299,9 @@ header{position:sticky;top:0;z-index:200;background:#fff;border-bottom:1px solid
 .etab-carousel{display:flex;overflow-x:auto;gap:20px;padding-bottom:12px;scroll-snap-type:x mandatory;scrollbar-width:none;-ms-overflow-style:none;margin-bottom:48px}
 .etab-carousel::-webkit-scrollbar{display:none}
 .etab-carousel .pub-card{flex:0 0 320px;scroll-snap-align:start}
-.etab-carousel .pub-card.vedette-card{flex:0 0 680px;grid-column:unset}
-.etab-carousel .pub-card.vedette-card .pub-card-img{width:300px;min-width:300px;height:220px}
+.etab-carousel .pub-card.vedette-card{flex:0 0 calc(50% - 10px);min-width:480px;grid-column:unset}
+.etab-carousel .pub-card.vedette-card .pub-card-img{width:260px;min-width:260px;height:220px;flex-shrink:0}
+.etab-carousel .pub-card.vedette-card .pub-card-body{width:0;flex:1;min-width:0;overflow:hidden;padding:20px 20px}
 @media(max-width:600px){
   .etab-carousel .pub-card{flex:0 0 280px}
   .etab-carousel .pub-card.vedette-card{flex:0 0 300px;flex-direction:column}
@@ -810,6 +804,7 @@ footer{background:var(--g100);border-top:1px solid var(--g200);padding:48px 24px
 }
 /* ── ÉTABLISSEMENTS / PUBLICITÉS ── */
 .pub-overlay-inner{width:100%;max-width:1100px;max-height:90vh;overflow-y:auto;background:#fff;border-radius:24px;padding:32px;position:relative}
+@media(max-width:768px){.pub-overlay-inner{padding:20px 16px;border-radius:20px 20px 0 0}}
 .pub-header{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:24px;flex-wrap:wrap}
 .pub-header-text h2{font-size:24px;font-weight:700;margin:0 0 4px}
 .pub-header-text p{color:var(--g600);font-size:14px;margin:0}
@@ -838,8 +833,9 @@ footer{background:var(--g100);border-top:1px solid var(--g200);padding:48px 24px
 .pub-stars{color:#f59e0b;font-size:13px;letter-spacing:1px}
 .pub-card-nom{font-size:16px;font-weight:700;margin-bottom:3px;line-height:1.3}
 .pub-card-loc{font-size:13px;color:var(--g600);margin-bottom:8px}
-.pub-card-desc{font-size:13px;color:var(--g600);line-height:1.55;margin-bottom:12px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
-.pub-card-actions{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.pub-card-desc{font-size:13px;color:var(--g600);line-height:1.55;margin-bottom:12px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;word-break:break-word;overflow-wrap:break-word}
+.pub-card-actions{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:auto;padding-top:12px}
+.pub-btn-call{min-width:0;flex-shrink:1}
 .pub-btn{display:inline-flex;align-items:center;gap:4px;padding:7px 12px;border-radius:8px;font-size:12px;font-weight:600;text-decoration:none;border:1.5px solid var(--g200);color:var(--g800);transition:all .2s;white-space:nowrap}
 .pub-btn:hover{border-color:var(--g800);background:var(--g50)}
 .pub-btn-call{display:inline-flex;align-items:center;gap:6px;padding:9px 16px;border-radius:10px;font-size:13px;font-weight:700;text-decoration:none;background:var(--red);color:#fff;border:none;white-space:nowrap;transition:background .2s}
@@ -847,17 +843,18 @@ footer{background:var(--g100);border-top:1px solid var(--g200);padding:48px 24px
 /* ── Carte VEDETTE — pleine largeur horizontale ── */
 .pub-card.vedette-card{grid-column:1/-1;display:flex;border:2px solid #f59e0b;background:linear-gradient(135deg,#fffbeb 0%,#fff 60%)}
 .pub-card.vedette-card .pub-card-img{width:360px;min-width:360px;height:240px;flex-shrink:0}
-.pub-card.vedette-card .pub-card-body{flex:1;padding:24px 28px;display:flex;flex-direction:column;justify-content:space-between}
+.pub-card.vedette-card .pub-card-body{flex:1;min-width:0;overflow:hidden;padding:24px 28px;display:flex;flex-direction:column;justify-content:space-between}
 .pub-card.vedette-card .pub-card-nom{font-size:20px;margin-bottom:4px}
-.pub-card.vedette-card .pub-card-desc{-webkit-line-clamp:3}
+.pub-card.vedette-card .pub-card-desc{-webkit-line-clamp:5;font-size:14px}
 /* ── Carte PREMIUM — photo plus haute, bordure violette ── */
 .pub-card.premium-card{border:2px solid #a855f7}
 .pub-card.premium-card .pub-card-img{height:210px}
-/* Mobile : VEDETTE redevient verticale */
-@media(max-width:640px){
+/* VEDETTE : passe en vertical dès que le corps de texte serait trop étroit */
+@media(max-width:960px){
   .pub-card.vedette-card{flex-direction:column}
-  .pub-card.vedette-card .pub-card-img{width:100%;min-width:0;height:200px}
-  .pub-card.vedette-card .pub-card-body{padding:16px}
+  .pub-card.vedette-card .pub-card-img{width:100%;min-width:0;height:220px;flex-shrink:0}
+  .pub-card.vedette-card .pub-card-body{padding:18px 20px}
+  .pub-card.vedette-card .pub-card-nom{font-size:17px}
 }
 .pub-pricing{background:linear-gradient(135deg,#f8fafc,#f1f5f9);border-radius:20px;padding:32px;margin-top:8px}
 .pub-pricing h3{font-size:19px;font-weight:700;margin:0 0 6px}
@@ -1032,34 +1029,39 @@ footer{background:var(--g100);border-top:1px solid var(--g200);padding:48px 24px
         <option>Adrar</option><option>Chlef</option><option>Laghouat</option><option>Oum El Bouaghi</option><option>Batna</option><option>Béjaïa</option><option>Biskra</option><option>Béchar</option><option>Blida</option><option>Bouira</option><option>Tamanrasset</option><option>Tébessa</option><option>Tlemcen</option><option>Tiaret</option><option>Tizi Ouzou</option><option>Alger</option><option>Djelfa</option><option>Jijel</option><option>Sétif</option><option>Saïda</option><option>Skikda</option><option>Sidi Bel Abbès</option><option>Annaba</option><option>Guelma</option><option>Constantine</option><option>Médéa</option><option>Mostaganem</option><option>M'Sila</option><option>Mascara</option><option>Ouargla</option><option>Oran</option><option>El Bayadh</option><option>Illizi</option><option>Bordj Bou Arréridj</option><option>Boumerdès</option><option>El Tarf</option><option>Tindouf</option><option>Tissemsilt</option><option>El Oued</option><option>Khenchela</option><option>Souk Ahras</option><option>Tipaza</option><option>Mila</option><option>Aïn Defla</option><option>Naâma</option><option>Aïn Témouchent</option><option>Ghardaïa</option><option>Relizane</option><option>Timimoun</option><option>Bordj Badji Mokhtar</option><option>Ouled Djellal</option><option>Béni Abbès</option><option>In Salah</option><option>In Guezzam</option><option>Touggourt</option><option>Djanet</option><option>El M'Ghair</option><option>El Meniaa</option>
       </select>
     </div>
-    <div class="qf-group" style="min-width:180px">
-      <label>Prix (DZD) — <span id="price-label">Tous</span></label>
-      <div class="price-slider-wrap">
-        <div class="price-slider-track"></div>
-        <div class="price-slider-range" id="price-slider-range"></div>
-        <input type="range" id="f-min-price" min="0" max="50000" step="500" value="0"/>
-        <input type="range" id="f-max-price" min="0" max="50000" step="500" value="50000"/>
-      </div>
+    <div class="qf-group">
+      <label>Prix (DZD)</label>
+      <select id="f-price">
+        <option value="">Tous les prix</option>
+        <option value="0-5000">Moins de 5 000</option>
+        <option value="5000-10000">5 000 – 10 000</option>
+        <option value="10000-20000">10 000 – 20 000</option>
+        <option value="20000-35000">20 000 – 35 000</option>
+        <option value="35000-50000">35 000 – 50 000</option>
+        <option value="50000-999999">Plus de 50 000</option>
+      </select>
     </div>
     <div class="qf-group">
       <label>Voyageurs</label>
-      <input type="number" id="f-guests" placeholder="Min" min="1" max="30"/>
+      <select id="f-guests">
+        <option value="">Tous</option>
+        <option value="1">1</option>
+        <option value="2">2</option>
+        <option value="3">3</option>
+        <option value="4">4</option>
+        <option value="5">5</option>
+        <option value="6">6+</option>
+      </select>
     </div>
     <div class="qf-group">
       <label>Chambres</label>
-      <input type="number" id="f-beds" placeholder="Min" min="1" max="20"/>
-    </div>
-    <div class="qf-group">
-      <label>Langue hôte</label>
-      <select id="f-host-lang">
+      <select id="f-beds">
         <option value="">Toutes</option>
-        <option value="ar">🇩🇿 Arabe</option>
-        <option value="ber">🇩🇿 Tamazight</option>
-        <option value="fr">🇫🇷 Français</option>
-        <option value="en">🇬🇧 Anglais</option>
-        <option value="es">🇪🇸 Espagnol</option>
-        <option value="tr">🇹🇷 Turc</option>
-        <option value="it">🇮🇹 Italien</option>
+        <option value="1">1</option>
+        <option value="2">2</option>
+        <option value="3">3</option>
+        <option value="4">4</option>
+        <option value="5">5+</option>
       </select>
     </div>
     <button class="btn-clear-qf" id="btn-clear-qf" style="display:none">✕ Filtres</button>
@@ -1195,7 +1197,7 @@ footer{background:var(--g100);border-top:1px solid var(--g200);padding:48px 24px
     <div class="footer-col"><h4>Légal</h4><a href="#" onclick="openLegal('cgu');return false">CGU</a><a href="#" onclick="openLegal('privacy');return false">Confidentialité</a><a href="#" onclick="openLegal('mentions');return false">Mentions légales</a></div>
   </div>
   <div class="footer-bottom">
-    <span>© 2026 Locavac · Plateforme de location de vacances en Algérie 🇩🇿</span>
+    <span>© 2026 Locavac — marque d'Ingénica Civil · RC N° 22/00-0025204B26 · Capital 50 000 DA 🇩🇿</span>
     <span style="font-size:12px">
       <a href="#" onclick="openLegal('cgu');return false" style="color:var(--g500);text-decoration:none;margin-right:12px">CGU</a>
       <a href="#" onclick="openLegal('privacy');return false" style="color:var(--g500);text-decoration:none;margin-right:12px">Confidentialité</a>
@@ -1595,11 +1597,7 @@ footer{background:var(--g100);border-top:1px solid var(--g200);padding:48px 24px
           <button class="btn-sm" id="prof-avatar-upload-btn" style="white-space:nowrap">📷 Fichier</button>
         </div>
       </div>
-      <!-- Langues parlées -->
-      <div class="fg">
-        <label>Langues parlées</label>
-        <div class="amenity-checklist" id="prof-lang-list"></div>
-      </div>
+      <div class="amenity-checklist" id="prof-lang-list" style="display:none"></div>
       <!-- Vérification identité -->
       <div style="background:var(--g50);border-radius:12px;padding:14px;margin-top:16px" id="prof-id-section">
         <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
@@ -3020,26 +3018,11 @@ function refuseCookies() {
   document.getElementById('scroll-top').style.bottom = '88px';
 }
 
-// ── PRICE SLIDER ──────────────────────────────────────────
+// ── PRICE SELECT ──────────────────────────────────────────
 function initPriceSlider() {
-  const minR = document.getElementById('f-min-price');
-  const maxR = document.getElementById('f-max-price');
-  const range = document.getElementById('price-slider-range');
-  const label = document.getElementById('price-label');
-  if (!minR || !maxR) return;
-  function updateSlider() {
-    const min = parseInt(minR.value), max = parseInt(maxR.value);
-    if (min > max - 500) { minR.value = max - 500; return; }
-    const pct = v => (v / 50000) * 100;
-    range.style.left  = pct(min) + '%';
-    range.style.width = (pct(max) - pct(min)) + '%';
-    label.textContent = (min === 0 && max === 50000)
-      ? 'Tous'
-      : `${Number(min).toLocaleString('fr-DZ')} – ${max === 50000 ? '50 000+' : Number(max).toLocaleString('fr-DZ')} DZD`;
-  }
-  minR.addEventListener('input', () => { updateSlider(); loadListings(currentCat || 'all'); });
-  maxR.addEventListener('input', () => { updateSlider(); loadListings(currentCat || 'all'); });
-  updateSlider();
+  const sel = document.getElementById('f-price');
+  if (!sel) return;
+  sel.addEventListener('change', () => loadListings(currentCat || 'all'));
 }
 
 // ── NEWSLETTER ────────────────────────────────────────────
@@ -3068,7 +3051,7 @@ function skeletonCards(n = 8) {
 }
 
 // ── LISTINGS ──────────────────────────────────────────────
-const PAGE_SIZE = 12;
+const PAGE_SIZE = 16;
 let listingsPage = 1;
 let allFilteredListings = [];
 
@@ -3152,19 +3135,14 @@ async function loadListings(cat) {
     const params = new URLSearchParams();
     if (cat && cat !== 'all') params.set('category', cat);
     if (checkIn)  params.set('check_in',  checkIn);
-    if (checkOut) params.set('check_out', checkOut);
-    const fWilaya   = document.getElementById('f-wilaya')?.value;
-    const fMinPrice = document.getElementById('f-min-price')?.value;
-    const fMaxPrice = document.getElementById('f-max-price')?.value;
-    const fGuests   = document.getElementById('f-guests')?.value;
-    const fBeds     = document.getElementById('f-beds')?.value;
-    if (fWilaya)   params.set('wilaya',    fWilaya);
-    if (fMinPrice) params.set('min_price', fMinPrice);
-    if (fMaxPrice) params.set('max_price', fMaxPrice);
-    if (fGuests)   params.set('guests',    fGuests);
-    if (fBeds)     params.set('min_beds',  fBeds);
-    const fHostLang = document.getElementById('f-host-lang')?.value;
-    if (fHostLang) params.set('host_lang', fHostLang);
+    if (checkOut) params.set('check_out', checkOut);     const fWilaya = document.getElementById('f-wilaya')?.value;
+     const fPrice  = document.getElementById('f-price')?.value;
+     const fGuests = document.getElementById('f-guests')?.value;
+     const fBeds   = document.getElementById('f-beds')?.value;
+     if (fWilaya) params.set('wilaya', fWilaya);
+     if (fPrice) { const [pMin,pMax]=fPrice.split('-'); params.set('min_price',pMin); params.set('max_price',pMax); }
+     if (fGuests) params.set('guests', fGuests);
+     if (fBeds)   params.set('min_beds', fBeds);
     const selAmenities = getSelectedAmenities();
     if (selAmenities.length) params.set('amenities', selAmenities.join(','));
     const qs = params.toString() ? '?' + params.toString() : '';
@@ -3231,12 +3209,7 @@ async function openListing(id) {
       }).join('');
       return `<div class="amenities-section"><div class="amenities-section-title">Équipements</div><div class="amenities-grid">${badges}</div></div>`;
     })()}
-    ${(()=>{
-      const ll = Array.isArray(l.host_languages) ? l.host_languages : [];
-      if (!ll.length) return '';
-      const flags = ll.map(id => { const d = LANG_DEF.find(x => x.id === id); return d ? `<div class="amenity-badge">${d.flag} ${d.label}</div>` : ''; }).join('');
-      return `<div class="amenities-section"><div class="amenities-section-title">Langues de l'hôte</div><div class="amenities-grid">${flags}</div></div>`;
-    })()}`;
+    `;
 
   // Dates : utiliser celles de la recherche si disponibles, sinon +1/+3 jours
   const filterIn  = document.getElementById('f-in')?.value;
@@ -3395,139 +3368,275 @@ async function openResas() {
 // ── PAGES LÉGALES ────────────────────────────────────────
 const LEGAL_CONTENT = {
   cgu: {
-    title: 'Conditions Générales d\'Utilisation',
-    subtitle: 'Dernière mise à jour : 30 août 2026',
+    title: 'CGU — الشروط العامة للاستخدام',
+    subtitle: 'Dernière mise à jour : 30 août 2026 — آخر تحديث: 30 أغسطس 2026',
     body: `
-      <h3>1. Objet</h3>
-      <p>Les présentes CGU régissent l'utilisation de la plateforme Locavac (ci-après « la Plateforme »), service de mise en relation entre hôtes proposant des hébergements de vacances et voyageurs souhaitant les louer, opérant en République Algérienne Démocratique et Populaire.</p>
-      <h3>2. Acceptation</h3>
-      <p>L'accès et l'utilisation de la Plateforme impliquent l'acceptation pleine et entière des présentes CGU. Tout utilisateur mineur doit disposer de l'autorisation de son représentant légal.</p>
-      <h3>3. Inscription et compte</h3>
-      <p>L'inscription est obligatoire pour réserver ou publier une annonce. L'utilisateur s'engage à fournir des informations exactes et à maintenir la confidentialité de ses identifiants. Locavac se réserve le droit de suspendre tout compte en cas d'utilisation frauduleuse.</p>
-      <h3>4. Responsabilités de l'hôte</h3>
-      <p>L'hôte est seul responsable de la conformité de son hébergement aux lois et règlements algériens applicables, notamment la loi n° 11-02 relative aux aires protégées et les dispositions du Code du tourisme. L'hôte garantit l'exactitude des informations publiées.</p>
-      <h3>5. Paiement et commission</h3>
-      <p>Locavac perçoit une commission de <strong>10 %</strong> sur chaque réservation confirmée. Les modes de paiement acceptés sont : CIB, Edahabia, BaridiMob, virement bancaire et espèces à l'arrivée. Les paiements sont effectués en dinars algériens (DZD).</p>
-      <h3>6. Politique d'annulation</h3>
-      <p>Trois politiques sont disponibles : <strong>Flexible</strong> (remboursement intégral si annulation plus de 24 h avant l'arrivée), <strong>Modérée</strong> (remboursement intégral > 5 j, 50 % entre 2 et 5 j) et <strong>Stricte</strong> (50 % si annulation > 7 j, aucun remboursement ensuite). La politique applicable est indiquée sur chaque annonce.</p>
-      <h3>7. Contenu interdit</h3>
-      <p>Sont strictement interdits : les annonces discriminatoires, les contenus à caractère pornographique, les logements non conformes aux standards de sécurité, et tout usage contraire à l'ordre public algérien.</p>
-      <h3>8. Résolution des litiges</h3>
-      <p>En cas de litige, les parties s'engagent à rechercher une solution amiable. À défaut, les tribunaux algériens compétents selon le lieu du siège social de Locavac seront saisis.</p>
-      <h3>9. Modification des CGU</h3>
-      <p>Locavac se réserve le droit de modifier les présentes CGU à tout moment. Les utilisateurs seront informés par email au moins 15 jours avant l'entrée en vigueur des modifications.</p>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:32px;align-items:start">
+        <div>
+          <h3>1. Objet</h3>
+          <p>Les présentes CGU régissent l'utilisation de la plateforme Locavac, service de mise en relation entre hôtes et voyageurs, opérant en République Algérienne Démocratique et Populaire.</p>
+          <h3>2. Acceptation</h3>
+          <p>L'accès à la Plateforme implique l'acceptation pleine des présentes CGU. Tout utilisateur mineur doit disposer de l'autorisation de son représentant légal.</p>
+          <h3>3. Inscription et compte</h3>
+          <p>L'inscription est obligatoire pour réserver ou publier une annonce. L'utilisateur s'engage à fournir des informations exactes. Locavac se réserve le droit de suspendre tout compte frauduleux.</p>
+          <h3>4. Responsabilités de l'hôte</h3>
+          <p>L'hôte est seul responsable de la conformité de son hébergement aux lois algériennes, notamment la loi n° 11-02 et le Code du tourisme.</p>
+          <h3>5. Paiement et commission</h3>
+          <p>Locavac perçoit une commission de <strong>10 %</strong>. Modes de paiement : CIB, Edahabia, BaridiMob, virement ou espèces. Paiements en DZD.</p>
+          <h3>6. Politique d'annulation</h3>
+          <p><strong>Flexible</strong> : remboursement intégral si annulation > 24 h. <strong>Modérée</strong> : intégral > 5 j, 50 % entre 2 et 5 j. <strong>Stricte</strong> : 50 % si > 7 j, aucun remboursement ensuite.</p>
+          <h3>7. Contenu interdit</h3>
+          <p>Sont interdits : annonces discriminatoires, contenus pornographiques, logements non conformes aux normes de sécurité, tout usage contraire à l'ordre public algérien.</p>
+          <h3>8. Résolution des litiges</h3>
+          <p>En cas de litige, les parties cherchent une solution amiable. À défaut, les tribunaux algériens compétents selon le siège de Locavac seront saisis.</p>
+          <h3>9. Modification des CGU</h3>
+          <p>Locavac peut modifier les présentes CGU. Les utilisateurs seront informés par email au moins 15 jours avant l'entrée en vigueur.</p>
+        </div>
+        <div dir="rtl" style="text-align:right;font-family:'Segoe UI',Tahoma,Arial,sans-serif">
+          <h3>1. الموضوع</h3>
+          <p>تُنظّم هذه الشروط استخدام منصة لوكافاك، خدمة الوساطة بين المضيفين والمسافرين، العاملة في الجمهورية الجزائرية الديمقراطية الشعبية.</p>
+          <h3>2. القبول</h3>
+          <p>يستلزم الوصول إلى المنصة القبول الكامل بهذه الشروط. يجب على القاصر الحصول على إذن من ممثله القانوني.</p>
+          <h3>3. التسجيل والحساب</h3>
+          <p>التسجيل إلزامي للحجز أو نشر إعلان. يلتزم المستخدم بتقديم معلومات دقيقة. تحتفظ لوكافاك بحق تعليق أي حساب احتيالي.</p>
+          <h3>4. مسؤوليات المضيف</h3>
+          <p>يتحمل المضيف وحده مسؤولية مطابقة إقامته للقوانين الجزائرية، لا سيما القانون رقم 11-02 وقانون السياحة.</p>
+          <h3>5. الدفع والعمولة</h3>
+          <p>تتقاضى لوكافاك عمولة <strong>10%</strong>. وسائل الدفع: CIB، إيداهابية، بريدي موب، تحويل بنكي أو نقدًا. المدفوعات بالدينار الجزائري.</p>
+          <h3>6. سياسة الإلغاء</h3>
+          <p><strong>مرنة</strong>: استرداد كامل عند الإلغاء قبل 24 ساعة. <strong>معتدلة</strong>: كامل > 5 أيام، 50% بين 2-5 أيام. <strong>صارمة</strong>: 50% إذا > 7 أيام، لا استرداد بعد ذلك.</p>
+          <h3>7. المحتوى المحظور</h3>
+          <p>يُحظر: الإعلانات التمييزية، المحتوى الإباحي، الإقامات غير المطابقة لمعايير السلامة، وأي استخدام مخالف للنظام العام الجزائري.</p>
+          <h3>8. تسوية النزاعات</h3>
+          <p>في حالة النزاع، يسعى الطرفان إلى حل ودّي. وإلا يُرفع الأمر إلى المحاكم الجزائرية المختصة وفق مقر لوكافاك.</p>
+          <h3>9. تعديل الشروط</h3>
+          <p>يحق للوكافاك تعديل هذه الشروط. يُبلَّغ المستخدمون بالبريد الإلكتروني قبل 15 يومًا من دخول التعديلات حيز التنفيذ.</p>
+        </div>
+      </div>
     `,
   },
   privacy: {
-    title: 'Politique de Confidentialité',
+    title: 'Confidentialité — سياسة الخصوصية',
     body: `
-      <p><strong>Dernière mise à jour : 30 août 2026</strong></p>
-      <h3>1. Responsable du traitement</h3>
-      <p>Locavac, plateforme de location de vacances en Algérie. Contact DPO : <a href="mailto:privacy@locavac.dz">privacy@locavac.dz</a></p>
-      <h3>2. Données collectées</h3>
-      <ul style="margin:8px 0 8px 20px">
-        <li>Données d'identification : nom, prénom, email, téléphone</li>
-        <li>CNI algérienne pour la vérification automatique des hôtes</li>
-        <li>Données de paiement (non stockées en clair — aucune carte bancaire conservée)</li>
-        <li>Données de navigation : adresse IP, cookies de session</li>
-        <li>Contenu généré : annonces, messages, avis</li>
-      </ul>
-      <h3>3. Finalités du traitement</h3>
-      <p>Les données sont traitées pour : exécuter le service de réservation, vérifier l'identité des hôtes, envoyer des notifications transactionnelles, améliorer la Plateforme et se conformer aux obligations légales algériennes.</p>
-      <h3>4. Base légale</h3>
-      <p>Le traitement de vos données repose sur deux cadres juridiques cumulatifs :</p>
-      <ul style="margin:8px 0 8px 20px">
-        <li><strong>Loi algérienne n° 18-07</strong> du 10 juin 2018 relative à la protection des données à caractère personnel (ANPDP)</li>
-        <li><strong>RGPD</strong> (Règlement UE 2016/679) — applicable car le serveur est hébergé en <strong>France</strong>, territoire de l'Union Européenne</li>
-      </ul>
-      <p>La base légale du traitement est l'exécution du contrat (réservation) ou le consentement explicite de l'utilisateur.</p>
-      <h3>5. Hébergement et transfert de données</h3>
-      <p>Vos données sont stockées sur un serveur situé en <strong>France</strong>. Conformément à l'article 46 du RGPD, ce transfert depuis l'Algérie vers la France (pays adéquat au sein de l'UE) bénéficie d'un niveau de protection suffisant. Aucune donnée n'est transférée hors de l'UE sans garanties appropriées.</p>
-      <h3>7. Conservation des données</h3>
-      <p>Les données de compte sont conservées pendant la durée d'activité du compte, puis 3 ans après la dernière connexion. Les données de transaction sont conservées 10 ans à des fins comptables et fiscales.</p>
-      <h3>8. Vos droits</h3>
-      <p>Conformément au RGPD et à la loi 18-07, vous disposez des droits d'accès, de rectification, d'effacement, de portabilité et d'opposition. Pour les exercer : <a href="mailto:privacy@locavac.dz">privacy@locavac.dz</a>. En cas de réclamation, vous pouvez saisir :</p>
-      <ul style="margin:6px 0 6px 20px">
-        <li><strong>ANPDP</strong> — Autorité Nationale de Protection des Données à Caractère Personnel (Algérie)</li>
-        <li><strong>CNIL</strong> — Commission Nationale de l'Informatique et des Libertés (France), compétente pour les données hébergées sur le territoire français</li>
-      </ul>
-      <h3>9. Cookies</h3>
-      <p>La Plateforme utilise uniquement des cookies strictement nécessaires au fonctionnement (session JWT). Aucun cookie publicitaire ou de pistage tiers n'est utilisé.</p>
-      <h3>10. Sécurité</h3>
-      <p>Les données sont chiffrées en transit (HTTPS/TLS) et au repos. Les mots de passe sont hashés avec bcrypt. Les documents d'identité sont stockés dans un répertoire protégé, inaccessible publiquement.</p>
+      <p style="margin-bottom:16px"><strong>Dernière mise à jour : 30 août 2026 — آخر تحديث: 30 أغسطس 2026</strong></p>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:32px;align-items:start">
+        <div>
+          <h3>1. Responsable du traitement</h3>
+          <p>Locavac, plateforme de location de vacances en Algérie. DPO : <a href="mailto:privacy@locavac.dz">privacy@locavac.dz</a></p>
+          <h3>2. Données collectées</h3>
+          <ul style="margin:8px 0 8px 20px">
+            <li>Nom, email, téléphone</li>
+            <li>CNI algérienne (vérification hôtes)</li>
+            <li>Données de paiement (non stockées en clair)</li>
+            <li>Adresse IP, cookies de session</li>
+            <li>Annonces, messages, avis</li>
+          </ul>
+          <h3>3. Finalités</h3>
+          <p>Exécuter le service de réservation, vérifier l'identité des hôtes, envoyer des notifications, améliorer la Plateforme, respecter les obligations légales.</p>
+          <h3>4. Base légale</h3>
+          <ul style="margin:8px 0 8px 20px">
+            <li><strong>Loi n° 18-07</strong> du 10 juin 2018 (ANPDP)</li>
+            <li><strong>RGPD</strong> UE 2016/679 — serveur hébergé en France</li>
+          </ul>
+          <h3>5. Hébergement et transfert</h3>
+          <p>Données stockées en <strong>France</strong>. Transfert couvert par l'article 46 du RGPD. Aucune donnée hors UE sans garanties.</p>
+          <h3>6. Conservation</h3>
+          <p>Compte : durée d'activité + 3 ans. Transactions : 10 ans (obligations fiscales).</p>
+          <h3>7. Vos droits</h3>
+          <p>Accès, rectification, effacement, portabilité, opposition — <a href="mailto:privacy@locavac.dz">privacy@locavac.dz</a>. Réclamation : ANPDP (Algérie) ou CNIL (France).</p>
+          <h3>8. Cookies</h3>
+          <p>Uniquement cookies techniques (session JWT). Aucun cookie publicitaire tiers.</p>
+          <h3>9. Sécurité</h3>
+          <p>Chiffrement HTTPS/TLS en transit, bcrypt pour mots de passe, répertoire protégé pour CNI.</p>
+        </div>
+        <div dir="rtl" style="text-align:right;font-family:'Segoe UI',Tahoma,Arial,sans-serif">
+          <h3>1. المسؤول عن المعالجة</h3>
+          <p>لوكافاك، منصة إيجار العطل في الجزائر. مسؤول حماية البيانات: <a href="mailto:privacy@locavac.dz">privacy@locavac.dz</a></p>
+          <h3>2. البيانات المُجمَّعة</h3>
+          <ul style="margin:8px 0 8px 0;padding-right:20px">
+            <li>الاسم والبريد الإلكتروني والهاتف</li>
+            <li>بطاقة الهوية الوطنية (للتحقق من المضيفين)</li>
+            <li>بيانات الدفع (غير مخزّنة بنص واضح)</li>
+            <li>عنوان IP وملفات جلسة العمل</li>
+            <li>الإعلانات والرسائل والتقييمات</li>
+          </ul>
+          <h3>3. الأغراض</h3>
+          <p>تنفيذ خدمة الحجز، التحقق من هوية المضيفين، إرسال الإشعارات، تحسين المنصة، الامتثال للالتزامات القانونية.</p>
+          <h3>4. الأساس القانوني</h3>
+          <ul style="margin:8px 0 8px 0;padding-right:20px">
+            <li><strong>القانون رقم 18-07</strong> المؤرخ في 10 يونيو 2018 (ANPDP)</li>
+            <li><strong>RGPD</strong> الأوروبي 2016/679 — الخادم في فرنسا</li>
+          </ul>
+          <h3>5. الاستضافة والنقل</h3>
+          <p>البيانات مُخزَّنة في <strong>فرنسا</strong>. النقل مشمول بالمادة 46 من RGPD. لا نقل خارج الاتحاد الأوروبي دون ضمانات.</p>
+          <h3>6. مدة الاحتفاظ</h3>
+          <p>الحساب: مدة النشاط + 3 سنوات. المعاملات: 10 سنوات (التزامات ضريبية).</p>
+          <h3>7. حقوقك</h3>
+          <p>الوصول، التصحيح، الحذف، قابلية النقل، الاعتراض — <a href="mailto:privacy@locavac.dz">privacy@locavac.dz</a>. شكاوى: ANPDP (الجزائر) أو CNIL (فرنسا).</p>
+          <h3>8. ملفات تعريف الارتباط</h3>
+          <p>ملفات تقنية فقط (جلسة JWT). لا ملفات إعلانية أو تتبعية من أطراف ثالثة.</p>
+          <h3>9. الأمن</h3>
+          <p>تشفير HTTPS/TLS أثناء النقل، bcrypt لكلمات المرور، مجلد محمي لوثائق الهوية.</p>
+        </div>
+      </div>
     `,
   },
   mentions: {
-    title: 'Mentions Légales',
+    title: 'Mentions Légales — البيانات القانونية',
     body: `
-      <h3 style="margin:0 0 8px">Éditeur</h3>
-      <p><strong>Locavac</strong> — Plateforme de location de vacances en Algérie<br>
-      Statut : EURL en cours d'immatriculation au CNRC<br>
-      Siège social : Alger, Algérie<br>
-      Email : <a href="mailto:contact@locavac.dz">contact@locavac.dz</a></p>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:32px;align-items:start">
 
-      <h3>Hébergement</h3>
-      <p>La Plateforme est hébergée sur un serveur VPS localisé en <strong>France</strong> (Union Européenne). En tant qu'hébergeur européen, les données sont soumises au Règlement Général sur la Protection des Données (RGPD — Règlement UE 2016/679) en sus de la loi algérienne n° 18-07 du 10 juin 2018.</p>
+        <!-- FRANÇAIS -->
+        <div>
+          <h3 style="margin:0 0 8px">Éditeur</h3>
+          <p><strong>Locavac</strong> est une marque commerciale de <strong>Ingénica Civil</strong><br>
+          Capital social : 50 000 DA<br>
+          Registre de commerce : N° 22/00 - 0025204B26<br>
+          NIF : en cours d'attribution<br>
+          Siège social : 4, rue Sakhr Ibn Salman, 22000 Sidi Bel Abbès, Algérie<br>
+          Email : <a href="mailto:contact@locavac.dz">contact@locavac.dz</a></p>
 
-      <h3>Propriété intellectuelle</h3>
-      <p>L'ensemble des éléments de la Plateforme (logo, design, textes, code source) sont la propriété exclusive de Locavac et sont protégés par les dispositions du droit algérien relatif à la propriété intellectuelle (ordonnance n° 03-05 du 19 juillet 2003).</p>
+          <h3>Hébergement</h3>
+          <p>La Plateforme est hébergée sur un serveur VPS localisé en <strong>France</strong> (Union Européenne). Les données sont soumises au RGPD (Règlement UE 2016/679) et à la loi algérienne n° 18-07 du 10 juin 2018.</p>
 
-      <h3>Limitation de responsabilité</h3>
-      <p>Locavac agit en qualité d'intermédiaire technique entre hôtes et voyageurs. La Plateforme ne peut être tenue responsable des dommages résultant de l'utilisation des hébergements proposés par les hôtes indépendants.</p>
+          <h3>Propriété intellectuelle</h3>
+          <p>L'ensemble des éléments de la Plateforme sont la propriété exclusive de Locavac, protégés par l'ordonnance n° 03-05 du 19 juillet 2003.</p>
 
-      <h3>Droit applicable</h3>
-      <p>Les présentes mentions légales sont soumises au droit algérien. Tout litige relève de la compétence exclusive des tribunaux algériens.</p>
+          <h3>Limitation de responsabilité</h3>
+          <p>Locavac agit en qualité d'intermédiaire technique entre hôtes et voyageurs et ne peut être tenu responsable des dommages résultant de l'utilisation des hébergements.</p>
 
-      <h3>Contact</h3>
-      <p>Pour toute question : <a href="mailto:contact@locavac.dz">contact@locavac.dz</a></p>
+          <h3>Droit applicable</h3>
+          <p>Les présentes mentions légales sont soumises au droit algérien. Tout litige relève de la compétence exclusive des tribunaux algériens.</p>
+
+          <h3>Contact</h3>
+          <p><a href="mailto:contact@locavac.dz">contact@locavac.dz</a></p>
+        </div>
+
+        <!-- ARABE -->
+        <div dir="rtl" style="text-align:right;font-family:'Segoe UI',Tahoma,Arial,sans-serif">
+          <h3 style="margin:0 0 8px">الناشر</h3>
+          <p><strong>لوكافاك</strong> علامة تجارية تابعة لشركة <strong>إنجينيكا سيفيل</strong><br>
+          رأس المال الاجتماعي: 50 000 دج<br>
+          السجل التجاري: رقم 22/00 - 0025204B26<br>
+          رقم التعريف الجبائي: قيد الإسناد<br>
+          المقر الاجتماعي: 4، شارع صخر بن سلمان، 22000 سيدي بلعباس، الجزائر<br>
+          البريد الإلكتروني: <a href="mailto:contact@locavac.dz">contact@locavac.dz</a></p>
+
+          <h3>الاستضافة</h3>
+          <p>تُستضاف المنصة على خادم VPS مقيم في <strong>فرنسا</strong> (الاتحاد الأوروبي). تخضع البيانات للائحة RGPD (التنظيم الأوروبي 2016/679) وللقانون الجزائري رقم 18-07 المؤرخ في 10 يونيو 2018.</p>
+
+          <h3>الملكية الفكرية</h3>
+          <p>جميع عناصر المنصة هي ملك حصري لـ لوكافاك، محمية بموجب الأمر رقم 03-05 المؤرخ في 19 يوليو 2003.</p>
+
+          <h3>حدود المسؤولية</h3>
+          <p>تعمل لوكافاك بوصفها وسيطاً تقنياً بين المضيفين والمسافرين، ولا تتحمل المسؤولية عن الأضرار الناجمة عن استخدام الإقامات.</p>
+
+          <h3>القانون المطبق</h3>
+          <p>تخضع هذه البيانات القانونية للقانون الجزائري، وأي نزاع يختص به القضاء الجزائري حصراً.</p>
+
+          <h3>التواصل</h3>
+          <p><a href="mailto:contact@locavac.dz">contact@locavac.dz</a></p>
+        </div>
+
+      </div>
     `,
   },
   about: {
-    title: 'À propos de Locavac',
+    title: 'À propos — عن لوكافاك',
     body: `
-      <p style="font-size:16px;color:var(--g800);margin-bottom:16px"><strong>Locavac</strong> est la première plateforme algérienne de location de vacances entre particuliers. 🇩🇿</p>
-      <p>Notre mission : rendre la location de vacances simple, sûre et accessible à tous les Algériens — que vous souhaitiez découvrir le Sahara, la Méditerranée, les Aurès ou la Kabylie.</p>
-      <h3 style="margin:20px 0 8px">Notre histoire</h3>
-      <p>Fondée en 2026, Locavac est née du constat que l'Algérie, riche de ses 1 200 km de côtes, de son désert et de ses montagnes, manquait d'une plateforme locale adaptée aux réalités du marché algérien : paiement en DZD, modes de paiement locaux (CIB, Edahabia, BaridiMob), interface bilingue FR/AR.</p>
-      <h3 style="margin:20px 0 8px">Nos valeurs</h3>
-      <ul style="margin:8px 0 8px 20px">
-        <li><strong>Confiance</strong> — vérification d'identité des hôtes, avis authentiques post-séjour</li>
-        <li><strong>Transparence</strong> — commission unique de 10 %, politique d'annulation claire</li>
-        <li><strong>Local</strong> — paiement en DZD, support en arabe et en français</li>
-        <li><strong>Sécurité</strong> — données hébergées conformément à la loi 18-07</li>
-      </ul>
-      <h3 style="margin:20px 0 8px">Contact</h3>
-      <p>Email : <a href="mailto:contact@locavac.dz">contact@locavac.dz</a><br>
-      Pour les partenariats presse : <a href="mailto:presse@locavac.dz">presse@locavac.dz</a></p>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:32px;align-items:start">
+        <div>
+          <p style="font-size:16px;color:var(--g800);margin-bottom:16px"><strong>Locavac</strong> est la première plateforme algérienne de location de vacances entre particuliers. 🇩🇿</p>
+          <p>Notre mission : rendre la location de vacances simple, sûre et accessible à tous les Algériens.</p>
+          <h3 style="margin:16px 0 8px">Notre histoire</h3>
+          <p>Fondée en 2026, Locavac est née du constat que l'Algérie manquait d'une plateforme locale adaptée : paiement en DZD, CIB/Edahabia/BaridiMob, interface bilingue FR/AR.</p>
+          <h3 style="margin:16px 0 8px">Nos valeurs</h3>
+          <ul style="margin:8px 0 8px 20px">
+            <li><strong>Confiance</strong> — vérification d'identité des hôtes, avis authentiques</li>
+            <li><strong>Transparence</strong> — commission de 10 %, politique d'annulation claire</li>
+            <li><strong>Local</strong> — paiement en DZD, support FR/AR</li>
+            <li><strong>Sécurité</strong> — données conformes à la loi 18-07</li>
+          </ul>
+          <h3 style="margin:16px 0 8px">Contact</h3>
+          <p><a href="mailto:contact@locavac.dz">contact@locavac.dz</a><br>
+          Presse : <a href="mailto:presse@locavac.dz">presse@locavac.dz</a></p>
+        </div>
+        <div dir="rtl" style="text-align:right;font-family:'Segoe UI',Tahoma,Arial,sans-serif">
+          <p style="font-size:16px;color:var(--g800);margin-bottom:16px"><strong>لوكافاك</strong> هي أول منصة جزائرية لإيجار العطل بين الأفراد. 🇩🇿</p>
+          <p>مهمتنا: جعل إيجار العطل بسيطًا وآمنًا ومتاحًا لجميع الجزائريين.</p>
+          <h3 style="margin:16px 0 8px">تاريخنا</h3>
+          <p>تأسست لوكافاك عام 2026 إدراكًا لغياب منصة محلية ملائمة في الجزائر: دفع بالدينار الجزائري، CIB/إيداهابية/بريدي موب، واجهة ثنائية اللغة فر/عر.</p>
+          <h3 style="margin:16px 0 8px">قيمنا</h3>
+          <ul style="margin:8px 0 8px 0;padding-right:20px">
+            <li><strong>الثقة</strong> — التحقق من هوية المضيفين، تقييمات حقيقية</li>
+            <li><strong>الشفافية</strong> — عمولة 10%، سياسة إلغاء واضحة</li>
+            <li><strong>المحلية</strong> — دفع بالدينار، دعم بالعربية والفرنسية</li>
+            <li><strong>الأمان</strong> — بيانات وفق القانون 18-07</li>
+          </ul>
+          <h3 style="margin:16px 0 8px">التواصل</h3>
+          <p><a href="mailto:contact@locavac.dz">contact@locavac.dz</a><br>
+          الشراكات الإعلامية: <a href="mailto:presse@locavac.dz">presse@locavac.dz</a></p>
+        </div>
+      </div>
     `,
   },
   host: {
-    title: 'Devenir hôte sur Locavac',
+    title: 'Devenir hôte — كن مضيفًا',
     body: `
-      <p style="font-size:16px;margin-bottom:20px">Partagez votre logement et gagnez des revenus supplémentaires en accueillant des voyageurs à travers l'Algérie.</p>
-      <h3 style="margin:0 0 10px">Comment ça marche ?</h3>
-      <div style="display:flex;flex-direction:column;gap:16px;margin-bottom:20px">
-        <div style="display:flex;gap:14px;align-items:flex-start">
-          <span style="background:var(--accent);color:#fff;border-radius:50%;width:32px;height:32px;display:flex;align-items:center;justify-content:center;font-weight:700;flex-shrink:0">1</span>
-          <div><strong>Créez votre annonce</strong><p style="margin:4px 0 0;color:var(--g600);font-size:13px">Photos, description, tarif, calendrier de disponibilité. Tout est personnalisable.</p></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:32px;align-items:start">
+        <div>
+          <p style="font-size:16px;margin-bottom:20px">Partagez votre logement et gagnez des revenus supplémentaires en accueillant des voyageurs à travers l'Algérie.</p>
+          <h3 style="margin:0 0 10px">Comment ça marche ?</h3>
+          <div style="display:flex;flex-direction:column;gap:16px;margin-bottom:20px">
+            <div style="display:flex;gap:14px;align-items:flex-start">
+              <span style="background:var(--accent);color:#fff;border-radius:50%;width:32px;height:32px;display:flex;align-items:center;justify-content:center;font-weight:700;flex-shrink:0">1</span>
+              <div><strong>Créez votre annonce</strong><p style="margin:4px 0 0;color:var(--g600);font-size:13px">Photos, description, tarif, calendrier de disponibilité. Tout est personnalisable.</p></div>
+            </div>
+            <div style="display:flex;gap:14px;align-items:flex-start">
+              <span style="background:var(--accent);color:#fff;border-radius:50%;width:32px;height:32px;display:flex;align-items:center;justify-content:center;font-weight:700;flex-shrink:0">2</span>
+              <div><strong>Vérifiez votre identité</strong><p style="margin:4px 0 0;color:var(--g600);font-size:13px">Uploadez votre CNI algérienne (recto-verso). Vérification automatique et instantanée.</p></div>
+            </div>
+            <div style="display:flex;gap:14px;align-items:flex-start">
+              <span style="background:var(--accent);color:#fff;border-radius:50%;width:32px;height:32px;display:flex;align-items:center;justify-content:center;font-weight:700;flex-shrink:0">3</span>
+              <div><strong>Acceptez les réservations</strong><p style="margin:4px 0 0;color:var(--g600);font-size:13px">Recevez les demandes, communiquez avec vos voyageurs, confirmez les arrivées.</p></div>
+            </div>
+            <div style="display:flex;gap:14px;align-items:flex-start">
+              <span style="background:var(--accent);color:#fff;border-radius:50%;width:32px;height:32px;display:flex;align-items:center;justify-content:center;font-weight:700;flex-shrink:0">4</span>
+              <div><strong>Encaissez vos gains</strong><p style="margin:4px 0 0;color:var(--g600);font-size:13px">Suivi de vos revenus en temps réel. Commission unique de 10 %. Virement mensuel sur votre RIB ou CCP.</p></div>
+            </div>
+          </div>
+          <div style="background:var(--g100);border-radius:12px;padding:16px;margin-bottom:20px">
+            <p style="margin:0;font-size:13px;color:var(--g600)">💡 <strong>Bon à savoir :</strong> vous choisissez votre politique d'annulation (flexible, modérée ou stricte) et bloquez vos dates indisponibles depuis votre tableau de bord.</p>
+          </div>
+          <button class="btn-primary" onclick="closeOverlay('ov-legal'); openAuth('register')">Commencer maintenant →</button>
         </div>
-        <div style="display:flex;gap:14px;align-items:flex-start">
-          <span style="background:var(--accent);color:#fff;border-radius:50%;width:32px;height:32px;display:flex;align-items:center;justify-content:center;font-weight:700;flex-shrink:0">2</span>
-          <div><strong>Vérifiez votre identité</strong><p style="margin:4px 0 0;color:var(--g600);font-size:13px">Uploadez votre CNI algérienne (recto-verso). Vérification automatique et instantanée.</p></div>
-        </div>
-        <div style="display:flex;gap:14px;align-items:flex-start">
-          <span style="background:var(--accent);color:#fff;border-radius:50%;width:32px;height:32px;display:flex;align-items:center;justify-content:center;font-weight:700;flex-shrink:0">3</span>
-          <div><strong>Acceptez les réservations</strong><p style="margin:4px 0 0;color:var(--g600);font-size:13px">Recevez les demandes, communiquez avec vos voyageurs, confirmez les arrivées.</p></div>
-        </div>
-        <div style="display:flex;gap:14px;align-items:flex-start">
-          <span style="background:var(--accent);color:#fff;border-radius:50%;width:32px;height:32px;display:flex;align-items:center;justify-content:center;font-weight:700;flex-shrink:0">4</span>
-          <div><strong>Encaissez vos gains</strong><p style="margin:4px 0 0;color:var(--g600);font-size:13px">Suivi de vos revenus en temps réel. Commission unique de 10 %. Virement mensuel sur votre RIB ou CCP.</p></div>
+        <div dir="rtl" style="text-align:right;font-family:'Segoe UI',Tahoma,Arial,sans-serif">
+          <p style="font-size:16px;margin-bottom:20px">شارك بمسكنك واكسب دخلاً إضافياً باستقبال المسافرين عبر أرجاء الجزائر.</p>
+          <h3 style="margin:0 0 10px">كيف يعمل ذلك؟</h3>
+          <div style="display:flex;flex-direction:column;gap:16px;margin-bottom:20px">
+            <div style="display:flex;gap:14px;align-items:flex-start;flex-direction:row-reverse">
+              <span style="background:var(--accent);color:#fff;border-radius:50%;width:32px;height:32px;display:flex;align-items:center;justify-content:center;font-weight:700;flex-shrink:0">١</span>
+              <div><strong>أنشئ إعلانك</strong><p style="margin:4px 0 0;color:var(--g600);font-size:13px">صور، وصف، سعر، تقويم التوفر. كل شيء قابل للتخصيص.</p></div>
+            </div>
+            <div style="display:flex;gap:14px;align-items:flex-start;flex-direction:row-reverse">
+              <span style="background:var(--accent);color:#fff;border-radius:50%;width:32px;height:32px;display:flex;align-items:center;justify-content:center;font-weight:700;flex-shrink:0">٢</span>
+              <div><strong>تحقق من هويتك</strong><p style="margin:4px 0 0;color:var(--g600);font-size:13px">ارفع بطاقتك الوطنية الجزائرية (وجهان). تحقق تلقائي وفوري.</p></div>
+            </div>
+            <div style="display:flex;gap:14px;align-items:flex-start;flex-direction:row-reverse">
+              <span style="background:var(--accent);color:#fff;border-radius:50%;width:32px;height:32px;display:flex;align-items:center;justify-content:center;font-weight:700;flex-shrink:0">٣</span>
+              <div><strong>اقبل الحجوزات</strong><p style="margin:4px 0 0;color:var(--g600);font-size:13px">استقبل الطلبات، تواصل مع المسافرين، أكّد وصولهم.</p></div>
+            </div>
+            <div style="display:flex;gap:14px;align-items:flex-start;flex-direction:row-reverse">
+              <span style="background:var(--accent);color:#fff;border-radius:50%;width:32px;height:32px;display:flex;align-items:center;justify-content:center;font-weight:700;flex-shrink:0">٤</span>
+              <div><strong>استلم أرباحك</strong><p style="margin:4px 0 0;color:var(--g600);font-size:13px">تتبع إيراداتك في الوقت الحقيقي. عمولة واحدة 10%. تحويل شهري إلى حسابك أو CCP.</p></div>
+            </div>
+          </div>
+          <div style="background:var(--g100);border-radius:12px;padding:16px;margin-bottom:20px">
+            <p style="margin:0;font-size:13px;color:var(--g600)">💡 <strong>معلومة مفيدة:</strong> أنت تختار سياسة الإلغاء (مرنة أو معتدلة أو صارمة) وتحجب التواريخ غير المتاحة من لوحة التحكم.</p>
+          </div>
+          <button class="btn-primary" onclick="closeOverlay('ov-legal'); openAuth('register')">ابدأ الآن ←</button>
         </div>
       </div>
-      <div style="background:var(--g100);border-radius:12px;padding:16px;margin-bottom:20px">
-        <p style="margin:0;font-size:13px;color:var(--g600)">💡 <strong>Bon à savoir :</strong> vous choisissez votre politique d'annulation (flexible, modérée ou stricte) et bloquez vos dates indisponibles depuis votre tableau de bord.</p>
-      </div>
-      <button class="btn-primary" onclick="closeOverlay('ov-legal'); openAuth('register')">Commencer maintenant →</button>
     `,
   },
 };
@@ -4879,7 +4988,7 @@ function renderPubCard(p) {
           ${typeLine}
           <div class="pub-card-nom">${p.nom}</div>
           ${loc}
-          <div class="pub-card-desc" style="-webkit-line-clamp:4">${p.description||''}</div>
+          <div class="pub-card-desc">${p.description||''}</div>
         </div>
         <div class="pub-card-actions">${callBtn}${webBtn}${mailBtn}</div>
       </div>
@@ -5346,7 +5455,7 @@ document.addEventListener('DOMContentLoaded', function() {
   initAmenityUI();
 
   // Filtres rapides (wilaya, prix, voyageurs, chambres)
-  const QF_IDS = ['f-wilaya','f-min-price','f-max-price','f-guests','f-beds','f-host-lang'];
+  const QF_IDS = ['f-wilaya','f-price','f-guests','f-beds'];
   function qfChanged() {
     const hasVal = QF_IDS.some(id => { const el = document.getElementById(id); return el && el.value; });
     const btn = document.getElementById('btn-clear-qf');
