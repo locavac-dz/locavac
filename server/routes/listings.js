@@ -43,6 +43,11 @@ router.get('/', async (req, res) => {
     if (max_price && l.price    >  Number(max_price)) return false;
     if (min_beds  && l.beds     <  Number(min_beds))  return false;
     if (check_in && check_out  && unavailableIds.has(Number(l.id))) return false;
+    if (check_in && check_out) {
+      const ranges = Array.isArray(l.blocked_ranges) ? l.blocked_ranges
+        : (l.blocked_ranges ? JSON.parse(l.blocked_ranges) : []);
+      if (ranges.some(b => b.start < check_out && b.end > check_in)) return false;
+    }
     if (wantedAmenities.length) {
       const la = Array.isArray(l.amenities) ? l.amenities : (l.amenities ? JSON.parse(l.amenities) : []);
       if (!wantedAmenities.every(a => la.includes(a))) return false;

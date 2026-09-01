@@ -50,6 +50,11 @@ router.post('/', auth, async (req, res) => {
   if (!await isAvailable(lid, check_in, check_out))
     return res.status(409).json({ error: "Ce logement n'est pas disponible pour ces dates." });
 
+  const ranges = Array.isArray(listing.blocked_ranges) ? listing.blocked_ranges
+    : (listing.blocked_ranges ? JSON.parse(listing.blocked_ranges) : []);
+  if (ranges.some(b => b.start < check_out && b.end > check_in))
+    return res.status(409).json({ error: "Ces dates sont indisponibles (logement bloqué par l'hôte)." });
+
   const total = listing.price * n;
   const resa  = await db.reservations.insert({
     listing_id: lid, guest_id: req.user.id, check_in, check_out,
