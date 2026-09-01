@@ -123,6 +123,17 @@ router.get('/verify-email', async (req, res) => {
   res.redirect('/?verify=ok');
 });
 
+// DELETE /api/auth/me — suppression de compte (RGPD)
+router.delete('/me', require('../middleware/auth'), async (req, res) => {
+  const uid = req.user.id;
+  await pool.query('DELETE FROM messages WHERE from_id = $1 OR to_id = $1', [uid]);
+  await pool.query(`DELETE FROM reviews WHERE user_id = $1 OR listing_id IN (SELECT id FROM listings WHERE host_id = $1)`, [uid, uid]);
+  await pool.query(`DELETE FROM reservations WHERE guest_id = $1 OR listing_id IN (SELECT id FROM listings WHERE host_id = $1)`, [uid, uid]);
+  await pool.query('DELETE FROM listings WHERE host_id = $1', [uid]);
+  await pool.query('DELETE FROM users WHERE id = $1', [uid]);
+  res.json({ ok: true });
+});
+
 // GET /api/users/:id — profil public
 router.get('/users/:id', async (req, res) => {
   const user = await db.users.findOne(u => u.id === Number(req.params.id));

@@ -2,11 +2,13 @@ require('dotenv').config({ path: require('path').join(__dirname, '..', '.env') }
 require('express-async-errors');
 
 const express     = require('express');
+const http        = require('http');
 const cors        = require('cors');
 const path        = require('path');
 const rateLimit   = require('express-rate-limit');
 const compression = require('compression');
 const db          = require('./db');
+const wsModule    = require('./ws');
 
 const app = express();
 app.use(compression());
@@ -74,7 +76,9 @@ const PORT = process.env.PORT || 3000;
 
 db.connect()
   .then(() => {
-    app.listen(PORT, () => {
+    const server = http.createServer(app);
+    wsModule.setup(server);
+    server.listen(PORT, () => {
       console.log(`\n🚀 Locavac démarré sur http://localhost:${PORT}`);
       console.log(`   API disponible sur http://localhost:${PORT}/api\n`);
       require('./agent').start();

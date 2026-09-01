@@ -1,6 +1,7 @@
 const router = require('express').Router();
 const db     = require('../db');
 const auth   = require('../middleware/auth');
+const ws     = require('../ws');
 
 // GET /api/messages — conversations de l'utilisateur
 router.get('/', auth, async (req, res) => {
@@ -75,6 +76,10 @@ router.post('/', auth, async (req, res) => {
       listingTitle: listing.title, preview: body.trim(),
     });
   }
+  ws.send(to_id, {
+    type: 'message',
+    msg: { ...msg, sender_name: sender.name, listing_title: listing.title },
+  });
   res.status(201).json(msg);
 });
 

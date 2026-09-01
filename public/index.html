@@ -693,6 +693,36 @@ footer{background:var(--g100);border-top:1px solid var(--g200);padding:48px 24px
 .date-summary{font-size:13px;color:var(--g600);margin-bottom:16px;display:none}
 .date-summary strong{color:var(--g800)}
 
+/* ── HOVER CARD (aperçu rapide) ── */
+#hover-card{position:fixed;z-index:8000;pointer-events:none;opacity:0;transform:translateY(8px) scale(.97);transition:opacity .18s,transform .18s;background:var(--surface);border:1.5px solid var(--border);border-radius:16px;box-shadow:var(--shlg);width:260px;overflow:hidden}
+#hover-card.show{opacity:1;transform:none;pointer-events:auto}
+#hover-card-img{width:100%;height:140px;object-fit:cover;display:block;background:var(--g100)}
+#hover-card-body{padding:12px 14px}
+#hover-card-title{font-size:14px;font-weight:700;margin-bottom:3px;line-height:1.3;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+#hover-card-sub{font-size:12px;color:var(--text2);margin-bottom:6px}
+#hover-card-price{font-size:15px;font-weight:700;color:var(--red);margin-bottom:8px}
+#hover-card-btn{display:block;width:100%;background:var(--red);color:#fff;border:none;border-radius:8px;padding:8px;font-size:13px;font-weight:700;cursor:pointer;text-align:center}
+#hover-card-btn:hover{background:var(--red-dk)}
+
+/* ── HISTORIQUE DE RECHERCHE ── */
+.hs-search-history{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--g400);padding:8px 16px 4px}
+.hs-autocomplete-section{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--g400);padding:8px 16px 2px;background:var(--g50)}
+.hs-autocomplete-item.history{color:var(--g600);display:flex;align-items:center;gap:8px}
+.hs-autocomplete-item.history::before{content:'🕐';font-size:12px}
+.hs-autocomplete-clear{display:block;width:100%;padding:8px 16px;font-size:12px;color:var(--g400);background:none;border:none;border-top:1px solid var(--g100);cursor:pointer;text-align:left}
+.hs-autocomplete-clear:hover{color:var(--red)}
+
+/* ── DANGER ZONE ── */
+.danger-zone{margin-top:24px;border:1.5px solid #fca5a5;border-radius:12px;padding:16px;background:#fff5f4}
+.danger-zone h4{font-size:14px;font-weight:700;color:#b91c1c;margin-bottom:6px}
+.danger-zone p{font-size:13px;color:var(--text2);margin-bottom:12px}
+.btn-delete-account{background:none;border:1.5px solid #b91c1c;color:#b91c1c;border-radius:8px;padding:9px 18px;font-size:13px;font-weight:700;cursor:pointer;transition:all .2s}
+.btn-delete-account:hover{background:#b91c1c;color:#fff}
+
+/* ── LIGNE CHART ── */
+.line-chart-wrap{margin-top:12px;overflow:hidden}
+.line-chart-wrap svg{width:100%;height:80px;display:block}
+
 /* ── PHOTO UPLOAD ── */
 .upload-zone{border:2px dashed var(--g200);border-radius:12px;padding:28px 16px;text-align:center;cursor:pointer;transition:all .2s;position:relative}
 .upload-zone:hover,.upload-zone.drag-over{border-color:var(--red);background:#fff5f4}
@@ -850,6 +880,17 @@ footer{background:var(--g100);border-top:1px solid var(--g200);padding:48px 24px
 </style>
 </head>
 <body>
+
+<!-- HOVER CARD aperçu rapide -->
+<div id="hover-card">
+  <img id="hover-card-img" src="" alt=""/>
+  <div id="hover-card-body">
+    <div id="hover-card-title"></div>
+    <div id="hover-card-sub"></div>
+    <div id="hover-card-price"></div>
+    <button id="hover-card-btn">Voir le logement</button>
+  </div>
+</div>
 
 <!-- HEADER -->
 <header>
@@ -1574,6 +1615,11 @@ footer{background:var(--g100);border-top:1px solid var(--g200);padding:48px 24px
       </div>
       <div class="ferr" id="prof-err"></div>
       <button class="btn-submit" id="prof-save-btn">Enregistrer</button>
+      <div class="danger-zone">
+        <h4>⚠️ Zone de danger</h4>
+        <p>La suppression de votre compte est définitive et irréversible. Toutes vos annonces, réservations et messages seront supprimés conformément au RGPD.</p>
+        <button class="btn-delete-account" onclick="deleteAccount()">🗑 Supprimer mon compte</button>
+      </div>
     </div>
   </div>
 </div>
@@ -2383,6 +2429,7 @@ async function doLogin() {
     localStorage.setItem('dz_user',  JSON.stringify(currentUser));
     refreshAuthUI(); closeOverlay('ov-auth');
     toast('Bienvenue ' + currentUser.name + ' ! 👋');
+    connectWs();
   } catch(e) { errEl.textContent = e.message; errEl.classList.add('show'); }
 }
 async function doRegister() {
@@ -2396,6 +2443,7 @@ async function doRegister() {
     refreshAuthUI(); closeOverlay('ov-auth');
     toast('Compte créé ! Bienvenue ' + currentUser.name + ' 🎉');
     setTimeout(() => toast('📧 Un email de confirmation a été envoyé à ' + email + '. Vérifiez votre boîte mail.'), 2000);
+    connectWs();
   } catch(e) { errEl.textContent = e.message; errEl.classList.add('show'); }
 }
 // ── LIGHTBOX ──────────────────────────────────────────────
@@ -2668,6 +2716,7 @@ function renderListingsMapMarkers() {
 }
 
 function doLogout() {
+  closeWs();
   localStorage.removeItem('dz_token'); localStorage.removeItem('dz_user');
   token = null; currentUser = null;
   document.getElementById('user-menu').classList.remove('open');
@@ -2755,28 +2804,142 @@ function getSelectedAmenities() {
 // ── WILAYAS (autocomplete) ────────────────────────────────
 const WILAYAS = ['Adrar','Aïn Defla','Aïn Témouchent','Alger','Annaba','Batna','Béchar','Béjaïa','Bordj Badji Mokhtar','Bordj Bou Arréridj','Boumerdès','Bouira','Chlef','Constantine','Djanet','Djelfa','El Bayadh','El M\'Ghair','El Meniaa','El Oued','El Tarf','Ghardaïa','Guelma','Illizi','In Guezzam','In Salah','Jijel','Khenchela','Laghouat','Mascara','Médéa','Mila','Mostaganem','M\'Sila','Naâma','Oran','Ouargla','Ouled Djellal','Oum El Bouaghi','Relizane','Saïda','Sétif','Sidi Bel Abbès','Skikda','Souk Ahras','Tamanrasset','Tébessa','Tiaret','Timimoun','Tindouf','Tipaza','Tissemsilt','Tizi Ouzou','Tlemcen','Touggourt'];
 
+const SEARCH_HISTORY_KEY = 'locavac_searches';
+function saveSearchHistory(q) {
+  if (!q || q.length < 2) return;
+  try {
+    let h = JSON.parse(localStorage.getItem(SEARCH_HISTORY_KEY) || '[]');
+    h = [q, ...h.filter(x => x !== q)].slice(0, 5);
+    localStorage.setItem(SEARCH_HISTORY_KEY, JSON.stringify(h));
+  } catch {}
+}
+function getSearchHistory() {
+  try { return JSON.parse(localStorage.getItem(SEARCH_HISTORY_KEY) || '[]'); } catch { return []; }
+}
+function clearSearchHistory() {
+  try { localStorage.removeItem(SEARCH_HISTORY_KEY); } catch {}
+}
+
 function initAutocomplete() {
   const input = document.getElementById('hs-q');
   const box   = document.getElementById('hs-autocomplete');
   if (!input || !box) return;
-  input.addEventListener('input', () => {
-    const q = input.value.trim().toLowerCase();
-    if (!q) { box.style.display = 'none'; return; }
-    const matches = WILAYAS.filter(w => w.toLowerCase().includes(q)).slice(0, 6);
-    if (!matches.length) { box.style.display = 'none'; return; }
-    box.innerHTML = matches.map(w => `<div class="hs-autocomplete-item">${w}</div>`).join('');
+
+  function buildItems(q) {
+    let html = '';
+    if (!q) {
+      const hist = getSearchHistory();
+      if (hist.length) {
+        html += `<div class="hs-search-history">Recherches récentes</div>`;
+        html += hist.map(h => `<div class="hs-autocomplete-item history" data-val="${h}">${h}</div>`).join('');
+        html += `<button class="hs-autocomplete-clear" onclick="clearSearchHistory();document.getElementById('hs-autocomplete').style.display='none'">Effacer l'historique</button>`;
+      }
+      return html;
+    }
+    const ql = q.toLowerCase();
+    const wMatch = WILAYAS.filter(w => w.toLowerCase().includes(ql)).slice(0, 4);
+    const lMatch = (allListings || []).filter(l => l.title && l.title.toLowerCase().includes(ql)).slice(0, 4);
+    if (wMatch.length) {
+      html += `<div class="hs-autocomplete-section">Wilayas</div>`;
+      html += wMatch.map(w => `<div class="hs-autocomplete-item" data-val="${w}" data-type="wilaya">📍 ${w}</div>`).join('');
+    }
+    if (lMatch.length) {
+      html += `<div class="hs-autocomplete-section">Logements</div>`;
+      html += lMatch.map(l => `<div class="hs-autocomplete-item" data-val="${l.title}" data-id="${l.id}" data-type="listing">🏠 ${l.title} <span style="color:var(--g400);font-size:11px;margin-left:4px">${l.location||''}</span></div>`).join('');
+    }
+    return html;
+  }
+
+  function showBox() {
+    const html = buildItems(input.value.trim());
+    if (!html) { box.style.display = 'none'; return; }
+    box.innerHTML = html;
     box.style.display = 'block';
     box.querySelectorAll('.hs-autocomplete-item').forEach(item => {
       item.addEventListener('mousedown', e => {
         e.preventDefault();
-        input.value = item.textContent;
+        const val = item.dataset.val;
+        input.value = val;
         box.style.display = 'none';
-        document.getElementById('f-wilaya').value = item.textContent;
-        loadListings(currentCat || 'all');
+        if (item.dataset.type === 'listing' && item.dataset.id) {
+          saveSearchHistory(val);
+          openListing(Number(item.dataset.id));
+        } else if (item.dataset.type === 'wilaya') {
+          saveSearchHistory(val);
+          document.getElementById('f-wilaya').value = val;
+          loadListings(currentCat || 'all');
+        } else {
+          saveSearchHistory(val);
+          document.getElementById('f-wilaya').value = '';
+          document.getElementById('hs-q').value = val;
+          loadListings(currentCat || 'all');
+        }
       });
     });
-  });
+  }
+
+  input.addEventListener('focus', showBox);
+  input.addEventListener('input', showBox);
   document.addEventListener('click', e => { if (!e.target.closest('.field')) box.style.display = 'none'; });
+}
+
+// ── APERÇU RAPIDE (hover card) ────────────────────────────
+let _hoverTimer = null;
+let _hoverActive = null;
+function initHoverCard() {
+  const card = document.getElementById('hover-card');
+  if (!card) return;
+  document.getElementById('hover-card-btn').addEventListener('click', () => {
+    if (_hoverActive) openListing(_hoverActive);
+  });
+  document.addEventListener('mouseover', e => {
+    const el = e.target.closest('.card');
+    if (!el || !el.dataset.id) return;
+    const id = Number(el.dataset.id);
+    if (_hoverActive === id) return;
+    clearTimeout(_hoverTimer);
+    _hoverTimer = setTimeout(() => {
+      const l = (allListings || []).find(x => x.id === id);
+      if (!l) return;
+      _hoverActive = id;
+      const img   = document.getElementById('hover-card-img');
+      img.src     = (l.photos && l.photos[0]) || l.image || '';
+      img.alt     = l.title;
+      document.getElementById('hover-card-title').textContent = l.title;
+      document.getElementById('hover-card-sub').textContent   = l.location || '';
+      document.getElementById('hover-card-price').textContent = Number(l.price).toLocaleString('fr-DZ') + ' DZD / nuit';
+      const rect = el.getBoundingClientRect();
+      let left = rect.right + 12;
+      let top  = rect.top + window.scrollY;
+      if (left + 270 > window.innerWidth) left = rect.left - 270 - 12;
+      card.style.left = left + 'px';
+      card.style.top  = top  + 'px';
+      card.classList.add('show');
+    }, 320);
+  });
+  document.addEventListener('mouseleave', e => {
+    if (!e.target.closest('.card') && !e.target.closest('#hover-card')) {
+      clearTimeout(_hoverTimer);
+      card.classList.remove('show');
+      _hoverActive = null;
+    }
+  }, true);
+  card.addEventListener('mouseleave', () => {
+    card.classList.remove('show');
+    _hoverActive = null;
+  });
+  document.addEventListener('mouseout', e => {
+    const el = e.target.closest('.card');
+    const to = e.relatedTarget;
+    if (el && !el.contains(to) && to !== card && !card.contains(to)) {
+      clearTimeout(_hoverTimer);
+      if (_hoverActive) {
+        setTimeout(() => {
+          if (!card.matches(':hover')) { card.classList.remove('show'); _hoverActive = null; }
+        }, 80);
+      }
+    }
+  });
 }
 
 // ── RECENTLY VIEWED ───────────────────────────────────────
@@ -3774,6 +3937,75 @@ async function saveProfile() {
   finally { btn.disabled = false; btn.textContent = 'Enregistrer'; }
 }
 
+async function deleteAccount() {
+  if (!currentUser) return;
+  if (!confirm(`Supprimer définitivement le compte de ${currentUser.name} ? Cette action est irréversible.`)) return;
+  const confirmName = prompt(`Pour confirmer, saisissez votre nom complet : ${currentUser.name}`);
+  if (confirmName !== currentUser.name) { toast('Nom incorrect — suppression annulée.'); return; }
+  try {
+    await apiFetch('/auth/me', { method: 'DELETE' });
+    closeWs();
+    localStorage.removeItem('dz_token');
+    localStorage.removeItem('dz_user');
+    currentUser = null;
+    document.getElementById('menu-in').style.display = 'none';
+    document.getElementById('menu-out').style.display = 'block';
+    document.getElementById('avatar').textContent = '👤';
+    closeOverlay('ov-profile');
+    toast('✅ Compte supprimé. À bientôt !');
+    loadListings('all');
+  } catch(e) { toast('Erreur : ' + e.message); }
+}
+
+// ── WEBSOCKET CHAT EN TEMPS RÉEL ──────────────────────────
+let _ws = null;
+let _wsRetryCount = 0;
+
+function connectWs() {
+  if (!currentUser) return;
+  if (_ws && (_ws.readyState === WebSocket.OPEN || _ws.readyState === WebSocket.CONNECTING)) return;
+  const token = localStorage.getItem('dz_token');
+  if (!token) return;
+  const proto = location.protocol === 'https:' ? 'wss' : 'ws';
+  const url   = `${proto}://${location.host}/ws?token=${encodeURIComponent(token)}`;
+  _ws = new WebSocket(url);
+  _ws.onopen  = () => { _wsRetryCount = 0; };
+  _ws.onclose = e => {
+    _ws = null;
+    if (currentUser && e.code !== 4001 && _wsRetryCount < 5) {
+      _wsRetryCount++;
+      setTimeout(connectWs, Math.min(2000 * _wsRetryCount, 15000));
+    }
+  };
+  _ws.onerror = () => {};
+  _ws.onmessage = e => {
+    try {
+      const data = JSON.parse(e.data);
+      if (data.type === 'message') {
+        const m = data.msg;
+        const threadEl = document.getElementById('thread-msgs');
+        const isOpen   = document.getElementById('ov-msgs')?.classList.contains('open');
+        if (isOpen && threadEl && activeConvListing === m.listing_id && activeConvOther === m.from_id) {
+          const div = document.createElement('div');
+          div.className = 'msg-bubble theirs';
+          div.innerHTML = `${m.body}<div class="msg-time">${new Date(m.created_at||Date.now()).toLocaleTimeString('fr-DZ',{hour:'2-digit',minute:'2-digit'})}</div>`;
+          threadEl.appendChild(div);
+          threadEl.scrollTop = threadEl.scrollHeight;
+          apiFetch(`/messages/${m.listing_id}/${m.from_id}`).catch(()=>{});
+        }
+        checkUnread();
+        if (!isOpen) {
+          showBrowserNotif(`💬 ${m.sender_name||'Message'}`, m.body ? m.body.slice(0,60) : '');
+        }
+      }
+    } catch {}
+  };
+}
+
+function closeWs() {
+  if (_ws) { _ws.onclose = null; _ws.close(); _ws = null; }
+}
+
 // ── STATISTIQUES HÔTE ─────────────────────────────────────
 async function loadStats() {
   const el = document.getElementById('hdp-stats');
@@ -3828,8 +4060,40 @@ async function loadStats() {
         🏆 <strong>Meilleure annonce :</strong> ${s.top_listing.title} — ${s.top_listing.bookings} réservation(s)
       </div>` : ''}
       <div class="chart-wrap">
-        <h4>Revenus mensuels (12 derniers mois)</h4>
+        <h4>Revenus mensuels (12 derniers mois) ${(() => {
+          if (vals.length >= 2) {
+            const prev = vals[vals.length-2] || 0;
+            const curr = vals[vals.length-1] || 0;
+            if (prev === 0 && curr === 0) return '';
+            if (prev === 0) return '<span style="color:#047857;font-size:12px;font-weight:600;margin-left:6px">↑ nouveau</span>';
+            const pct = Math.round(((curr - prev) / prev) * 100);
+            const color = pct >= 0 ? '#047857' : '#b91c1c';
+            return `<span style="color:${color};font-size:12px;font-weight:600;margin-left:6px">${pct >= 0 ? '↑' : '↓'} ${Math.abs(pct)}% vs mois préc.</span>`;
+          }
+          return '';
+        })()}</h4>
         <div class="bar-chart">${bars}</div>
+        ${(() => {
+          if (vals.length < 2) return '';
+          const W = 400, H = 60, pad = 8;
+          const min = 0, max = maxVal;
+          const points = vals.map((v, i) => {
+            const x = pad + (i / (vals.length - 1)) * (W - pad * 2);
+            const y = H - pad - ((v - min) / (max - min || 1)) * (H - pad * 2);
+            return `${x.toFixed(1)},${y.toFixed(1)}`;
+          });
+          const area = `${pad},${H} ` + points.join(' ') + ` ${W - pad},${H}`;
+          return `<div class="line-chart-wrap"><svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none">
+            <defs><linearGradient id="lcg" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#E8261A" stop-opacity=".25"/><stop offset="100%" stop-color="#E8261A" stop-opacity="0"/></linearGradient></defs>
+            <polygon points="${area}" fill="url(#lcg)"/>
+            <polyline points="${points.join(' ')}" fill="none" stroke="#E8261A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            ${vals.map((v, i) => {
+              const x = pad + (i / (vals.length - 1)) * (W - pad * 2);
+              const y = H - pad - ((v - min) / (max - min || 1)) * (H - pad * 2);
+              return `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="3" fill="#E8261A"/>`;
+            }).join('')}
+          </svg></div>`;
+        })()}
       </div>`;
   } catch(e) { el.innerHTML = '<p style="color:var(--red);font-size:14px">'+e.message+'</p>'; }
 }
@@ -4486,6 +4750,7 @@ function syncHeroDatesToFilter() {
 // ── RECHERCHE ──────────────────────────────────────────────
 async function doSearch() {
   const q        = document.getElementById('hs-q').value.trim();
+  if (q) saveSearchHistory(q);
   const checkIn  = document.getElementById('hs-in').value;
   const checkOut = document.getElementById('hs-out').value;
 
@@ -5178,10 +5443,12 @@ document.addEventListener('DOMContentLoaded', function() {
   loadDestCounts();
   loadStats();
   initAutocomplete();
+  initHoverCard();
   initDarkMode();
   initCookieBanner();
   initPriceSlider();
   renderRecentlyViewed();
+  if (currentUser) connectWs();
   setInterval(checkUnread, 30000);
 
   // URL param handlers
