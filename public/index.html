@@ -2991,7 +2991,11 @@ async function loadConversations() {
         ${c.unread > 0 ? `<div class="conv-badge">${c.unread}</div>` : ''}
       </div>`).join('');
     list.querySelectorAll('.conv-item').forEach(item => {
-      item.addEventListener('click', () => openThread(Number(item.dataset.lid), Number(item.dataset.oid), item.dataset.oname));
+      item.addEventListener('click', () => {
+        list.querySelectorAll('.conv-item').forEach(i => i.classList.remove('active'));
+        item.classList.add('active');
+        openThread(Number(item.dataset.lid), Number(item.dataset.oid), item.dataset.oname);
+      });
     });
   } catch(e) { list.innerHTML='<div style="padding:16px;color:var(--red);font-size:14px">'+e.message+'</div>'; }
 }
@@ -3038,16 +3042,15 @@ async function contactHost() {
   closeOverlay('ov-listing');
   openOverlay('ov-msgs');
   await loadConversations();
-  activeConvOther   = currentHostId;
-  activeConvListing = currentListingId;
-  document.getElementById('thread-empty').style.display = 'none';
-  const tc = document.getElementById('thread-content');
-  tc.style.display = 'flex';
-  tc.style.flexDirection = 'column';
-  tc.style.height = '100%';
   const host = allListings.find(l => l.id === currentListingId);
-  document.getElementById('thread-hd').textContent = host?.host_name || 'Hôte';
-  document.getElementById('thread-msgs').innerHTML = '<p style="color:var(--g400);text-align:center;padding:24px">Commencez la conversation avec l\'hôte !</p>';
+  const hostName = host?.host_name || 'Hôte';
+  // Activer l'item de conv correspondant s'il existe déjà
+  const existing = document.querySelector(`#conv-list .conv-item[data-lid="${currentListingId}"][data-oid="${currentHostId}"]`);
+  if (existing) {
+    document.querySelectorAll('#conv-list .conv-item').forEach(i => i.classList.remove('active'));
+    existing.classList.add('active');
+  }
+  openThread(currentListingId, currentHostId, hostName);
 }
 
 // ── ESPACE HÔTE ───────────────────────────────────────────
