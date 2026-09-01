@@ -143,6 +143,41 @@ header{position:sticky;top:0;z-index:200;background:#fff;border-bottom:1px solid
 .map-popup-rating{font-size:12px;color:var(--g600)}
 .map-toggle-btn{position:absolute;top:12px;right:12px;z-index:1000;background:#fff;border:none;border-radius:12px;padding:10px 16px;font-size:13px;font-weight:600;cursor:pointer;box-shadow:var(--sh)}
 
+/* ── STATS BAND ── */
+.stats-band{background:var(--g50);border-top:1px solid var(--g200);border-bottom:1px solid var(--g200);padding:18px 24px;display:flex;justify-content:center;gap:48px}
+.stats-band .stat{display:flex;flex-direction:column;align-items:center;gap:2px}
+.stats-band .stat-val{font-size:22px;font-weight:700;color:var(--red);line-height:1}
+.stats-band .stat-lbl{font-size:12px;color:var(--g600);font-weight:500}
+@media(max-width:600px){.stats-band{gap:24px}.stats-band .stat-val{font-size:18px}}
+
+/* ── CAROUSEL Les Incontournables ── */
+.etab-carousel{display:flex;overflow-x:auto;gap:20px;padding-bottom:12px;scroll-snap-type:x mandatory;scrollbar-width:none;-ms-overflow-style:none;margin-bottom:48px}
+.etab-carousel::-webkit-scrollbar{display:none}
+.etab-carousel .pub-card{flex:0 0 320px;scroll-snap-align:start}
+.etab-carousel .pub-card.vedette-card{flex:0 0 680px;grid-column:unset}
+.etab-carousel .pub-card.vedette-card .pub-card-img{width:300px;min-width:300px;height:220px}
+@media(max-width:600px){
+  .etab-carousel .pub-card{flex:0 0 280px}
+  .etab-carousel .pub-card.vedette-card{flex:0 0 300px;flex-direction:column}
+  .etab-carousel .pub-card.vedette-card .pub-card-img{width:100%;min-width:0;height:180px}
+}
+
+/* ── SECTION DIVIDER ── */
+.section-divider{border:none;border-top:1px solid var(--g200);margin:0 0 32px}
+
+/* ── SKELETON LOADING ── */
+@keyframes shimmer{0%{background-position:-800px 0}100%{background-position:800px 0}}
+.skeleton-card{border-radius:var(--r);overflow:hidden;background:#fff;border:1px solid var(--g200)}
+.skeleton-img{height:200px;background:linear-gradient(90deg,var(--g100) 25%,var(--g200) 50%,var(--g100) 75%);background-size:800px 100%;animation:shimmer 1.4s infinite linear}
+.skeleton-line{height:14px;border-radius:8px;margin:10px 14px;background:linear-gradient(90deg,var(--g100) 25%,var(--g200) 50%,var(--g100) 75%);background-size:800px 100%;animation:shimmer 1.4s infinite linear}
+.skeleton-line.short{width:55%;margin-top:6px}
+.skeleton-line.price{width:40%;margin-top:14px;height:16px}
+
+/* ── SCROLL TO TOP ── */
+#scroll-top{position:fixed;bottom:88px;right:20px;width:44px;height:44px;border-radius:50%;background:var(--g800);color:#fff;border:none;font-size:20px;cursor:pointer;box-shadow:var(--sh);opacity:0;transform:translateY(8px);transition:opacity .25s,transform .25s;z-index:900;display:flex;align-items:center;justify-content:center}
+#scroll-top.visible{opacity:1;transform:none}
+@media(max-width:768px){#scroll-top{bottom:80px;right:16px}}
+
 /* ── MAIN GRID ── */
 main{max-width:1280px;margin:0 auto;padding:32px 24px 64px}
 .sec-title{font-size:22px;font-weight:700;margin-bottom:20px}
@@ -747,6 +782,13 @@ footer{background:var(--g100);border-top:1px solid var(--g200);padding:48px 24px
   </div>
 </section>
 
+<!-- STATS BAND -->
+<div class="stats-band" id="stats-band">
+  <div class="stat"><span class="stat-val" id="stat-listings">—</span><span class="stat-lbl">Logements</span></div>
+  <div class="stat"><span class="stat-val">48</span><span class="stat-lbl">Wilayas</span></div>
+  <div class="stat"><span class="stat-val" id="stat-hosts">—</span><span class="stat-lbl">Hôtes</span></div>
+</div>
+
 <!-- CATEGORIES -->
 <div class="cats-wrap">
   <div class="cats">
@@ -829,22 +871,23 @@ footer{background:var(--g100);border-top:1px solid var(--g200);padding:48px 24px
       <h2 class="sec-title" style="margin:0">🌟 Les Incontournables</h2>
       <button onclick="openEtablissements()" style="border:none;background:none;font-size:14px;font-weight:600;color:var(--red);cursor:pointer;padding:6px 0">Voir tous →</button>
     </div>
-    <div class="pub-grid" id="home-etab-grid" style="margin-bottom:48px"><div class="empty-state">Chargement…</div></div>
+    <div class="etab-carousel" id="home-etab-grid"><div class="empty-state">Chargement…</div></div>
   </div>
 
+  <hr class="section-divider"/>
   <h2 class="sec-title" id="sec-title" data-i18n="main.popular">Logements populaires</h2>
   <div class="grid" id="grid"></div>
 
   <h2 class="sec-title">Explorez par destination</h2>
   <div class="dest-grid" id="dest-grid">
-    <div class="dest" data-dest="Alger"><img src="https://images.unsplash.com/photo-1548013146-72479768bada?w=600&q=80" alt="Alger"/><div class="dest-lbl"><strong>Alger</strong><span id="dest-count-Alger">…</span></div></div>
-    <div class="dest" data-dest="Oran"><img src="https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=600&q=80" alt="Oran"/><div class="dest-lbl"><strong>Oran</strong><span id="dest-count-Oran">…</span></div></div>
-    <div class="dest" data-dest="Béjaïa"><img src="https://images.unsplash.com/photo-1510414842594-a61c69b5ae57?w=600&q=80" alt="Béjaïa"/><div class="dest-lbl"><strong>Béjaïa</strong><span id="dest-count-Béjaïa">…</span></div></div>
-    <div class="dest" data-dest="Constantine"><img src="https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=600&q=80" alt="Constantine"/><div class="dest-lbl"><strong>Constantine</strong><span id="dest-count-Constantine">…</span></div></div>
-    <div class="dest" data-dest="Tamanrasset"><img src="https://images.unsplash.com/photo-1509316785289-025f5b846b35?w=600&q=80" alt="Tamanrasset"/><div class="dest-lbl"><strong>Tamanrasset</strong><span id="dest-count-Tamanrasset">…</span></div></div>
-    <div class="dest" data-dest="Tlemcen"><img src="https://images.unsplash.com/photo-1533130061792-64b345e4a833?w=600&q=80" alt="Tlemcen"/><div class="dest-lbl"><strong>Tlemcen</strong><span id="dest-count-Tlemcen">…</span></div></div>
-    <div class="dest" data-dest="Tizi Ouzou"><img src="https://images.unsplash.com/photo-1500382017468-9049fed747ef?w=600&q=80" alt="Tizi Ouzou"/><div class="dest-lbl"><strong>Tizi Ouzou</strong><span id="dest-count-Tizi Ouzou">…</span></div></div>
-    <div class="dest" data-dest="Annaba"><img src="https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=600&q=80" alt="Annaba"/><div class="dest-lbl"><strong>Annaba</strong><span id="dest-count-Annaba">…</span></div></div>
+    <div class="dest" data-dest="Alger"><img src="https://images.unsplash.com/photo-1548013146-72479768bada?w=600&q=80" alt="Alger" loading="lazy"/><div class="dest-lbl"><strong>Alger</strong><span id="dest-count-Alger">…</span></div></div>
+    <div class="dest" data-dest="Oran"><img src="https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=600&q=80" alt="Oran" loading="lazy"/><div class="dest-lbl"><strong>Oran</strong><span id="dest-count-Oran">…</span></div></div>
+    <div class="dest" data-dest="Béjaïa"><img src="https://images.unsplash.com/photo-1510414842594-a61c69b5ae57?w=600&q=80" alt="Béjaïa" loading="lazy"/><div class="dest-lbl"><strong>Béjaïa</strong><span id="dest-count-Béjaïa">…</span></div></div>
+    <div class="dest" data-dest="Constantine"><img src="https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=600&q=80" alt="Constantine" loading="lazy"/><div class="dest-lbl"><strong>Constantine</strong><span id="dest-count-Constantine">…</span></div></div>
+    <div class="dest" data-dest="Tamanrasset"><img src="https://images.unsplash.com/photo-1509316785289-025f5b846b35?w=600&q=80" alt="Tamanrasset" loading="lazy"/><div class="dest-lbl"><strong>Tamanrasset</strong><span id="dest-count-Tamanrasset">…</span></div></div>
+    <div class="dest" data-dest="Tlemcen"><img src="https://images.unsplash.com/photo-1533130061792-64b345e4a833?w=600&q=80" alt="Tlemcen" loading="lazy"/><div class="dest-lbl"><strong>Tlemcen</strong><span id="dest-count-Tlemcen">…</span></div></div>
+    <div class="dest" data-dest="Tizi Ouzou"><img src="https://images.unsplash.com/photo-1500382017468-9049fed747ef?w=600&q=80" alt="Tizi Ouzou" loading="lazy"/><div class="dest-lbl"><strong>Tizi Ouzou</strong><span id="dest-count-Tizi Ouzou">…</span></div></div>
+    <div class="dest" data-dest="Annaba"><img src="https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=600&q=80" alt="Annaba" loading="lazy"/><div class="dest-lbl"><strong>Annaba</strong><span id="dest-count-Annaba">…</span></div></div>
   </div>
 
   <div class="banner">
@@ -852,6 +895,9 @@ footer{background:var(--g100);border-top:1px solid var(--g200);padding:48px 24px
     <button class="banner-btn" id="banner-host-btn" data-i18n="banner.btn">Devenir hôte →</button>
   </div>
 </main>
+
+<!-- SCROLL TO TOP -->
+<button id="scroll-top" title="Haut de page" aria-label="Retour en haut">↑</button>
 
 <!-- FOOTER -->
 <footer>
@@ -2101,10 +2147,21 @@ function getSelectedAmenities() {
   return [...document.querySelectorAll('#amenity-chips .amenity-chip.active')].map(c => c.dataset.amenity);
 }
 
+// ── SKELETON ──────────────────────────────────────────────
+function skeletonCards(n = 8) {
+  return Array.from({length: n}, () => `
+    <div class="skeleton-card">
+      <div class="skeleton-img"></div>
+      <div class="skeleton-line"></div>
+      <div class="skeleton-line short"></div>
+      <div class="skeleton-line price"></div>
+    </div>`).join('');
+}
+
 // ── LISTINGS ──────────────────────────────────────────────
 async function loadListings(cat) {
   const grid = document.getElementById('grid');
-  grid.innerHTML = '<p style="color:var(--g400);padding:32px;text-align:center">Chargement…</p>';
+  grid.innerHTML = skeletonCards(8);
   const checkIn  = document.getElementById('f-in')?.value  || '';
   const checkOut = document.getElementById('f-out')?.value || '';
   try {
@@ -3730,7 +3787,7 @@ function renderPubCard(p) {
   const typeLabel = { hotel:'Hôtel', camping:'Camping', complexe:'Complexe touristique' };
   const stars = p.etoiles > 0 ? `<span class="pub-stars">${'★'.repeat(Math.min(p.etoiles,5))}</span>` : '';
   const img = p.logo
-    ? `<img src="${p.logo}" alt="${p.nom}" onerror="this.parentNode.innerHTML='<div class=pub-card-img-ph>${typeIcon[p.type]||'🏢'}</div>'">`
+    ? `<img src="${p.logo}" alt="${p.nom}" loading="lazy" onerror="this.parentNode.innerHTML='<div class=pub-card-img-ph>${typeIcon[p.type]||'🏢'}</div>'">`
     : `<div class="pub-card-img-ph">${typeIcon[p.type]||'🏢'}</div>`;
   const typeLine = `<div class="pub-card-type">${typeIcon[p.type]||'🏢'} ${typeLabel[p.type]||p.type} ${stars}</div>`;
   const loc  = `<div class="pub-card-loc">📍 ${p.wilaya}${p.ville?' · '+p.ville:''}</div>`;
@@ -4270,8 +4327,30 @@ document.addEventListener('DOMContentLoaded', function() {
   loadListings('all');
   loadHomeEtab();
   loadDestCounts();
+  loadStats();
   setInterval(checkUnread, 30000);
+
+  // Scroll to top
+  const scrollTopBtn = document.getElementById('scroll-top');
+  window.addEventListener('scroll', () => {
+    scrollTopBtn.classList.toggle('visible', window.scrollY > 400);
+  }, { passive: true });
+  scrollTopBtn.addEventListener('click', () => window.scrollTo({ top: 0, behavior: 'smooth' }));
 });
+
+// ── STATS BAND ────────────────────────────────────────────
+async function loadStats() {
+  try {
+    const data = await apiFetch('/listings');
+    const listingsEl = document.getElementById('stat-listings');
+    if (listingsEl) listingsEl.textContent = (data.length >= 10 ? data.length + '+' : data.length);
+    const hostsEl = document.getElementById('stat-hosts');
+    if (hostsEl) {
+      const hostIds = new Set(data.map(l => l.host_id));
+      hostsEl.textContent = hostIds.size >= 10 ? hostIds.size + '+' : hostIds.size;
+    }
+  } catch(e) { /* silencieux */ }
+}
 
 // ── PWA ───────────────────────────────────────────────────
 
