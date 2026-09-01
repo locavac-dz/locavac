@@ -232,6 +232,59 @@ header{position:sticky;top:0;z-index:200;background:#fff;border-bottom:1px solid
 .price-slider-range{position:absolute;height:4px;background:var(--red);border-radius:2px;top:50%;transform:translateY(-50%)}
 .price-labels{display:flex;justify-content:space-between;font-size:12px;color:var(--text2);margin-top:4px}
 
+/* ── LIGHTBOX ── */
+#lightbox{position:fixed;inset:0;z-index:10000;background:rgba(0,0,0,.96);display:none;flex-direction:column;align-items:center;justify-content:center}
+#lightbox.open{display:flex}
+#lb-main{position:relative;width:100%;flex:1;display:flex;align-items:center;justify-content:center;padding:0 60px;min-height:0}
+#lb-img{max-width:100%;max-height:calc(100vh - 180px);object-fit:contain;border-radius:8px;transition:opacity .2s;user-select:none}
+#lb-close{position:fixed;top:16px;right:20px;background:rgba(255,255,255,.12);border:none;color:#fff;font-size:22px;cursor:pointer;z-index:10001;width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;transition:background .2s}
+#lb-close:hover{background:rgba(255,255,255,.25)}
+.lb-nav{position:absolute;top:50%;transform:translateY(-50%);background:rgba(255,255,255,.15);border:none;color:#fff;width:48px;height:48px;border-radius:50%;font-size:28px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background .2s;z-index:2}
+.lb-nav:hover{background:rgba(255,255,255,.3)}
+#lb-prev{left:8px}
+#lb-next{right:8px}
+#lb-counter{color:rgba(255,255,255,.6);font-size:13px;font-weight:600;margin:8px 0 6px;flex-shrink:0}
+#lb-thumbs{display:flex;gap:8px;padding:0 16px 16px;overflow-x:auto;max-width:100%;scrollbar-width:none;flex-shrink:0}
+#lb-thumbs::-webkit-scrollbar{display:none}
+.lb-thumb{width:64px;height:48px;border-radius:6px;overflow:hidden;cursor:pointer;border:2px solid transparent;flex-shrink:0;transition:border-color .2s;opacity:.6}
+.lb-thumb:hover,.lb-thumb.active{border-color:#fff;opacity:1}
+.lb-thumb img{width:100%;height:100%;object-fit:cover}
+.gal-expand{position:absolute;bottom:12px;left:12px;background:rgba(0,0,0,.55);color:#fff;border:none;font-size:12px;font-weight:700;padding:5px 12px;border-radius:10px;cursor:pointer;z-index:3;display:flex;align-items:center;gap:5px;transition:background .2s}
+.gal-expand:hover{background:rgba(0,0,0,.85)}
+
+/* ── COMPARATEUR ── */
+.card-cmp-btn{position:absolute;bottom:10px;left:10px;background:rgba(255,255,255,.92);border:1.5px solid var(--g200);font-size:11px;font-weight:700;padding:4px 10px;border-radius:20px;cursor:pointer;color:#222;transition:all .2s;z-index:1;white-space:nowrap}
+.card-cmp-btn.active{background:var(--red);color:#fff;border-color:var(--red)}
+#compare-bar{position:fixed;bottom:0;left:0;right:0;background:var(--g800);color:#fff;padding:12px 24px;display:none;align-items:center;gap:12px;z-index:9000;box-shadow:0 -4px 24px rgba(0,0,0,.3);flex-wrap:wrap}
+#compare-bar.visible{display:flex}
+.cmp-bar-item{background:rgba(255,255,255,.12);border-radius:8px;padding:4px 12px;font-size:13px;font-weight:600;display:flex;align-items:center;gap:6px;white-space:nowrap;max-width:200px;overflow:hidden;text-overflow:ellipsis}
+.cmp-bar-rm{background:none;border:none;color:rgba(255,255,255,.6);cursor:pointer;font-size:16px;padding:0;line-height:1}
+.cmp-bar-rm:hover{color:#fff}
+.cmp-go{background:var(--red);color:#fff;border:none;border-radius:10px;padding:10px 22px;font-size:14px;font-weight:700;cursor:pointer;white-space:nowrap;margin-left:auto}
+.cmp-go:disabled{opacity:.4;cursor:not-allowed}
+.cmp-clear{background:none;border:none;color:rgba(255,255,255,.5);cursor:pointer;font-size:22px;padding:0;line-height:1}
+.cmp-clear:hover{color:#fff}
+.cmp-table{display:flex;gap:16px;min-width:600px}
+.cmp-col{flex:1;min-width:220px;border:1.5px solid var(--border);border-radius:12px;overflow:hidden;background:var(--surface)}
+.cmp-col-img{height:160px;width:100%;object-fit:cover;display:block}
+.cmp-col-body{padding:14px}
+.cmp-col-title{font-size:15px;font-weight:700;margin-bottom:4px;line-height:1.3}
+.cmp-col-row{display:flex;justify-content:space-between;padding:7px 0;border-top:1px solid var(--border);font-size:13px}
+.cmp-col-row:first-of-type{border-top:none}
+.cmp-col-lbl{color:var(--text2);font-weight:500}
+.cmp-col-val{font-weight:600;color:var(--text);text-align:right;max-width:60%}
+
+/* ── COLLECTIONS ── */
+.save-btn{position:absolute;bottom:10px;right:42px;background:none;border:none;font-size:20px;cursor:pointer;color:rgba(255,255,255,.85);text-shadow:0 1px 4px rgba(0,0,0,.5);transition:transform .2s;line-height:1;z-index:1}
+.save-btn:hover{transform:scale(1.2)}
+.coll-list{display:flex;flex-direction:column;gap:8px;margin-bottom:16px}
+.coll-item{display:flex;align-items:center;gap:10px;padding:10px 14px;border:1.5px solid var(--border);border-radius:10px;cursor:pointer;transition:border-color .2s;font-size:14px;font-weight:600}
+.coll-item:hover{border-color:var(--red)}
+.coll-item-count{margin-left:auto;font-size:12px;color:var(--text2);font-weight:400}
+.coll-new-row{display:flex;gap:8px;margin-top:8px}
+.coll-new-row input{flex:1;border:1.5px solid var(--border);border-radius:8px;padding:8px 12px;font-size:14px;background:var(--surface);color:var(--text)}
+.coll-new-row button{background:var(--red);color:#fff;border:none;border-radius:8px;padding:8px 16px;font-size:14px;font-weight:700;cursor:pointer;white-space:nowrap}
+
 /* ── NEWSLETTER ── */
 .newsletter-section{background:var(--red);padding:40px 24px;text-align:center}
 .newsletter-section h3{font-size:20px;font-weight:700;color:#fff;margin-bottom:8px}
@@ -1263,6 +1316,7 @@ footer{background:var(--g100);border-top:1px solid var(--g200);padding:48px 24px
       <button class="gallery-btn next" id="gal-next">›</button>
       <div class="gallery-dots" id="gal-dots"></div>
       <div class="gallery-count" id="gal-count"></div>
+      <button class="gal-expand" id="gal-expand">🔍 Voir toutes les photos</button>
     </div>
     <div class="mp">
       <h2 id="m-title"></h2>
@@ -1365,6 +1419,50 @@ footer{background:var(--g100);border-top:1px solid var(--g200);padding:48px 24px
         <div class="fg"><label>Mot de passe</label><input type="password" id="r-pass" placeholder="Min. 6 caractères"/></div>
         <div class="ferr" id="r-err"></div>
         <button class="btn-submit" id="r-btn">Créer mon compte</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- LIGHTBOX GALERIE PLEIN ÉCRAN -->
+<div id="lightbox">
+  <button id="lb-close">✕</button>
+  <div id="lb-main">
+    <button class="lb-nav" id="lb-prev">‹</button>
+    <img id="lb-img" src="" alt="Photo du logement" draggable="false"/>
+    <button class="lb-nav" id="lb-next">›</button>
+  </div>
+  <div id="lb-counter"></div>
+  <div id="lb-thumbs"></div>
+</div>
+
+<!-- BARRE COMPARATEUR (fixed bottom) -->
+<div id="compare-bar">
+  <span style="font-size:13px;font-weight:600;opacity:.7;white-space:nowrap">Comparer :</span>
+  <div style="display:flex;gap:8px;flex-wrap:wrap;flex:1;min-width:0" id="cmp-items"></div>
+  <button class="cmp-go" id="cmp-go-btn" disabled>Comparer →</button>
+  <button class="cmp-clear" id="cmp-clear-btn">✕</button>
+</div>
+
+<!-- MODAL COMPARATEUR -->
+<div class="overlay" id="ov-compare">
+  <div class="modal" style="max-width:960px">
+    <button class="modal-x" id="x-compare">✕</button>
+    <div class="mp"><h2>Comparaison</h2><p class="sub">Comparez les logements côte à côte</p></div>
+    <div style="padding:0 24px 24px;overflow-x:auto"><div class="cmp-table" id="cmp-table"></div></div>
+  </div>
+</div>
+
+<!-- MODAL COLLECTIONS -->
+<div class="overlay" id="ov-collections">
+  <div class="modal" style="max-width:420px">
+    <button class="modal-x" id="x-collections">✕</button>
+    <div class="mp"><h2>💾 Sauvegarder dans…</h2><p class="sub" id="coll-listing-title"></p></div>
+    <div style="padding:0 24px 24px">
+      <div class="coll-list" id="coll-list"></div>
+      <div class="coll-new-row">
+        <input type="text" id="coll-new-name" placeholder="Nouvelle liste…" maxlength="40"/>
+        <button id="coll-new-btn">+ Créer</button>
       </div>
     </div>
   </div>
@@ -2239,6 +2337,7 @@ function refreshAuthUI() {
     document.getElementById('notif-dot').style.display = 'none';
   }
 }
+let _lastUnreadCount = 0;
 async function checkUnread() {
   if (!currentUser) return;
   try {
@@ -2249,10 +2348,14 @@ async function checkUnread() {
       dot.style.display = 'block';
       badge.textContent = data.count;
       badge.style.display = 'inline-block';
+      if (data.count > _lastUnreadCount) {
+        showBrowserNotif('Locavac — Nouveau message', `Vous avez ${data.count} message(s) non lu(s).`);
+      }
     } else {
       dot.style.display = 'none';
       badge.style.display = 'none';
     }
+    _lastUnreadCount = data.count;
   } catch {}
 }
 
@@ -2295,6 +2398,193 @@ async function doRegister() {
     setTimeout(() => toast('📧 Un email de confirmation a été envoyé à ' + email + '. Vérifiez votre boîte mail.'), 2000);
   } catch(e) { errEl.textContent = e.message; errEl.classList.add('show'); }
 }
+// ── LIGHTBOX ──────────────────────────────────────────────
+let lbIdx = 0;
+let lbTouchX = null;
+
+function openLightbox(idx) {
+  lbIdx = idx ?? currentPhotoIdx;
+  renderLightbox();
+  document.getElementById('lightbox').classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+function closeLightbox() {
+  document.getElementById('lightbox').classList.remove('open');
+  document.body.style.overflow = '';
+}
+function renderLightbox() {
+  if (!currentPhotos.length) return;
+  lbIdx = ((lbIdx % currentPhotos.length) + currentPhotos.length) % currentPhotos.length;
+  const img = document.getElementById('lb-img');
+  img.style.opacity = '0';
+  setTimeout(() => { img.src = currentPhotos[lbIdx]; img.style.opacity = '1'; }, 80);
+  document.getElementById('lb-counter').textContent = (lbIdx + 1) + ' / ' + currentPhotos.length;
+  const thumbs = document.getElementById('lb-thumbs');
+  thumbs.innerHTML = currentPhotos.map((p, i) =>
+    `<div class="lb-thumb ${i===lbIdx?'active':''}" data-i="${i}"><img src="${p}" loading="lazy" alt=""/></div>`
+  ).join('');
+  thumbs.querySelectorAll('.lb-thumb').forEach(t => {
+    t.addEventListener('click', () => { lbIdx = Number(t.dataset.i); renderLightbox(); });
+  });
+  const active = thumbs.querySelector('.lb-thumb.active');
+  if (active) active.scrollIntoView({ inline: 'center', behavior: 'smooth' });
+}
+
+// ── COMPARATEUR ────────────────────────────────────────────
+const compareSet = new Set();
+
+function toggleCompare(id, title, image) {
+  if (compareSet.has(id)) {
+    compareSet.delete(id);
+  } else {
+    if (compareSet.size >= 3) { toast('Maximum 3 logements à comparer.'); return; }
+    compareSet.add(id);
+  }
+  updateCompareBar();
+  document.querySelectorAll(`.card-cmp-btn[data-cid="${id}"]`).forEach(b => b.classList.toggle('active', compareSet.has(id)));
+}
+function updateCompareBar() {
+  const bar = document.getElementById('compare-bar');
+  const items = document.getElementById('cmp-items');
+  const btn   = document.getElementById('cmp-go-btn');
+  if (!compareSet.size) { bar.classList.remove('visible'); return; }
+  bar.classList.add('visible');
+  const ids = [...compareSet];
+  items.innerHTML = ids.map(id => {
+    const l = allFilteredListings.find(x => x.id === id) || allListings.find(x => x.id === id) || {};
+    return `<div class="cmp-bar-item"><span style="overflow:hidden;text-overflow:ellipsis">${l.title||'Logement #'+id}</span><button class="cmp-bar-rm" onclick="toggleCompare(${id})">✕</button></div>`;
+  }).join('');
+  btn.disabled = compareSet.size < 2;
+}
+function openCompare() {
+  const ids = [...compareSet];
+  const listings = ids.map(id => allFilteredListings.find(x => x.id === id) || allListings.find(x => x.id === id) || {id});
+  const rows = [
+    { label: 'Photo',       fn: l => `<img class="cmp-col-img" src="${(l.photos&&l.photos[0])||l.image||''}" alt="" onerror="this.style.display='none'"/>` },
+    { label: 'Titre',       fn: l => `<div class="cmp-col-title">${l.title||'—'}</div>` },
+    { label: 'Localisation',fn: l => l.location||'—' },
+    { label: 'Prix/nuit',   fn: l => `<strong>${Number(l.price||0).toLocaleString('fr-DZ')} DZD</strong>` },
+    { label: 'Note',        fn: l => l.rating ? `⭐ ${l.rating} (${l.reviews||0} avis)` : '—' },
+    { label: 'Voyageurs',   fn: l => l.guests ? l.guests + ' pers.' : '—' },
+    { label: 'Chambres',    fn: l => l.beds ? l.beds + ' ch.' : '—' },
+    { label: 'Catégorie',   fn: l => l.category||'—' },
+    { label: 'Équipements', fn: l => { const am = Array.isArray(l.amenities)?l.amenities:[]; return am.slice(0,6).map(a=>{ const d=AMENITIES_DEF.find(x=>x.id===a); return d?d.icon+' '+d.label:''; }).join(', ')||'—'; } },
+  ];
+  document.getElementById('cmp-table').innerHTML = `<div class="cmp-table">${listings.map(l => `
+    <div class="cmp-col">
+      ${rows[0].fn(l)}
+      <div class="cmp-col-body">
+        ${rows[1].fn(l)}
+        ${rows.slice(2).map(r => `<div class="cmp-col-row"><span class="cmp-col-lbl">${r.label}</span><span class="cmp-col-val">${r.fn(l)}</span></div>`).join('')}
+        <button class="btn-submit" style="margin-top:12px;padding:10px" onclick="closeOverlay('ov-compare');openListing(${l.id})">Voir l'annonce →</button>
+      </div>
+    </div>`).join('')}</div>`;
+  openOverlay('ov-compare');
+}
+
+// ── COLLECTIONS ────────────────────────────────────────────
+const COLL_KEY = 'locavac_collections';
+let pendingSaveId = null;
+
+function collLoad() {
+  try { return JSON.parse(localStorage.getItem(COLL_KEY)) || []; } catch { return []; }
+}
+function collSave(cols) {
+  try { localStorage.setItem(COLL_KEY, JSON.stringify(cols)); } catch {}
+}
+function openCollModal(listingId) {
+  if (!currentUser) { openAuth('login'); return; }
+  pendingSaveId = listingId;
+  const l = allFilteredListings.find(x => x.id === listingId) || allListings.find(x => x.id === listingId) || {};
+  document.getElementById('coll-listing-title').textContent = l.title || '';
+  renderCollList();
+  openOverlay('ov-collections');
+}
+function renderCollList() {
+  const cols = collLoad();
+  const el = document.getElementById('coll-list');
+  if (!cols.length) { el.innerHTML = '<p style="font-size:13px;color:var(--text2);margin-bottom:8px">Aucune liste — créez-en une ci-dessous.</p>'; return; }
+  el.innerHTML = cols.map((c, i) => {
+    const saved = c.ids.includes(pendingSaveId);
+    return `<div class="coll-item" onclick="toggleCollItem(${i})" style="${saved?'border-color:var(--red);background:var(--g50)':''}">
+      <span>${saved?'✅':''} ${c.name}</span>
+      <span class="coll-item-count">${c.ids.length} logement${c.ids.length>1?'s':''}</span>
+    </div>`;
+  }).join('');
+}
+function toggleCollItem(idx) {
+  const cols = collLoad();
+  if (!cols[idx]) return;
+  const ids = cols[idx].ids;
+  const pos = ids.indexOf(pendingSaveId);
+  pos >= 0 ? ids.splice(pos, 1) : ids.push(pendingSaveId);
+  collSave(cols);
+  renderCollList();
+  toast(pos >= 0 ? 'Retiré de la liste.' : '✅ Ajouté à "' + cols[idx].name + '"');
+}
+function createCollection() {
+  const name = document.getElementById('coll-new-name').value.trim();
+  if (!name) return;
+  const cols = collLoad();
+  if (cols.find(c => c.name === name)) { toast('Cette liste existe déjà.'); return; }
+  cols.push({ name, ids: pendingSaveId ? [pendingSaveId] : [] });
+  collSave(cols);
+  document.getElementById('coll-new-name').value = '';
+  renderCollList();
+  toast('✅ Liste "' + name + '" créée !');
+}
+
+// ── PDF RÉSERVATION ────────────────────────────────────────
+function printResa(r) {
+  const statusLabel = r.status==='confirmed'?'Confirmée ✅':r.status==='pending'?'En attente':'Annulée';
+  const statusColor = r.status==='confirmed'?'#15803d':r.status==='pending'?'#92400e':'#b91c1c';
+  const statusBg    = r.status==='confirmed'?'#dcfce7':r.status==='pending'?'#fef3c7':'#fee2e2';
+  const w = window.open('', '_blank', 'width=600,height=850');
+  if (!w) { toast('Autorisez les pop-ups pour télécharger le PDF.'); return; }
+  w.document.write(`<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8"><title>Réservation #${r.id} — Locavac</title>
+<style>*{box-sizing:border-box;margin:0;padding:0}body{font-family:Arial,sans-serif;color:#222;padding:40px;max-width:520px;margin:auto}
+.logo{font-size:26px;font-weight:900;color:#E8261A;letter-spacing:-1px;margin-bottom:32px;display:block}
+h2{font-size:20px;margin-bottom:8px}
+.status{display:inline-block;padding:4px 14px;border-radius:20px;font-size:12px;font-weight:700;background:${statusBg};color:${statusColor};margin-bottom:20px}
+.box{background:#f9f9f9;border-radius:10px;padding:18px;margin:16px 0}
+.row{display:flex;justify-content:space-between;padding:8px 0;border-top:1px solid #e0e0e0;font-size:14px}
+.row:first-child{border-top:none}
+.lbl{color:#666}
+.val{font-weight:600}
+hr{border:none;border-top:1px solid #e0e0e0;margin:24px 0}
+.footer{font-size:12px;color:#999;line-height:1.6}
+@media print{.no-print{display:none}}
+</style></head><body>
+<span class="logo">Locavac 🇩🇿</span>
+<h2>${r.title||'Logement'}</h2>
+<div class="status">${statusLabel}</div>
+<div class="box">
+  <div class="row"><span class="lbl">📅 Arrivée</span><span class="val">${r.check_in}</span></div>
+  <div class="row"><span class="lbl">📅 Départ</span><span class="val">${r.check_out}</span></div>
+  <div class="row"><span class="lbl">👥 Voyageurs</span><span class="val">${r.guests_count||1} personne(s)</span></div>
+  <div class="row"><span class="lbl">💰 Total</span><span class="val">${Number(r.total_price).toLocaleString('fr-DZ')} DZD</span></div>
+  <div class="row"><span class="lbl">🔖 Référence</span><span class="val">#${r.id}</span></div>
+</div>
+<hr/>
+<div class="footer">Généré le ${new Date().toLocaleDateString('fr-DZ')} · Locavac — Location de vacances en Algérie · contact@locavac.dz</div>
+<br/><button class="no-print" onclick="window.print()" style="background:#E8261A;color:#fff;border:none;padding:12px 28px;border-radius:8px;font-size:15px;font-weight:700;cursor:pointer;margin-top:16px">🖨 Imprimer / Enregistrer en PDF</button>
+</body></html>`);
+  w.document.close();
+}
+
+// ── NOTIFICATIONS PUSH ─────────────────────────────────────
+async function requestNotifPermission() {
+  if (!('Notification' in window) || Notification.permission === 'granted') return;
+  if (Notification.permission !== 'denied') {
+    const perm = await Notification.requestPermission();
+    if (perm === 'granted') toast('🔔 Notifications activées !');
+  }
+}
+function showBrowserNotif(title, body) {
+  if (typeof Notification === 'undefined' || Notification.permission !== 'granted') return;
+  try { new Notification(title, { body, icon: '/icon.svg', badge: '/icon.svg' }); } catch {}
+}
+
 // ── MOT DE PASSE OUBLIÉ ──────────────────────────────────
 async function doForgotPassword() {
   const email = document.getElementById('forgot-email').value.trim();
@@ -2636,6 +2926,8 @@ function renderListingsPage() {
         <img src="${(l.photos && l.photos[0]) || l.image || ''}" alt="${l.title}" loading="lazy" onerror="this.src='https://images.unsplash.com/photo-1564013799919-ab600027ffc6?w=600&q=80'"/>
         ${l.rating >= 4.9 ? '<div class="badge">Coup de cœur</div>' : ''}
         <button class="wish ${liked.has(l.id)?'liked':''}" data-wid="${l.id}">${liked.has(l.id)?'❤':'♡'}</button>
+        <button class="save-btn" data-sid="${l.id}" title="Sauvegarder dans une liste">🔖</button>
+        <button class="card-cmp-btn ${compareSet.has(l.id)?'active':''}" data-cid="${l.id}">⊞ Comparer</button>
       </div>
       <div class="card-body">
         <div class="card-hd"><div class="card-title">${l.title}</div><div class="card-rating">⭐ ${l.rating||'—'} <span>(${l.reviews||0})</span></div></div>
@@ -2663,7 +2955,10 @@ function renderListingsPage() {
   }
 
   grid.querySelectorAll('.card').forEach(c => {
-    c.addEventListener('click', e => { if (!e.target.closest('.wish')) openListing(Number(c.dataset.id)); });
+    c.addEventListener('click', e => {
+      if (!e.target.closest('.wish') && !e.target.closest('.save-btn') && !e.target.closest('.card-cmp-btn'))
+        openListing(Number(c.dataset.id));
+    });
   });
   grid.querySelectorAll('.wish').forEach(btn => {
     btn.addEventListener('click', e => {
@@ -2675,6 +2970,12 @@ function renderListingsPage() {
       btn.textContent = liked.has(id) ? '❤' : '♡';
       toast(liked.has(id) ? 'Ajouté aux favoris ❤' : 'Retiré des favoris');
     });
+  });
+  grid.querySelectorAll('.save-btn').forEach(btn => {
+    btn.addEventListener('click', e => { e.stopPropagation(); openCollModal(Number(btn.dataset.sid)); });
+  });
+  grid.querySelectorAll('.card-cmp-btn').forEach(btn => {
+    btn.addEventListener('click', e => { e.stopPropagation(); toggleCompare(Number(btn.dataset.cid)); });
   });
 }
 
@@ -2897,6 +3198,7 @@ async function doReserve() {
     const res = await apiFetch('/reservations', { method:'POST', body: JSON.stringify({ listing_id: currentListingId, check_in, check_out, guests_count: Number(document.getElementById('bk-guests').value) || 1 }) });
     closeOverlay('ov-listing');
     openPayment(res.id, res.total_price);
+    setTimeout(() => requestNotifPermission(), 2000);
   } catch(e) { errEl.textContent = e.message; errEl.classList.add('show'); }
   finally { btn.disabled=false; btn.textContent='🔒 Réserver maintenant'; }
 }
@@ -2920,6 +3222,7 @@ async function openResas() {
           <div class="resa-dates">💰 ${Number(r.total_price).toLocaleString('fr-DZ')} DZD</div>
           ${r.can_review ? `<button class="btn-sm" style="margin-top:6px;background:var(--accent);color:#fff;border:none;padding:5px 12px;border-radius:8px;cursor:pointer" onclick="openReviewModal(${r.listing_id})">⭐ Laisser un avis</button>` : ''}
           ${r.status==='pending' ? `<button class="btn-sm" style="margin-top:6px;background:var(--red);color:#fff;border:none;padding:5px 12px;border-radius:8px;cursor:pointer;font-weight:600" onclick="openPayment(${r.id},${r.total_price})">💳 Payer maintenant</button>` : ''}
+          <button class="btn-sm" style="margin-top:6px;background:var(--g100);color:var(--g800);border:none;padding:5px 12px;border-radius:8px;cursor:pointer" onclick='printResa(${JSON.stringify(r).replace(/'/g,"&#39;")})'>📄 PDF</button>
         </div>
         <span class="resa-status-badge ${r.status}">${r.status==='pending'?'En attente':r.status==='confirmed'?'Confirmée ✅':'Annulée'}</span>
       </div>`).join('');
@@ -4722,6 +5025,38 @@ document.addEventListener('DOMContentLoaded', function() {
   document.getElementById('l-pass').addEventListener('keydown', e => { if(e.key==='Enter') doLogin(); });
   document.getElementById('r-pass').addEventListener('keydown', e => { if(e.key==='Enter') doRegister(); });
   document.getElementById('view-toggle-btn').addEventListener('click', () => toggleListingsMapView());
+
+  // Lightbox
+  document.getElementById('gal-expand').addEventListener('click', () => openLightbox(currentPhotoIdx));
+  document.getElementById('lb-close').addEventListener('click',   closeLightbox);
+  document.getElementById('lb-prev').addEventListener('click',    () => { lbIdx--; renderLightbox(); });
+  document.getElementById('lb-next').addEventListener('click',    () => { lbIdx++; renderLightbox(); });
+  document.getElementById('lightbox').addEventListener('click', e => { if (e.target.id === 'lightbox') closeLightbox(); });
+  // Lightbox keyboard
+  document.addEventListener('keydown', e => {
+    if (!document.getElementById('lightbox').classList.contains('open')) return;
+    if (e.key === 'ArrowLeft')  { lbIdx--; renderLightbox(); }
+    if (e.key === 'ArrowRight') { lbIdx++; renderLightbox(); }
+    if (e.key === 'Escape') closeLightbox();
+  });
+  // Lightbox touch swipe
+  document.getElementById('lb-main').addEventListener('touchstart', e => { lbTouchX = e.touches[0].clientX; }, { passive: true });
+  document.getElementById('lb-main').addEventListener('touchend',   e => {
+    if (lbTouchX === null) return;
+    const dx = e.changedTouches[0].clientX - lbTouchX;
+    if (Math.abs(dx) > 40) { dx < 0 ? lbIdx++ : lbIdx--; renderLightbox(); }
+    lbTouchX = null;
+  });
+
+  // Comparateur
+  document.getElementById('cmp-go-btn').addEventListener('click',    () => openCompare());
+  document.getElementById('cmp-clear-btn').addEventListener('click', () => { compareSet.clear(); updateCompareBar(); document.querySelectorAll('.card-cmp-btn').forEach(b => b.classList.remove('active')); });
+  document.getElementById('x-compare').addEventListener('click',     () => closeOverlay('ov-compare'));
+
+  // Collections
+  document.getElementById('x-collections').addEventListener('click', () => closeOverlay('ov-collections'));
+  document.getElementById('coll-new-btn').addEventListener('click',  () => createCollection());
+  document.getElementById('coll-new-name').addEventListener('keydown', e => { if (e.key === 'Enter') createCollection(); });
 
   // Messagerie
   document.getElementById('msg-send-btn').addEventListener('click', () => sendMsg());
