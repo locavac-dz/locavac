@@ -532,13 +532,64 @@ footer{background:var(--g100);border-top:1px solid var(--g200);padding:48px 24px
 
 /* ── RESPONSIVE ── */
 @media(max-width:768px){
+  /* ── Navbar ── */
+  .hi{height:60px;padding:0 16px;gap:10px}
+  .logo-text{font-size:18px}
   .search-pill,.map-section{display:none}
+  .btn-host{display:none}           /* "Établissements" + "Devenez hôte" → menu hamburger */
+  .lang-select{font-size:12px;padding:5px 8px}
+  .btn-user{padding:5px 10px 5px 12px;gap:7px}
+  .cats-wrap{top:60px}
+
+  /* ── Modaux → bottom sheet ── */
+  .overlay{align-items:flex-end;padding:0}
+  .modal{border-radius:24px 24px 0 0;max-width:100%;max-height:92dvh;animation:sheetUp .3s ease}
+  .modal.wide,.modal.full{max-width:100%}
+  @keyframes sheetUp{from{transform:translateY(100%)}to{transform:none}}
+
+  /* ── Hero ── */
+  .hero{height:380px}
+  .hero-content h1{font-size:26px}
+  .hero-content p{font-size:14px;margin-bottom:20px}
   .hero-search{flex-direction:column;border-radius:12px}
-  .hero-search .field{border-right:none;border-bottom:1px solid var(--g200);width:100%}
-  .hs-btn{width:100%;justify-content:center;border-radius:0 0 12px 12px}
-  .banner{flex-direction:column;padding:32px 20px;text-align:center}
+  .hero-search .field{border-right:none;border-bottom:1px solid var(--g200);width:100%;padding:12px 16px}
+  .hs-btn{width:100%;justify-content:center;border-radius:0 0 12px 12px;padding:14px}
+
+  /* ── Grilles ── */
+  main{padding:20px 16px 80px}
+  .grid{grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:16px}
+  .dest-grid{grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px}
+
+  /* ── Banner ── */
+  .banner{flex-direction:column;padding:28px 20px;text-align:center;border-radius:16px}
+  .banner h2{font-size:22px}
+
+  /* ── Onglets scrollables ── */
+  .tabs,.hd-tabs,.admin-tabs,.auth-tabs{overflow-x:auto;scrollbar-width:none;flex-wrap:nowrap;padding-bottom:2px}
+  .tabs::-webkit-scrollbar,.hd-tabs::-webkit-scrollbar,.admin-tabs::-webkit-scrollbar{display:none}
+  .tab,.hd-tab,.admin-tab,.auth-tab{flex-shrink:0;font-size:13px;padding-bottom:10px}
+
+  /* ── Messagerie ── */
   .msg-layout{flex-direction:column;height:auto}
   .conv-list{width:100%;height:200px;border-right:none;border-bottom:1px solid var(--g200)}
+
+  /* ── Carte de réservation ── */
+  .resa-card{flex-wrap:wrap}
+  .resa-card img{width:56px;height:56px}
+
+  /* ── Grilles stats ── */
+  .stats-grid{grid-template-columns:repeat(2,1fr)}
+  .admin-stats-grid{grid-template-columns:repeat(2,1fr)}
+
+  /* ── Pied de page ── */
+  footer{padding:32px 16px 24px}
+  .footer-bottom{flex-direction:column;align-items:flex-start;gap:8px}
+}
+@media(max-width:480px){
+  .grid{grid-template-columns:1fr 1fr}
+  .hero{height:320px}
+  .modal-body{padding:16px}
+  .stats-grid{grid-template-columns:repeat(2,1fr)}
 }
 /* ── ÉTABLISSEMENTS / PUBLICITÉS ── */
 .pub-overlay-inner{width:100%;max-width:1100px;max-height:90vh;overflow-y:auto;background:#fff;border-radius:24px;padding:32px;position:relative}
@@ -636,6 +687,9 @@ footer{background:var(--g100);border-top:1px solid var(--g200);padding:48px 24px
         <div id="menu-out">
           <a id="m-register" data-i18n="nav.register">Inscription</a>
           <a id="m-login" data-i18n="nav.login">Connexion</a>
+          <hr/>
+          <a onclick="openEtablissements()" style="cursor:pointer">🏨 Établissements</a>
+          <a id="m-host-mob" data-i18n="nav.host" style="cursor:pointer">Devenez hôte</a>
         </div>
         <div id="menu-in" style="display:none">
           <a id="m-profile" data-i18n="nav.profile">👤 Mon profil</a>
@@ -643,6 +697,8 @@ footer{background:var(--g100);border-top:1px solid var(--g200);padding:48px 24px
           <a id="m-msgs">Messages <span class="badge-count" id="msg-badge" style="display:none">0</span></a>
           <a id="m-dashboard" data-i18n="nav.dashboard">Espace hôte</a>
           <a id="m-admin" style="display:none;color:var(--red)" data-i18n="nav.admin">🛡️ Administration</a>
+          <hr/>
+          <a onclick="openEtablissements()" style="cursor:pointer">🏨 Établissements</a>
           <hr/>
           <a id="m-logout" data-i18n="nav.logout">Déconnexion</a>
         </div>
@@ -3939,6 +3995,7 @@ document.addEventListener('DOMContentLoaded', function() {
   document.getElementById('m-dashboard').addEventListener('click',    () => openDashboard());
   document.getElementById('m-logout').addEventListener('click',       () => doLogout());
   document.getElementById('btn-host').addEventListener('click',       () => currentUser ? openDashboard() : openAuth('register'));
+  document.getElementById('m-host-mob').addEventListener('click',     () => { document.getElementById('user-menu').classList.remove('open'); currentUser ? openDashboard() : openAuth('register'); });
   document.getElementById('banner-host-btn').addEventListener('click',() => currentUser ? openDashboard() : openAuth('register'));
 
   // Dates min = aujourd'hui
