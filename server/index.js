@@ -58,6 +58,7 @@ app.use('/api/agent',        require('./routes/agent'));
 app.use('/api/publicites',   require('./routes/publicites'));
 
 app.get('/api/health', (_, res) => res.json({ ok: true, message: 'Locavac API opérationnelle 🇩🇿' }));
+app.get('/404', (_, res) => res.sendFile(path.join(__dirname, '..', 'public', '404.html')));
 app.get('*', (_, res) => res.sendFile(path.join(__dirname, '..', 'public', 'index.html')));
 
 // Middleware d'erreur global

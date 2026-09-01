@@ -150,6 +150,60 @@ header{position:sticky;top:0;z-index:200;background:#fff;border-bottom:1px solid
 .stats-band .stat-lbl{font-size:12px;color:var(--g600);font-weight:500}
 @media(max-width:600px){.stats-band{gap:24px}.stats-band .stat-val{font-size:18px}}
 
+/* ── TRUST BADGES ── */
+.trust-badges{display:flex;justify-content:center;gap:28px;flex-wrap:wrap;padding:14px 24px;background:#fff;border-bottom:1px solid var(--g200)}
+.trust-badge{display:flex;align-items:center;gap:7px;font-size:12px;font-weight:600;color:var(--g600)}
+.trust-badge span.icon{font-size:17px}
+
+/* ── AUTOCOMPLETE ── */
+.hs-autocomplete{position:absolute;top:calc(100% + 4px);left:0;right:0;background:#fff;border-radius:12px;box-shadow:var(--shlg);z-index:200;overflow:hidden;max-height:220px;overflow-y:auto}
+.hs-autocomplete-item{padding:10px 16px;cursor:pointer;font-size:14px;color:var(--g800);border-bottom:1px solid var(--g100)}
+.hs-autocomplete-item:last-child{border-bottom:none}
+.hs-autocomplete-item:hover{background:var(--g50)}
+.hero-search .field{position:relative}
+
+/* ── RECENTLY VIEWED ── */
+.recently-viewed{margin-bottom:40px}
+.rv-carousel{display:flex;overflow-x:auto;gap:16px;padding-bottom:10px;scroll-snap-type:x mandatory;scrollbar-width:none}
+.rv-carousel::-webkit-scrollbar{display:none}
+.rv-card{flex:0 0 200px;scroll-snap-align:start;cursor:pointer;border-radius:12px;overflow:hidden;border:1px solid var(--g200);background:#fff;transition:box-shadow .2s,transform .2s}
+.rv-card:hover{transform:translateY(-3px);box-shadow:var(--sh)}
+.rv-card-img{height:120px;overflow:hidden;background:var(--g100)}
+.rv-card-img img{width:100%;height:100%;object-fit:cover}
+.rv-card-body{padding:8px 10px}
+.rv-card-title{font-size:13px;font-weight:600;line-height:1.3;margin-bottom:3px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.rv-card-price{font-size:12px;color:var(--g600)}
+
+/* ── TESTIMONIALS ── */
+.testimonials-section{padding:48px 24px;background:var(--g50);border-top:1px solid var(--g200);border-bottom:1px solid var(--g200)}
+.testimonials-section h2{font-size:22px;font-weight:700;margin-bottom:28px;text-align:center}
+.testimonials-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:20px;max-width:1280px;margin:0 auto}
+.testimonial-card{background:#fff;border-radius:16px;padding:22px;border:1px solid var(--g200);box-shadow:0 2px 8px rgba(0,0,0,.06)}
+.testimonial-stars{color:#f59e0b;font-size:15px;margin-bottom:10px}
+.testimonial-text{font-size:14px;color:var(--g600);line-height:1.6;margin-bottom:14px;font-style:italic}
+.testimonial-author{display:flex;align-items:center;gap:10px}
+.testimonial-avatar{width:38px;height:38px;border-radius:50%;background:var(--g200);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0}
+.testimonial-name{font-size:13px;font-weight:700;color:var(--g800)}
+.testimonial-loc{font-size:12px;color:var(--g400)}
+
+/* ── COMMENT ÇA MARCHE ── */
+.how-section{padding:56px 24px;max-width:1280px;margin:0 auto}
+.how-section h2{font-size:22px;font-weight:700;text-align:center;margin-bottom:36px}
+.how-steps{display:grid;grid-template-columns:repeat(3,1fr);gap:32px}
+.how-step{text-align:center;padding:24px 16px}
+.how-step-icon{font-size:48px;margin-bottom:16px}
+.how-step-num{display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:50%;background:var(--red);color:#fff;font-size:12px;font-weight:700;margin-bottom:12px}
+.how-step h3{font-size:16px;font-weight:700;margin-bottom:8px}
+.how-step p{font-size:13px;color:var(--g600);line-height:1.6}
+@media(max-width:640px){.how-steps{grid-template-columns:1fr}}
+
+/* ── SHARE BUTTONS ── */
+.share-bar{display:flex;gap:8px;margin-top:12px}
+.share-btn{display:inline-flex;align-items:center;gap:6px;padding:7px 14px;border-radius:20px;font-size:12px;font-weight:700;border:1.5px solid var(--g200);background:#fff;cursor:pointer;transition:background .15s,border-color .15s;text-decoration:none;color:var(--g800)}
+.share-btn:hover{background:var(--g100)}
+.share-btn.whatsapp{border-color:#25D366;color:#25D366}
+.share-btn.whatsapp:hover{background:#f0fdf4}
+
 /* ── CAROUSEL Les Incontournables ── */
 .etab-carousel{display:flex;overflow-x:auto;gap:20px;padding-bottom:12px;scroll-snap-type:x mandatory;scrollbar-width:none;-ms-overflow-style:none;margin-bottom:48px}
 .etab-carousel::-webkit-scrollbar{display:none}
@@ -771,7 +825,7 @@ footer{background:var(--g100);border-top:1px solid var(--g200);padding:48px 24px
     <h1 data-i18n-html="hero.title">Découvrez l'Algérie<br>comme jamais avant</h1>
     <p data-i18n="hero.sub">Des Aurès au Sahara, du Tell à la Méditerranée</p>
     <div class="hero-search">
-      <div class="field"><label data-i18n="search.dest">Destination</label><input type="text" id="hs-q" data-i18n-placeholder="search.dest_ph"/></div>
+      <div class="field"><label data-i18n="search.dest">Destination</label><input type="text" id="hs-q" data-i18n-placeholder="search.dest_ph" autocomplete="off"/><div class="hs-autocomplete" id="hs-autocomplete" style="display:none"></div></div>
       <div class="field"><label data-i18n="search.checkin">Arrivée</label><input type="date" id="hs-in"/></div>
       <div class="field"><label data-i18n="search.checkout">Départ</label><input type="date" id="hs-out"/></div>
       <div class="field"><label data-i18n="search.guests">Voyageurs</label>
@@ -781,6 +835,14 @@ footer{background:var(--g100);border-top:1px solid var(--g200);padding:48px 24px
     </div>
   </div>
 </section>
+
+<!-- TRUST BADGES -->
+<div class="trust-badges">
+  <div class="trust-badge"><span class="icon">🔒</span> Paiement sécurisé SATIM</div>
+  <div class="trust-badge"><span class="icon">⚡</span> Réservation instantanée</div>
+  <div class="trust-badge"><span class="icon">🛡️</span> Hôtes vérifiés</div>
+  <div class="trust-badge"><span class="icon">💬</span> Assistance 7j/7</div>
+</div>
 
 <!-- STATS BAND -->
 <div class="stats-band" id="stats-band">
@@ -866,6 +928,15 @@ footer{background:var(--g100);border-top:1px solid var(--g200);padding:48px 24px
   <p class="date-summary" id="date-summary"></p>
 
   <!-- SECTION LES INCONTOURNABLES -->
+  <!-- RECENTLY VIEWED -->
+  <div class="recently-viewed" id="rv-section" style="display:none">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+      <h2 class="sec-title" style="margin:0">🕐 Vos dernières consultations</h2>
+      <button onclick="clearRecentlyViewed()" style="border:none;background:none;font-size:12px;color:var(--g400);cursor:pointer;padding:4px">Effacer</button>
+    </div>
+    <div class="rv-carousel" id="rv-carousel"></div>
+  </div>
+
   <div id="home-etab-section">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
       <h2 class="sec-title" style="margin:0">🌟 Les Incontournables</h2>
@@ -895,6 +966,55 @@ footer{background:var(--g100);border-top:1px solid var(--g200);padding:48px 24px
     <button class="banner-btn" id="banner-host-btn" data-i18n="banner.btn">Devenir hôte →</button>
   </div>
 </main>
+
+<!-- TESTIMONIALS -->
+<section class="testimonials-section">
+  <h2>Ce que disent nos voyageurs</h2>
+  <div class="testimonials-grid">
+    <div class="testimonial-card">
+      <div class="testimonial-stars">★★★★★</div>
+      <p class="testimonial-text">« Une expérience incroyable à Tipaza. La villa était exactement comme sur les photos, l'hôte très réactif. Je recommande Locavac à tous mes amis ! »</p>
+      <div class="testimonial-author"><div class="testimonial-avatar">👩</div><div><div class="testimonial-name">Amira B.</div><div class="testimonial-loc">Alger</div></div></div>
+    </div>
+    <div class="testimonial-card">
+      <div class="testimonial-stars">★★★★★</div>
+      <p class="testimonial-text">« Nuit sous les étoiles dans le Sahara — magique. Réservation simple, paiement sécurisé, rien à redire. Locavac c'est la référence pour voyager en Algérie. »</p>
+      <div class="testimonial-author"><div class="testimonial-avatar">👨</div><div><div class="testimonial-name">Karim L.</div><div class="testimonial-loc">Oran</div></div></div>
+    </div>
+    <div class="testimonial-card">
+      <div class="testimonial-stars">★★★★☆</div>
+      <p class="testimonial-text">« Le riad à Tlemcen était un coup de cœur absolu. Très bien situé, déco authentique. Je reviens cet été avec toute la famille. »</p>
+      <div class="testimonial-author"><div class="testimonial-avatar">👩</div><div><div class="testimonial-name">Nadia M.</div><div class="testimonial-loc">Constantine</div></div></div>
+    </div>
+  </div>
+</section>
+
+<!-- COMMENT ÇA MARCHE -->
+<section>
+  <div class="how-section">
+    <h2>Comment ça marche ?</h2>
+    <div class="how-steps">
+      <div class="how-step">
+        <div class="how-step-icon">🔍</div>
+        <div class="how-step-num">1</div>
+        <h3>Cherchez</h3>
+        <p>Parcourez des centaines de logements en Algérie — plages, Sahara, montagnes, riads. Filtrez par destination, dates et budget.</p>
+      </div>
+      <div class="how-step">
+        <div class="how-step-icon">📅</div>
+        <div class="how-step-num">2</div>
+        <h3>Réservez</h3>
+        <p>Choisissez vos dates, payez en toute sécurité via SATIM. Votre réservation est confirmée instantanément.</p>
+      </div>
+      <div class="how-step">
+        <div class="how-step-icon">🌴</div>
+        <div class="how-step-num">3</div>
+        <h3>Profitez</h3>
+        <p>Retrouvez votre hôte, installez-vous et savourez votre séjour. Notre équipe est disponible 7j/7 si besoin.</p>
+      </div>
+    </div>
+  </div>
+</section>
 
 <!-- SCROLL TO TOP -->
 <button id="scroll-top" title="Haut de page" aria-label="Retour en haut">↑</button>
@@ -1075,6 +1195,10 @@ footer{background:var(--g100);border-top:1px solid var(--g200);padding:48px 24px
       <h2 id="m-title"></h2>
       <p class="sub" id="m-loc" style="margin-bottom:0"></p>
       <div class="modal-price" id="m-price"></div>
+      <div class="share-bar">
+        <button class="share-btn whatsapp" id="share-wa">📱 WhatsApp</button>
+        <button class="share-btn" id="share-copy">🔗 Copier le lien</button>
+      </div>
 
       <div class="tabs">
         <div class="tab active" data-tab="details">Détails</div>
@@ -2147,6 +2271,72 @@ function getSelectedAmenities() {
   return [...document.querySelectorAll('#amenity-chips .amenity-chip.active')].map(c => c.dataset.amenity);
 }
 
+// ── WILAYAS (autocomplete) ────────────────────────────────
+const WILAYAS = ['Adrar','Aïn Defla','Aïn Témouchent','Alger','Annaba','Batna','Béchar','Béjaïa','Bordj Badji Mokhtar','Bordj Bou Arréridj','Boumerdès','Bouira','Chlef','Constantine','Djanet','Djelfa','El Bayadh','El M\'Ghair','El Meniaa','El Oued','El Tarf','Ghardaïa','Guelma','Illizi','In Guezzam','In Salah','Jijel','Khenchela','Laghouat','Mascara','Médéa','Mila','Mostaganem','M\'Sila','Naâma','Oran','Ouargla','Ouled Djellal','Oum El Bouaghi','Relizane','Saïda','Sétif','Sidi Bel Abbès','Skikda','Souk Ahras','Tamanrasset','Tébessa','Tiaret','Timimoun','Tindouf','Tipaza','Tissemsilt','Tizi Ouzou','Tlemcen','Touggourt'];
+
+function initAutocomplete() {
+  const input = document.getElementById('hs-q');
+  const box   = document.getElementById('hs-autocomplete');
+  if (!input || !box) return;
+  input.addEventListener('input', () => {
+    const q = input.value.trim().toLowerCase();
+    if (!q) { box.style.display = 'none'; return; }
+    const matches = WILAYAS.filter(w => w.toLowerCase().includes(q)).slice(0, 6);
+    if (!matches.length) { box.style.display = 'none'; return; }
+    box.innerHTML = matches.map(w => `<div class="hs-autocomplete-item">${w}</div>`).join('');
+    box.style.display = 'block';
+    box.querySelectorAll('.hs-autocomplete-item').forEach(item => {
+      item.addEventListener('mousedown', e => {
+        e.preventDefault();
+        input.value = item.textContent;
+        box.style.display = 'none';
+        document.getElementById('f-wilaya').value = item.textContent;
+        loadListings(currentCat || 'all');
+      });
+    });
+  });
+  document.addEventListener('click', e => { if (!e.target.closest('.field')) box.style.display = 'none'; });
+}
+
+// ── RECENTLY VIEWED ───────────────────────────────────────
+const RV_KEY = 'locavac_rv';
+const RV_MAX = 8;
+
+function saveRecentlyViewed(listing) {
+  try {
+    let rv = JSON.parse(localStorage.getItem(RV_KEY) || '[]');
+    rv = rv.filter(x => x.id !== listing.id);
+    rv.unshift({ id: listing.id, title: listing.title, image: (listing.photos && listing.photos[0]) || listing.image || '', price: listing.price, location: listing.location });
+    rv = rv.slice(0, RV_MAX);
+    localStorage.setItem(RV_KEY, JSON.stringify(rv));
+    renderRecentlyViewed();
+  } catch(e) {}
+}
+
+function renderRecentlyViewed() {
+  try {
+    const rv = JSON.parse(localStorage.getItem(RV_KEY) || '[]');
+    const section  = document.getElementById('rv-section');
+    const carousel = document.getElementById('rv-carousel');
+    if (!section || !carousel || rv.length < 2) { if (section) section.style.display = 'none'; return; }
+    section.style.display = 'block';
+    carousel.innerHTML = rv.map(l => `
+      <div class="rv-card" onclick="openListing(${l.id})">
+        <div class="rv-card-img"><img src="${l.image}" alt="${l.title}" loading="lazy"/></div>
+        <div class="rv-card-body">
+          <div class="rv-card-title">${l.title}</div>
+          <div class="rv-card-price">${Number(l.price).toLocaleString('fr-DZ')} DZD / nuit</div>
+        </div>
+      </div>`).join('');
+  } catch(e) {}
+}
+
+function clearRecentlyViewed() {
+  try { localStorage.removeItem(RV_KEY); } catch(e) {}
+  const section = document.getElementById('rv-section');
+  if (section) section.style.display = 'none';
+}
+
 // ── SKELETON ──────────────────────────────────────────────
 function skeletonCards(n = 8) {
   return Array.from({length: n}, () => `
@@ -2305,6 +2495,21 @@ async function openListing(id) {
   document.getElementById('rev-comment').value = '';
   document.getElementById('review-form-wrap').style.display  = currentUser ? 'block' : 'none';
   document.getElementById('review-login-prompt').style.display = !currentUser ? 'block' : 'none';
+
+  // Recently viewed
+  saveRecentlyViewed(l);
+
+  // Share buttons
+  const listingUrl = `${location.origin}/?listing=${id}`;
+  const waMsg = encodeURIComponent(`🏠 ${l.title}\n📍 ${l.location}\n💰 ${Number(l.price).toLocaleString('fr-DZ')} DZD / nuit\n${listingUrl}`);
+  document.getElementById('share-wa').onclick = () => window.open(`https://wa.me/?text=${waMsg}`, '_blank');
+  document.getElementById('share-copy').onclick = () => {
+    navigator.clipboard.writeText(listingUrl).then(() => {
+      const btn = document.getElementById('share-copy');
+      btn.textContent = '✅ Copié !';
+      setTimeout(() => { btn.textContent = '🔗 Copier le lien'; }, 2000);
+    });
+  };
 
   // Reset tabs
   showListingTab('details');
@@ -4328,6 +4533,8 @@ document.addEventListener('DOMContentLoaded', function() {
   loadHomeEtab();
   loadDestCounts();
   loadStats();
+  initAutocomplete();
+  renderRecentlyViewed();
   setInterval(checkUnread, 30000);
 
   // Scroll to top
