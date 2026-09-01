@@ -11,8 +11,28 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="default"/>
 <meta name="apple-mobile-web-app-title" content="Locavac"/>
 <link rel="manifest" href="/manifest.json"/>
+<link rel="canonical" href="https://locavac.dz/"/>
 <link rel="icon" href="/icon.svg" type="image/svg+xml"/>
 <link rel="apple-touch-icon" href="/icon.svg"/>
+<!-- Open Graph -->
+<meta property="og:type" content="website"/>
+<meta property="og:url" content="https://locavac.dz/"/>
+<meta property="og:title" content="Locavac — Location de vacances en Algérie"/>
+<meta property="og:description" content="Trouvez et réservez des logements de vacances partout en Algérie — plages, Sahara, montagnes, riads."/>
+<meta property="og:image" content="https://locavac.dz/og-cover.jpg"/>
+<meta property="og:image:width" content="1200"/>
+<meta property="og:image:height" content="630"/>
+<meta property="og:locale" content="fr_DZ"/>
+<meta property="og:site_name" content="Locavac"/>
+<!-- Twitter Card -->
+<meta name="twitter:card" content="summary_large_image"/>
+<meta name="twitter:site" content="@locavac_dz"/>
+<meta name="twitter:title" content="Locavac — Location de vacances en Algérie"/>
+<meta name="twitter:description" content="Trouvez et réservez des logements de vacances partout en Algérie — plages, Sahara, montagnes, riads."/>
+<meta name="twitter:image" content="https://locavac.dz/og-cover.jpg"/>
+<!-- JSON-LD -->
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"WebSite","name":"Locavac","url":"https://locavac.dz","description":"Location de vacances en Algérie","potentialAction":{"@type":"SearchAction","target":{"@type":"EntryPoint","urlTemplate":"https://locavac.dz/?q={search_term_string}"},"query-input":"required name=search_term_string"}}</script>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"Organization","name":"Locavac","url":"https://locavac.dz","logo":"https://locavac.dz/icon.svg","contactPoint":{"@type":"ContactPoint","contactType":"customer service","email":"contact@locavac.dz","availableLanguage":["French","Arabic"]}}</script>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Cairo:wght@300;400;500;600;700&family=Sora:wght@300;700;800&display=swap" rel="stylesheet"/>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 <style>
@@ -2253,6 +2273,7 @@ async function openResas() {
           <div class="resa-dates">📅 ${r.check_in} → ${r.check_out}</div>
           <div class="resa-dates">💰 ${Number(r.total_price).toLocaleString('fr-DZ')} DZD</div>
           ${r.can_review ? `<button class="btn-sm" style="margin-top:6px;background:var(--accent);color:#fff;border:none;padding:5px 12px;border-radius:8px;cursor:pointer" onclick="openReviewModal(${r.listing_id})">⭐ Laisser un avis</button>` : ''}
+          ${r.status==='pending' ? `<button class="btn-sm" style="margin-top:6px;background:var(--red);color:#fff;border:none;padding:5px 12px;border-radius:8px;cursor:pointer;font-weight:600" onclick="openPayment(${r.id},${r.total_price})">💳 Payer maintenant</button>` : ''}
         </div>
         <span class="resa-status-badge ${r.status}">${r.status==='pending'?'En attente':r.status==='confirmed'?'Confirmée ✅':'Annulée'}</span>
       </div>`).join('');

@@ -1,0 +1,8 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://locavac.dz/sitemap.xml
+
+# Protéger les routes API et assets privés
+Disallow: /api/
+Disallow: /uploads/
