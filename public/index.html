@@ -823,6 +823,16 @@ footer{background:var(--g100);border-top:1px solid var(--g200);padding:48px 24px
     <button class="btn-clear-amenities" id="btn-clear-amenities" style="display:none">✕ Équipements</button>
   </div>
   <p class="date-summary" id="date-summary"></p>
+
+  <!-- SECTION LES INCONTOURNABLES -->
+  <div id="home-etab-section">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
+      <h2 class="sec-title" style="margin:0">🌟 Les Incontournables</h2>
+      <button onclick="openEtablissements()" style="border:none;background:none;font-size:14px;font-weight:600;color:var(--red);cursor:pointer;padding:6px 0">Voir tous →</button>
+    </div>
+    <div class="pub-grid" id="home-etab-grid" style="margin-bottom:48px"><div class="empty-state">Chargement…</div></div>
+  </div>
+
   <div class="grid" id="grid"></div>
 
   <h2 class="sec-title">Explorez par destination</h2>
@@ -836,13 +846,6 @@ footer{background:var(--g100);border-top:1px solid var(--g200);padding:48px 24px
     <div class="dest" data-dest="Tizi Ouzou"><img src="https://images.unsplash.com/photo-1500382017468-9049fed747ef?w=600&q=80" alt="Tizi Ouzou"/><div class="dest-lbl"><strong>Tizi Ouzou</strong><span id="dest-count-Tizi Ouzou">…</span></div></div>
     <div class="dest" data-dest="Annaba"><img src="https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=600&q=80" alt="Annaba"/><div class="dest-lbl"><strong>Annaba</strong><span id="dest-count-Annaba">…</span></div></div>
   </div>
-
-  <!-- SECTION LES INCONTOURNABLES -->
-  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
-    <h2 class="sec-title" style="margin:0">🌟 Les Incontournables</h2>
-    <button onclick="openEtablissements()" style="border:none;background:none;font-size:14px;font-weight:600;color:var(--red);cursor:pointer;padding:6px 0">Voir tous →</button>
-  </div>
-  <div class="pub-grid" id="home-etab-grid" style="margin-bottom:48px"><div class="empty-state">Chargement…</div></div>
 
   <div class="banner">
     <div><h2 data-i18n="banner.title">Vous avez un logement à louer ?</h2><p data-i18n="banner.sub">Rejoignez des milliers d'hôtes algériens. Inscription gratuite, paiement sécurisé SATIM.</p></div>
