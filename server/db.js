@@ -153,6 +153,8 @@ const payouts      = new Collection('payouts');
 async function connect() {
   await pool.query('SELECT 1'); // test connexion
   await initSchema();
+  const migrate = require('./migrate');
+  await migrate(pool);
   await seed();
   console.log('🐘 PostgreSQL connecté');
 }

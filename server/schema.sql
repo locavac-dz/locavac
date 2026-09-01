@@ -1,4 +1,5 @@
--- Schéma PostgreSQL — Locavac
+-- Schéma de base Locavac — tables fondamentales uniquement.
+-- Les évolutions (ALTER TABLE, nouvelles tables) sont dans server/migrations/.
 
 CREATE TABLE IF NOT EXISTS users (
   id            SERIAL PRIMARY KEY,
@@ -87,69 +88,4 @@ CREATE TABLE IF NOT EXISTS messages (
   body        TEXT,
   read        BOOLEAN DEFAULT false,
   created_at  TIMESTAMPTZ DEFAULT NOW()
-);
-
--- Lot 2 : politique d'annulation
-ALTER TABLE listings ADD COLUMN IF NOT EXISTS cancellation_policy TEXT DEFAULT 'flexible';
-
--- Lot 3 : coordonnées bancaires hôte pour les virements de commission
-ALTER TABLE users ADD COLUMN IF NOT EXISTS rib  TEXT;
-ALTER TABLE users ADD COLUMN IF NOT EXISTS ccp  TEXT;
-
--- Lot 4 : vérification d'identité
-ALTER TABLE users ADD COLUMN IF NOT EXISTS id_document TEXT;
-ALTER TABLE users ADD COLUMN IF NOT EXISTS id_verified  BOOLEAN DEFAULT false;
-
--- Lot 5b : signalements d'annonces
-CREATE TABLE IF NOT EXISTS signalements (
-  id         SERIAL PRIMARY KEY,
-  listing_id INTEGER REFERENCES listings(id) ON DELETE CASCADE,
-  user_id    INTEGER,
-  motif      TEXT,
-  message    TEXT,
-  status     TEXT DEFAULT 'pending',
-  created_at TIMESTAMPTZ DEFAULT NOW()
-);
-ALTER TABLE signalements ADD COLUMN IF NOT EXISTS status TEXT DEFAULT 'pending';
-
--- Lot 6b : langues parlées par l'hôte
-ALTER TABLE users ADD COLUMN IF NOT EXISTS languages TEXT[] DEFAULT '{}';
-
--- Lot 6 : équipements / commodités des logements
-ALTER TABLE listings ADD COLUMN IF NOT EXISTS amenities JSONB DEFAULT '[]';
-
--- Emails transactionnels : flags anti-doublon pour les crons
-ALTER TABLE reservations ADD COLUMN IF NOT EXISTS checkin_reminded BOOLEAN DEFAULT false;
-ALTER TABLE reservations ADD COLUMN IF NOT EXISTS review_reminded  BOOLEAN DEFAULT false;
-
--- Demandes de virement hôtes
-CREATE TABLE IF NOT EXISTS payouts (
-  id           SERIAL PRIMARY KEY,
-  host_id      INTEGER REFERENCES users(id) ON DELETE CASCADE,
-  amount       NUMERIC NOT NULL,
-  status       TEXT DEFAULT 'pending',
-  requested_at TIMESTAMPTZ DEFAULT NOW(),
-  processed_at TIMESTAMPTZ,
-  admin_note   TEXT
-);
-
--- Lot 5 : pages publicitaires établissements (hôtels / campings / complexes)
-CREATE TABLE IF NOT EXISTS publicites (
-  id              SERIAL PRIMARY KEY,
-  nom             TEXT NOT NULL,
-  type            TEXT NOT NULL CHECK (type IN ('hotel','camping','complexe')),
-  wilaya          TEXT NOT NULL,
-  ville           TEXT,
-  description     TEXT,
-  logo            TEXT,
-  images          JSONB DEFAULT '[]',
-  telephone       TEXT,
-  email_contact   TEXT,
-  site_web        TEXT,
-  adresse         TEXT,
-  etoiles         INTEGER DEFAULT 0,
-  forfait         TEXT DEFAULT 'basic',
-  actif           BOOLEAN DEFAULT true,
-  expire_le       DATE,
-  created_at      TIMESTAMPTZ DEFAULT NOW()
 );
