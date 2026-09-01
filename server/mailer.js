@@ -213,10 +213,42 @@ function mailReviewReminder({ guestName, guestEmail, listingTitle, listingId }) 
   });
 }
 
+function mailPasswordReset({ name, email, resetUrl }) {
+  return sendMail({
+    to: email, subject: '🔑 Réinitialisation de votre mot de passe — Locavac',
+    html: wrap(`
+      <h2 style="color:#222;margin-top:0">Réinitialisation du mot de passe</h2>
+      <p>Bonjour <strong>${name}</strong>,</p>
+      <p>Vous avez demandé à réinitialiser votre mot de passe. Cliquez sur le bouton ci-dessous pour choisir un nouveau mot de passe :</p>
+      <div style="text-align:center;margin:28px 0">
+        <a href="${resetUrl}" style="display:inline-block;background:#E8261A;color:#fff;padding:14px 32px;border-radius:10px;text-decoration:none;font-weight:700;font-size:15px">Réinitialiser mon mot de passe →</a>
+      </div>
+      <p style="font-size:13px;color:#666">Ce lien est valable <strong>1 heure</strong>. Si vous n'avez pas fait cette demande, ignorez cet email — votre mot de passe reste inchangé.</p>
+      <p style="font-size:12px;color:#999;margin-top:16px">Lien alternatif : <a href="${resetUrl}" style="color:#E8261A">${resetUrl}</a></p>
+    `),
+  });
+}
+
+function mailVerifyEmail({ name, email, verifyUrl }) {
+  return sendMail({
+    to: email, subject: '✅ Confirmez votre adresse email — Locavac',
+    html: wrap(`
+      <h2 style="color:#222;margin-top:0">Confirmez votre adresse email</h2>
+      <p>Bonjour <strong>${name}</strong>,</p>
+      <p>Merci de vous être inscrit sur Locavac ! Pour activer votre compte, confirmez votre adresse email :</p>
+      <div style="text-align:center;margin:28px 0">
+        <a href="${verifyUrl}" style="display:inline-block;background:#0a7c47;color:#fff;padding:14px 32px;border-radius:10px;text-decoration:none;font-weight:700;font-size:15px">Confirmer mon email →</a>
+      </div>
+      <p style="font-size:13px;color:#666">Ce lien est valable <strong>24 heures</strong>. Si vous n'avez pas créé de compte, ignorez cet email.</p>
+    `),
+  });
+}
+
 module.exports = {
   sendMail,
   mailReservationCreated, mailReservationConfirmed, mailReservationCancelled,
   mailNewMessage, mailNewReservationToHost,
   mailPaymentConfirmedToGuest, mailVirementToHost,
   mailWelcome, mailCheckInReminder, mailReviewReminder,
+  mailPasswordReset, mailVerifyEmail,
 };

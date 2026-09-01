@@ -995,8 +995,12 @@ footer{background:var(--g100);border-top:1px solid var(--g200);padding:48px 24px
   </div>
 
   <hr class="section-divider"/>
-  <h2 class="sec-title" id="sec-title" data-i18n="main.popular">Logements populaires</h2>
+  <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:8px">
+    <h2 class="sec-title" id="sec-title" style="margin-bottom:0" data-i18n="main.popular">Logements populaires</h2>
+    <button id="view-toggle-btn" style="display:inline-flex;align-items:center;gap:6px;border:1.5px solid var(--border);border-radius:24px;padding:8px 18px;font-size:13px;font-weight:600;background:var(--surface);color:var(--text);cursor:pointer;transition:all .2s;white-space:nowrap">🗺 Vue carte</button>
+  </div>
   <div class="grid" id="grid"></div>
+  <div id="listings-map" style="display:none;height:500px;border-radius:16px;overflow:hidden;margin-bottom:32px;border:1.5px solid var(--border)"></div>
 
   <h2 class="sec-title">Explorez par destination</h2>
   <div class="dest-grid" id="dest-grid">
@@ -1351,7 +1355,8 @@ footer{background:var(--g100);border-top:1px solid var(--g200);padding:48px 24px
         <div class="fg"><label>Mot de passe</label><input type="password" id="l-pass" placeholder="••••••"/></div>
         <div class="ferr" id="l-err"></div>
         <button class="btn-submit" id="l-btn">Se connecter</button>
-        <p style="text-align:center;margin-top:14px;font-size:13px;color:var(--g600)">Pas de compte ? <a id="goto-register" style="color:var(--red);cursor:pointer;font-weight:600">Inscrivez-vous</a></p>
+        <p style="text-align:center;margin-top:10px;font-size:13px;color:var(--g600)"><a id="goto-forgot" style="color:var(--red);cursor:pointer">Mot de passe oublié ?</a></p>
+        <p style="text-align:center;margin-top:8px;font-size:13px;color:var(--g600)">Pas de compte ? <a id="goto-register" style="color:var(--red);cursor:pointer;font-weight:600">Inscrivez-vous</a></p>
       </div>
       <div id="f-register" style="display:none">
         <div class="fg"><label>Nom complet</label><input type="text" id="r-name" placeholder="Votre nom"/></div>
@@ -1361,6 +1366,40 @@ footer{background:var(--g100);border-top:1px solid var(--g200);padding:48px 24px
         <div class="ferr" id="r-err"></div>
         <button class="btn-submit" id="r-btn">Créer mon compte</button>
       </div>
+    </div>
+  </div>
+</div>
+
+<!-- MOT DE PASSE OUBLIÉ -->
+<div class="overlay" id="ov-forgot">
+  <div class="modal" style="max-width:420px">
+    <button class="modal-x" id="x-forgot">✕</button>
+    <div class="mp">
+      <h2>Mot de passe oublié</h2>
+      <p class="sub">Entrez votre email pour recevoir un lien de réinitialisation.</p>
+    </div>
+    <div style="padding:0 28px 28px">
+      <div class="fg"><label>Email</label><input type="email" id="forgot-email" placeholder="vous@email.com"/></div>
+      <div class="ferr" id="forgot-err"></div>
+      <div id="forgot-ok" style="display:none;background:#dcfce7;color:#15803d;border-radius:10px;padding:12px 16px;font-size:14px;font-weight:600;margin-bottom:16px">✅ Si cet email existe, un lien a été envoyé. Vérifiez votre boîte mail.</div>
+      <button class="btn-submit" id="forgot-btn">Envoyer le lien</button>
+    </div>
+  </div>
+</div>
+
+<!-- RÉINITIALISATION MOT DE PASSE -->
+<div class="overlay" id="ov-reset">
+  <div class="modal" style="max-width:420px">
+    <button class="modal-x" id="x-reset">✕</button>
+    <div class="mp">
+      <h2>Nouveau mot de passe</h2>
+      <p class="sub">Choisissez un nouveau mot de passe sécurisé.</p>
+    </div>
+    <div style="padding:0 28px 28px">
+      <div class="fg"><label>Nouveau mot de passe</label><input type="password" id="reset-pass1" placeholder="Min. 6 caractères"/></div>
+      <div class="fg"><label>Confirmer</label><input type="password" id="reset-pass2" placeholder="Répétez le mot de passe"/></div>
+      <div class="ferr" id="reset-err"></div>
+      <button class="btn-submit" id="reset-btn">Enregistrer le mot de passe</button>
     </div>
   </div>
 </div>
@@ -2253,8 +2292,91 @@ async function doRegister() {
     localStorage.setItem('dz_user',  JSON.stringify(currentUser));
     refreshAuthUI(); closeOverlay('ov-auth');
     toast('Compte créé ! Bienvenue ' + currentUser.name + ' 🎉');
+    setTimeout(() => toast('📧 Un email de confirmation a été envoyé à ' + email + '. Vérifiez votre boîte mail.'), 2000);
   } catch(e) { errEl.textContent = e.message; errEl.classList.add('show'); }
 }
+// ── MOT DE PASSE OUBLIÉ ──────────────────────────────────
+async function doForgotPassword() {
+  const email = document.getElementById('forgot-email').value.trim();
+  const errEl = document.getElementById('forgot-err');
+  const okEl  = document.getElementById('forgot-ok');
+  errEl.classList.remove('show'); okEl.style.display = 'none';
+  if (!email) { errEl.textContent = 'Email requis.'; errEl.classList.add('show'); return; }
+  const btn = document.getElementById('forgot-btn');
+  btn.disabled = true; btn.textContent = 'Envoi…';
+  try {
+    await apiFetch('/auth/forgot-password', { method:'POST', body: JSON.stringify({ email }) });
+    okEl.style.display = 'block';
+    document.getElementById('forgot-email').value = '';
+  } catch(e) { errEl.textContent = e.message; errEl.classList.add('show'); }
+  finally { btn.disabled = false; btn.textContent = 'Envoyer le lien'; }
+}
+
+async function doResetPassword() {
+  const pass1 = document.getElementById('reset-pass1').value;
+  const pass2 = document.getElementById('reset-pass2').value;
+  const errEl = document.getElementById('reset-err');
+  errEl.classList.remove('show');
+  if (pass1.length < 6) { errEl.textContent = 'Au moins 6 caractères.'; errEl.classList.add('show'); return; }
+  if (pass1 !== pass2)  { errEl.textContent = 'Les mots de passe ne correspondent pas.'; errEl.classList.add('show'); return; }
+  const urlToken = new URLSearchParams(location.search).get('reset_token');
+  if (!urlToken) { errEl.textContent = 'Lien invalide.'; errEl.classList.add('show'); return; }
+  const btn = document.getElementById('reset-btn');
+  btn.disabled = true; btn.textContent = 'Enregistrement…';
+  try {
+    await apiFetch('/auth/reset-password', { method:'POST', body: JSON.stringify({ token: urlToken, password: pass1 }) });
+    closeOverlay('ov-reset');
+    history.replaceState({}, '', '/');
+    toast('✅ Mot de passe mis à jour ! Connectez-vous.');
+    openOverlay('ov-auth');
+  } catch(e) { errEl.textContent = e.message; errEl.classList.add('show'); }
+  finally { btn.disabled = false; btn.textContent = 'Enregistrer le mot de passe'; }
+}
+
+// ── VUE CARTE LISTINGS ────────────────────────────────────
+let listingsMapObj = null;
+let listingsMapVisible = false;
+
+function toggleListingsMapView() {
+  listingsMapVisible = !listingsMapVisible;
+  const grid    = document.getElementById('grid');
+  const loadBtn = document.getElementById('load-more-btn');
+  const mapDiv  = document.getElementById('listings-map');
+  const btn     = document.getElementById('view-toggle-btn');
+  if (listingsMapVisible) {
+    grid.style.display = 'none';
+    if (loadBtn) loadBtn.style.display = 'none';
+    mapDiv.style.display = 'block';
+    btn.textContent = '📋 Vue liste';
+    if (!listingsMapObj) {
+      listingsMapObj = L.map('listings-map').setView([28.5, 2.5], 5);
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution:'© OpenStreetMap', maxZoom:18,
+      }).addTo(listingsMapObj);
+    }
+    listingsMapObj.invalidateSize();
+    renderListingsMapMarkers();
+  } else {
+    grid.style.display = '';
+    if (loadBtn) loadBtn.style.display = '';
+    mapDiv.style.display = 'none';
+    btn.textContent = '🗺 Vue carte';
+  }
+}
+
+function renderListingsMapMarkers() {
+  if (!listingsMapObj) return;
+  listingsMapObj.eachLayer(l => { if (l instanceof L.Marker) listingsMapObj.removeLayer(l); });
+  const bounds = [];
+  allFilteredListings.forEach(l => {
+    if (!l.lat || !l.lng) return;
+    const marker = L.marker([l.lat, l.lng]).addTo(listingsMapObj);
+    marker.bindPopup(`<strong>${l.title}</strong><br>${l.location}<br><em>${Number(l.price).toLocaleString('fr-DZ')} DZD / nuit</em><br><a href="/?listing=${l.id}" onclick="event.preventDefault();openListing(${l.id})">Voir l'annonce →</a>`);
+    bounds.push([l.lat, l.lng]);
+  });
+  if (bounds.length) listingsMapObj.fitBounds(bounds, { padding: [40, 40], maxZoom: 10 });
+}
+
 function doLogout() {
   localStorage.removeItem('dz_token'); localStorage.removeItem('dz_user');
   token = null; currentUser = null;
@@ -2602,6 +2724,7 @@ function renderGrid(data, checkIn = '', checkOut = '') {
   }
   allFilteredListings = data;
   renderListingsPage();
+  if (listingsMapVisible) renderListingsMapMarkers();
 }
 
 // ── LISTING DETAIL ─────────────────────────────────────────
@@ -4588,10 +4711,17 @@ document.addEventListener('DOMContentLoaded', function() {
   document.getElementById('tab-login').addEventListener('click',    () => showAuthTab('login'));
   document.getElementById('tab-register').addEventListener('click', () => showAuthTab('register'));
   document.getElementById('goto-register').addEventListener('click',() => showAuthTab('register'));
+  document.getElementById('goto-forgot').addEventListener('click',  () => { closeOverlay('ov-auth'); openOverlay('ov-forgot'); });
+  document.getElementById('x-forgot').addEventListener('click',     () => closeOverlay('ov-forgot'));
+  document.getElementById('forgot-btn').addEventListener('click',   () => doForgotPassword());
+  document.getElementById('forgot-email').addEventListener('keydown', e => { if(e.key==='Enter') doForgotPassword(); });
+  document.getElementById('x-reset').addEventListener('click',      () => closeOverlay('ov-reset'));
+  document.getElementById('reset-btn').addEventListener('click',    () => doResetPassword());
   document.getElementById('l-btn').addEventListener('click',        () => doLogin());
   document.getElementById('r-btn').addEventListener('click',        () => doRegister());
   document.getElementById('l-pass').addEventListener('keydown', e => { if(e.key==='Enter') doLogin(); });
   document.getElementById('r-pass').addEventListener('keydown', e => { if(e.key==='Enter') doRegister(); });
+  document.getElementById('view-toggle-btn').addEventListener('click', () => toggleListingsMapView());
 
   // Messagerie
   document.getElementById('msg-send-btn').addEventListener('click', () => sendMsg());
@@ -4718,6 +4848,20 @@ document.addEventListener('DOMContentLoaded', function() {
   initPriceSlider();
   renderRecentlyViewed();
   setInterval(checkUnread, 30000);
+
+  // URL param handlers
+  const urlP = new URLSearchParams(location.search);
+  if (urlP.get('reset_token')) {
+    setTimeout(() => openOverlay('ov-reset'), 300);
+  }
+  if (urlP.get('verify') === 'ok') {
+    history.replaceState({}, '', '/');
+    setTimeout(() => toast('✅ Email vérifié ! Votre compte est activé.'), 300);
+  }
+  if (urlP.get('verify') === 'invalid') {
+    history.replaceState({}, '', '/');
+    setTimeout(() => toast('❌ Lien de vérification invalide ou expiré.'), 300);
+  }
 
   // Scroll to top
   const scrollTopBtn = document.getElementById('scroll-top');
