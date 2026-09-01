@@ -1298,6 +1298,7 @@ footer{background:var(--g100);border-top:1px solid var(--g200);padding:48px 24px
         <div class="admin-tab" data-admtab="agent">🤖 Agent IA</div>
         <div class="admin-tab" data-admtab="pubs">🏨 Publicités</div>
         <div class="admin-tab" data-admtab="signalements">⚑ Signalements</div>
+        <div class="admin-tab" data-admtab="payouts">💸 Virements</div>
       </div>
 
       <!-- Overview -->
@@ -1382,6 +1383,20 @@ footer{background:var(--g100);border-top:1px solid var(--g200);padding:48px 24px
           <button class="btn-adm" onclick="loadAdmSignalements()" style="margin-left:auto">↻ Actualiser</button>
         </div>
         <div id="adm-sig-wrap"><div class="empty-state">Chargement…</div></div>
+      </div>
+
+      <!-- Virements hôtes -->
+      <div class="admin-panel" id="admp-payouts">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px">
+          <select id="adm-payout-status" style="width:200px" onchange="loadAdmPayouts()">
+            <option value="">Toutes les demandes</option>
+            <option value="pending">En attente</option>
+            <option value="paid">Versés</option>
+            <option value="rejected">Refusés</option>
+          </select>
+          <button class="btn-adm" onclick="loadAdmPayouts()" style="margin-left:auto">↻ Actualiser</button>
+        </div>
+        <div id="adm-payouts-wrap"><div class="empty-state">Chargement…</div></div>
       </div>
     </div>
   </div>
@@ -2432,6 +2447,7 @@ function showAdmTab(name) {
   if (name === 'agent')        loadAdmAgent();
   if (name === 'pubs')         loadAdmPubs();
   if (name === 'signalements') loadAdmSignalements();
+  if (name === 'payouts')      loadAdmPayouts();
 }
 
 async function loadAdmStats() {
@@ -2839,10 +2855,18 @@ async function loadGains() {
   const el = document.getElementById('hdp-gains');
   el.innerHTML = '<p style="color:var(--g400);font-size:14px">Chargement…</p>';
   try {
-    const data = await apiFetch('/stats/host/earnings');
+    const [data, payoutsData] = await Promise.all([
+      apiFetch('/stats/host/earnings'),
+      apiFetch('/stats/host/payouts'),
+    ]);
     const { summary, bank_info, transactions } = data;
     const fmt = n => Number(n).toLocaleString('fr-DZ') + ' DZD';
-    const rows = transactions.length ? transactions.map(t => `
+
+    // Solde disponible = net total − virements paid ou pending
+    const alreadyOut = payoutsData.reduce((s, p) => s + (p.status === 'paid' || p.status === 'pending' ? Number(p.amount) : 0), 0);
+    const available  = Math.max(0, summary.net - alreadyOut);
+
+    const txRows = transactions.length ? transactions.map(t => `
       <tr>
         <td style="padding:8px 10px;font-size:13px">${String(t.paid_at).slice(0,10)}</td>
         <td style="padding:8px 10px;font-size:13px">${t.listing_title}</td>
@@ -2853,17 +2877,42 @@ async function loadGains() {
       </tr>`).join('') :
       '<tr><td colspan="6" style="padding:20px;text-align:center;color:var(--g400)">Aucune transaction</td></tr>';
 
+    const statusLabel = { pending:'⏳ En attente', paid:'✅ Versé', rejected:'❌ Refusé' };
+    const statusColor = { pending:'#92400e', paid:'#047857', rejected:'#b91c1c' };
+    const payoutRows = payoutsData.length ? payoutsData.map(p => `
+      <tr>
+        <td style="padding:8px 10px;font-size:13px">${String(p.requested_at).slice(0,10)}</td>
+        <td style="padding:8px 10px;font-size:13px;font-weight:700">${fmt(p.amount)}</td>
+        <td style="padding:8px 10px;font-size:12px;color:${statusColor[p.status]||'#666'};font-weight:600">${statusLabel[p.status]||p.status}</td>
+        <td style="padding:8px 10px;font-size:12px;color:var(--g600)">${p.admin_note||'—'}</td>
+      </tr>`).join('') :
+      '<tr><td colspan="4" style="padding:16px;text-align:center;color:var(--g400)">Aucune demande</td></tr>';
+
+    const hasPending = payoutsData.some(p => p.status === 'pending');
+
     el.innerHTML = `
       <div class="stats-grid" style="grid-template-columns:repeat(3,1fr);margin-bottom:20px">
         <div class="stat-card"><div class="stat-val">${fmt(summary.gross)}</div><div class="stat-lbl">Revenus bruts</div></div>
-        <div class="stat-card"><div class="stat-val" style="color:#dc2626">-${fmt(summary.fee)}</div><div class="stat-lbl">Commission Locavac (${summary.commission_pct}%)</div></div>
+        <div class="stat-card"><div class="stat-val" style="color:#dc2626">-${fmt(summary.fee)}</div><div class="stat-lbl">Commission (${summary.commission_pct}%)</div></div>
         <div class="stat-card accent"><div class="stat-val">${fmt(summary.net)}</div><div class="stat-lbl">Gains nets</div></div>
+      </div>
+
+      <!-- Solde disponible + bouton demande -->
+      <div style="background:${available > 0 ? '#f0fdf4' : 'var(--g50)'};border:1.5px solid ${available > 0 ? '#bbf7d0' : 'var(--g200)'};border-radius:12px;padding:16px;margin-bottom:20px;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap">
+        <div>
+          <div style="font-size:12px;color:var(--g600);margin-bottom:4px">Solde disponible au virement</div>
+          <div style="font-size:26px;font-weight:800;color:${available > 0 ? '#047857' : 'var(--g400)'}">${fmt(available)}</div>
+          ${hasPending ? '<div style="font-size:12px;color:#92400e;margin-top:4px">⏳ Une demande est en cours de traitement</div>' : ''}
+        </div>
+        <button class="btn-submit" id="btn-request-payout" onclick="requestPayout()" style="max-width:220px;padding:12px 20px;font-size:14px" ${hasPending || available < 1000 ? 'disabled style="max-width:220px;padding:12px 20px;font-size:14px;opacity:.5;cursor:not-allowed"' : ''}>
+          💸 Demander un virement
+        </button>
       </div>
 
       <!-- Coordonnées bancaires -->
       <div style="background:var(--g50);border-radius:12px;padding:16px;margin-bottom:20px">
         <h4 style="margin:0 0 12px">🏦 Coordonnées bancaires</h4>
-        <p style="font-size:12px;color:var(--g600);margin:0 0 12px">Locavac vire vos gains chaque 1er du mois vers le compte enregistré.</p>
+        <p style="font-size:12px;color:var(--g600);margin:0 0 12px">Locavac vire vos gains vers le compte enregistré à réception de votre demande (2–5 jours ouvrables).</p>
         <div class="row2">
           <div class="fg"><label>RIB</label><input type="text" id="gains-rib" placeholder="002 00012 0000040031 97" value="${bank_info.rib||''}"/></div>
           <div class="fg"><label>CCP (optionnel)</label><input type="text" id="gains-ccp" placeholder="1234567 Clé 89" value="${bank_info.ccp||''}"/></div>
@@ -2871,8 +2920,22 @@ async function loadGains() {
         <button class="btn-submit" onclick="saveBankInfo()" style="max-width:200px;padding:10px 20px;font-size:14px">💾 Enregistrer</button>
       </div>
 
+      <!-- Historique des demandes de virement -->
+      <h4 style="margin:0 0 12px">Historique des virements</h4>
+      <div style="overflow-x:auto;border-radius:10px;border:1px solid var(--g200);margin-bottom:24px">
+        <table style="width:100%;border-collapse:collapse">
+          <thead><tr style="background:var(--g50);font-size:12px;color:var(--g600)">
+            <th style="padding:8px 10px;text-align:left">Date demande</th>
+            <th style="padding:8px 10px;text-align:left">Montant</th>
+            <th style="padding:8px 10px;text-align:left">Statut</th>
+            <th style="padding:8px 10px;text-align:left">Note admin</th>
+          </tr></thead>
+          <tbody>${payoutRows}</tbody>
+        </table>
+      </div>
+
       <!-- Tableau des transactions -->
-      <h4 style="margin:0 0 12px">Détail des transactions</h4>
+      <h4 style="margin:0 0 12px">Détail des réservations</h4>
       <div style="overflow-x:auto;border-radius:10px;border:1px solid var(--g200)">
         <table style="width:100%;border-collapse:collapse">
           <thead><tr style="background:var(--g50);font-size:12px;color:var(--g600)">
@@ -2883,10 +2946,23 @@ async function loadGains() {
             <th style="padding:8px 10px;text-align:right">Frais</th>
             <th style="padding:8px 10px;text-align:right">Net</th>
           </tr></thead>
-          <tbody>${rows}</tbody>
+          <tbody>${txRows}</tbody>
         </table>
       </div>`;
   } catch(e) { el.innerHTML = '<p style="color:var(--red);font-size:14px">'+e.message+'</p>'; }
+}
+
+async function requestPayout() {
+  const btn = document.getElementById('btn-request-payout');
+  if (btn) { btn.disabled = true; btn.textContent = 'Envoi…'; }
+  try {
+    await apiFetch('/stats/host/payout', { method: 'POST' });
+    toast('✅ Demande de virement envoyée. Traitement sous 2–5 jours ouvrables.');
+    loadGains();
+  } catch(e) {
+    toast('❌ ' + e.message);
+    if (btn) { btn.disabled = false; btn.textContent = '💸 Demander un virement'; }
+  }
 }
 async function saveBankInfo() {
   const rib = document.getElementById('gains-rib')?.value.trim();
@@ -3650,6 +3726,49 @@ async function deleteSignalement(id) {
     await apiFetch('/admin/signalements/' + id, { method: 'DELETE' });
     toast('Signalement supprimé.');
     loadAdmSignalements();
+  } catch(e) { toast('❌ ' + e.message); }
+}
+
+async function loadAdmPayouts() {
+  const el = document.getElementById('adm-payouts-wrap');
+  el.innerHTML = '<div class="empty-state">Chargement…</div>';
+  try {
+    const statusFilter = document.getElementById('adm-payout-status')?.value;
+    let list = await apiFetch('/stats/admin/payouts');
+    if (statusFilter) list = list.filter(p => p.status === statusFilter);
+    if (!list.length) { el.innerHTML = '<div class="empty-state">Aucune demande.</div>'; return; }
+    const fmt = n => Number(n).toLocaleString('fr-DZ') + ' DZD';
+    const statusLabel = { pending:'⏳ En attente', paid:'✅ Versé', rejected:'❌ Refusé' };
+    const statusColor = { pending:'#92400e', paid:'#047857', rejected:'#b91c1c' };
+    el.innerHTML = `<div class="admin-table-wrap"><table class="admin-table">
+      <thead><tr>
+        <th>Date</th><th>Hôte</th><th>Montant</th><th>Coordonnées</th><th>Statut</th><th>Actions</th>
+      </tr></thead>
+      <tbody>
+        ${list.map(p => `<tr>
+          <td>${String(p.requested_at).slice(0,10)}</td>
+          <td><strong>${p.host_name}</strong><br><span style="font-size:11px;color:var(--g400)">${p.host_email}</span></td>
+          <td><strong>${fmt(p.amount)}</strong></td>
+          <td style="font-size:12px">${p.host_rib ? `RIB: ${p.host_rib}` : ''}${p.host_ccp ? `<br>CCP: ${p.host_ccp}` : ''}${!p.host_rib && !p.host_ccp ? '<span style="color:var(--red)">Non renseigné</span>' : ''}</td>
+          <td><span style="color:${statusColor[p.status]||'#666'};font-weight:600;font-size:12px">${statusLabel[p.status]||p.status}</span></td>
+          <td style="white-space:nowrap">
+            ${p.status === 'pending' ? `
+              <button class="btn-adm" style="background:#047857;color:#fff;margin-right:4px" onclick="processAdmPayout(${p.id},'paid')">✅ Versé</button>
+              <button class="btn-adm" style="background:#b91c1c;color:#fff" onclick="processAdmPayout(${p.id},'rejected')">❌ Refuser</button>
+            ` : `<span style="font-size:12px;color:var(--g400)">${p.processed_at ? String(p.processed_at).slice(0,10) : '—'}</span>`}
+          </td>
+        </tr>`).join('')}
+      </tbody>
+    </table></div>`;
+  } catch(e) { el.innerHTML = '<div class="empty-state" style="color:var(--red)">'+e.message+'</div>'; }
+}
+
+async function processAdmPayout(id, status) {
+  const note = status === 'rejected' ? prompt('Motif du refus (optionnel) :') : null;
+  try {
+    await apiFetch('/stats/admin/payouts/' + id, { method: 'PATCH', body: JSON.stringify({ status, admin_note: note || null }) });
+    toast(status === 'paid' ? '✅ Virement marqué versé.' : '❌ Demande refusée.');
+    loadAdmPayouts();
   } catch(e) { toast('❌ ' + e.message); }
 }
 

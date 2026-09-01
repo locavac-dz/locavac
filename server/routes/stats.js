@@ -101,4 +101,67 @@ router.patch('/host/bank', auth, async (req, res) => {
   res.json({ ok: true });
 });
 
+// GET /api/stats/host/payouts — liste des demandes de virement de l'hôte
+router.get('/host/payouts', auth, async (req, res) => {
+  const list = await db.payouts.find(p => p.host_id === req.user.id);
+  list.sort((a, b) => String(b.requested_at).localeCompare(String(a.requested_at)));
+  res.json(list);
+});
+
+// POST /api/stats/host/payout — demande de virement
+router.post('/host/payout', auth, async (req, res) => {
+  const COMMISSION = 0.10;
+  const uid = req.user.id;
+
+  // Calcul du solde disponible
+  const myListings  = await db.listings.find(l => l.host_id === uid);
+  const myIds       = myListings.map(l => l.id);
+  const confirmed   = await db.reservations.find(r => myIds.includes(r.listing_id) && r.status === 'confirmed');
+  const totalNet    = confirmed.reduce((s, r) => s + Math.round(Number(r.total_price || 0) * (1 - COMMISSION)), 0);
+  const paidPayouts = await db.payouts.find(p => p.host_id === uid && (p.status === 'paid' || p.status === 'pending'));
+  const alreadyOut  = paidPayouts.reduce((s, p) => s + Number(p.amount), 0);
+  const available   = totalNet - alreadyOut;
+
+  if (available < 1000)
+    return res.status(400).json({ error: `Solde insuffisant. Minimum 1 000 DZD requis (disponible : ${available.toLocaleString('fr-DZ')} DZD).` });
+
+  const user = await db.users.findOne(u => u.id === uid);
+  if (!user?.rib && !user?.ccp)
+    return res.status(400).json({ error: 'Veuillez enregistrer vos coordonnées bancaires (RIB ou CCP) avant de demander un virement.' });
+
+  const payout = await db.payouts.insert({ host_id: uid, amount: available, status: 'pending' });
+  res.status(201).json(payout);
+});
+
+// GET /api/admin/payouts — liste admin
+router.get('/admin/payouts', auth, async (req, res) => {
+  const user = await db.users.findOne(u => u.id === req.user.id);
+  if (!user?.is_admin) return res.status(403).json({ error: 'Accès refusé.' });
+  const list = await db.payouts.find();
+  const enriched = await Promise.all(list.map(async p => {
+    const host = await db.users.findOne(u => u.id === p.host_id);
+    return { ...p, host_name: host?.name || '—', host_email: host?.email || '—', host_rib: host?.rib || null, host_ccp: host?.ccp || null };
+  }));
+  enriched.sort((a, b) => String(b.requested_at).localeCompare(String(a.requested_at)));
+  res.json(enriched);
+});
+
+// PATCH /api/admin/payouts/:id — approuver ou refuser
+router.patch('/admin/payouts/:id', auth, async (req, res) => {
+  const admin = await db.users.findOne(u => u.id === req.user.id);
+  if (!admin?.is_admin) return res.status(403).json({ error: 'Accès refusé.' });
+  const { status, admin_note } = req.body;
+  if (!['paid', 'rejected'].includes(status))
+    return res.status(400).json({ error: 'status doit être "paid" ou "rejected".' });
+  const id = Number(req.params.id);
+  const payout = await db.payouts.findOne(p => p.id === id);
+  if (!payout) return res.status(404).json({ error: 'Demande introuvable.' });
+  await db.payouts.update(p => p.id === id, {
+    status,
+    processed_at: new Date().toISOString(),
+    admin_note: admin_note || null,
+  });
+  res.json({ ok: true });
+});
+
 module.exports = router;

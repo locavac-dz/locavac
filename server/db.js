@@ -148,6 +148,7 @@ const reservations = new Collection('reservations');
 const reviews      = new Collection('reviews');
 const payments     = new Collection('payments');
 const messages     = new Collection('messages');
+const payouts      = new Collection('payouts');
 
 async function connect() {
   await pool.query('SELECT 1'); // test connexion
@@ -156,4 +157,4 @@ async function connect() {
   console.log('🐘 PostgreSQL connecté');
 }
 
-module.exports = { users, listings, reservations, reviews, payments, messages, connect, pool };
+module.exports = { users, listings, reservations, reviews, payments, messages, payouts, connect, pool };

@@ -122,6 +122,17 @@ ALTER TABLE listings ADD COLUMN IF NOT EXISTS amenities JSONB DEFAULT '[]';
 ALTER TABLE reservations ADD COLUMN IF NOT EXISTS checkin_reminded BOOLEAN DEFAULT false;
 ALTER TABLE reservations ADD COLUMN IF NOT EXISTS review_reminded  BOOLEAN DEFAULT false;
 
+-- Demandes de virement hôtes
+CREATE TABLE IF NOT EXISTS payouts (
+  id           SERIAL PRIMARY KEY,
+  host_id      INTEGER REFERENCES users(id) ON DELETE CASCADE,
+  amount       NUMERIC NOT NULL,
+  status       TEXT DEFAULT 'pending',
+  requested_at TIMESTAMPTZ DEFAULT NOW(),
+  processed_at TIMESTAMPTZ,
+  admin_note   TEXT
+);
+
 -- Lot 5 : pages publicitaires établissements (hôtels / campings / complexes)
 CREATE TABLE IF NOT EXISTS publicites (
   id              SERIAL PRIMARY KEY,
