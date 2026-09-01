@@ -2184,6 +2184,10 @@ function t(key) {
   return TRANSLATIONS[currentLang]?.[key] ?? TRANSLATIONS['fr'][key] ?? key;
 }
 
+function escapeHtml(s) {
+  return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+
 function applyTranslations() {
   document.querySelectorAll('[data-i18n]').forEach(el => {
     const key = el.dataset.i18n;
@@ -2498,7 +2502,7 @@ function updateCompareBar() {
   const ids = [...compareSet];
   items.innerHTML = ids.map(id => {
     const l = allFilteredListings.find(x => x.id === id) || allListings.find(x => x.id === id) || {};
-    return `<div class="cmp-bar-item"><span style="overflow:hidden;text-overflow:ellipsis">${l.title||'Logement #'+id}</span><button class="cmp-bar-rm" onclick="toggleCompare(${id})">✕</button></div>`;
+    return `<div class="cmp-bar-item"><span style="overflow:hidden;text-overflow:ellipsis">${escapeHtml(l.title||'Logement #'+id)}</span><button class="cmp-bar-rm" onclick="toggleCompare(${id})">✕</button></div>`;
   }).join('');
   btn.disabled = compareSet.size < 2;
 }
@@ -2507,8 +2511,8 @@ function openCompare() {
   const listings = ids.map(id => allFilteredListings.find(x => x.id === id) || allListings.find(x => x.id === id) || {id});
   const rows = [
     { label: 'Photo',       fn: l => `<img class="cmp-col-img" src="${(l.photos&&l.photos[0])||l.image||''}" alt="" onerror="this.style.display='none'"/>` },
-    { label: 'Titre',       fn: l => `<div class="cmp-col-title">${l.title||'—'}</div>` },
-    { label: 'Localisation',fn: l => l.location||'—' },
+    { label: 'Titre',       fn: l => `<div class="cmp-col-title">${escapeHtml(l.title||'—')}</div>` },
+    { label: 'Localisation',fn: l => escapeHtml(l.location||'—') },
     { label: 'Prix/nuit',   fn: l => `<strong>${Number(l.price||0).toLocaleString('fr-DZ')} DZD</strong>` },
     { label: 'Note',        fn: l => l.rating ? `⭐ ${l.rating} (${l.reviews||0} avis)` : '—' },
     { label: 'Voyageurs',   fn: l => l.guests ? l.guests + ' pers.' : '—' },
@@ -2707,7 +2711,7 @@ function renderListingsMapMarkers() {
   allFilteredListings.forEach(l => {
     if (!l.lat || !l.lng) return;
     const marker = L.marker([l.lat, l.lng]).addTo(listingsMapObj);
-    marker.bindPopup(`<strong>${l.title}</strong><br>${l.location}<br><em>${Number(l.price).toLocaleString('fr-DZ')} DZD / nuit</em><br><a href="/?listing=${l.id}" onclick="event.preventDefault();openListing(${l.id})">Voir l'annonce →</a>`);
+    marker.bindPopup(`<strong>${escapeHtml(l.title)}</strong><br>${escapeHtml(l.location)}<br><em>${Number(l.price).toLocaleString('fr-DZ')} DZD / nuit</em><br><a href="/?listing=${l.id}" onclick="event.preventDefault();openListing(${l.id})">Voir l'annonce →</a>`);
     bounds.push([l.lat, l.lng]);
   });
   if (bounds.length) listingsMapObj.fitBounds(bounds, { padding: [40, 40], maxZoom: 10 });
@@ -2843,7 +2847,7 @@ function initAutocomplete() {
     }
     if (lMatch.length) {
       html += `<div class="hs-autocomplete-section">Logements</div>`;
-      html += lMatch.map(l => `<div class="hs-autocomplete-item" data-val="${l.title}" data-id="${l.id}" data-type="listing">🏠 ${l.title} <span style="color:var(--g400);font-size:11px;margin-left:4px">${l.location||''}</span></div>`).join('');
+      html += lMatch.map(l => `<div class="hs-autocomplete-item" data-val="${escapeHtml(l.title)}" data-id="${l.id}" data-type="listing">🏠 ${escapeHtml(l.title)} <span style="color:var(--g400);font-size:11px;margin-left:4px">${escapeHtml(l.location||'')}</span></div>`).join('');
     }
     return html;
   }
@@ -2964,9 +2968,9 @@ function renderRecentlyViewed() {
     section.style.display = 'block';
     carousel.innerHTML = rv.map(l => `
       <div class="rv-card" onclick="openListing(${l.id})">
-        <div class="rv-card-img"><img src="${l.image}" alt="${l.title}" loading="lazy"/></div>
+        <div class="rv-card-img"><img src="${l.image}" alt="${escapeHtml(l.title)}" loading="lazy"/></div>
         <div class="rv-card-body">
-          <div class="rv-card-title">${l.title}</div>
+          <div class="rv-card-title">${escapeHtml(l.title)}</div>
           <div class="rv-card-price">${Number(l.price).toLocaleString('fr-DZ')} DZD / nuit</div>
         </div>
       </div>`).join('');

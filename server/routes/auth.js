@@ -27,6 +27,8 @@ router.post('/register', async (req, res) => {
   const { name, email, password, phone } = req.body;
   if (!name || !email || !password)
     return res.status(400).json({ error: 'Nom, email et mot de passe obligatoires.' });
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))
+    return res.status(400).json({ error: 'Adresse email invalide.' });
   if (password.length < 6)
     return res.status(400).json({ error: 'Le mot de passe doit contenir au moins 6 caractères.' });
   if (await db.users.findOne(u => u.email === email))
@@ -127,7 +129,7 @@ router.get('/verify-email', async (req, res) => {
 router.delete('/me', require('../middleware/auth'), async (req, res) => {
   const uid = req.user.id;
   await pool.query('DELETE FROM messages WHERE from_id = $1 OR to_id = $1', [uid]);
-  await pool.query(`DELETE FROM reviews WHERE user_id = $1 OR listing_id IN (SELECT id FROM listings WHERE host_id = $1)`, [uid, uid]);
+  await pool.query(`DELETE FROM reviews WHERE user_id = $1 OR listing_id IN (SELECT id FROM listings WHERE host_id = $1)`, [uid]);
   await pool.query(`DELETE FROM reservations WHERE guest_id = $1 OR listing_id IN (SELECT id FROM listings WHERE host_id = $1)`, [uid, uid]);
   await pool.query('DELETE FROM listings WHERE host_id = $1', [uid]);
   await pool.query('DELETE FROM users WHERE id = $1', [uid]);

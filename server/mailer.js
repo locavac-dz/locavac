@@ -1,5 +1,9 @@
 const nodemailer = require('nodemailer');
 
+function esc(s) {
+  return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
 // Configuration SMTP depuis .env (optionnelle)
 // Si EMAIL_HOST n'est pas défini, les emails sont ignorés silencieusement
 let transporter = null;
@@ -49,12 +53,12 @@ function mailReservationCreated({ guestName, guestEmail, listingTitle, checkIn, 
     to: guestEmail, subject: `✅ Réservation reçue — ${listingTitle}`,
     html: wrap(`
       <h2 style="color:#222;margin-top:0">Votre réservation est en cours 🎉</h2>
-      <p>Bonjour <strong>${guestName}</strong>,</p>
+      <p>Bonjour <strong>${esc(guestName)}</strong>,</p>
       <p>Votre demande de réservation a bien été reçue. Elle est en attente de confirmation par l'hôte.</p>
       <div style="background:#f9f9f9;border-radius:10px;padding:16px;margin:20px 0">
-        <p style="margin:4px 0"><strong>📍 Logement :</strong> ${listingTitle}</p>
-        <p style="margin:4px 0"><strong>📅 Arrivée :</strong> ${checkIn}</p>
-        <p style="margin:4px 0"><strong>📅 Départ :</strong> ${checkOut}</p>
+        <p style="margin:4px 0"><strong>📍 Logement :</strong> ${esc(listingTitle)}</p>
+        <p style="margin:4px 0"><strong>📅 Arrivée :</strong> ${esc(checkIn)}</p>
+        <p style="margin:4px 0"><strong>📅 Départ :</strong> ${esc(checkOut)}</p>
         <p style="margin:4px 0"><strong>🌙 Nuits :</strong> ${nights}</p>
         <p style="margin:4px 0"><strong>💰 Total :</strong> ${Number(total).toLocaleString('fr-DZ')} DZD</p>
       </div>
@@ -68,13 +72,13 @@ function mailReservationConfirmed({ guestName, guestEmail, listingTitle, checkIn
     to: guestEmail, subject: `🏠 Réservation confirmée — ${listingTitle}`,
     html: wrap(`
       <h2 style="color:#0a7c47;margin-top:0">Votre séjour est confirmé ! ✅</h2>
-      <p>Bonjour <strong>${guestName}</strong>,</p>
-      <p>Bonne nouvelle ! Votre réservation à <strong>${listingTitle}</strong> est confirmée.</p>
+      <p>Bonjour <strong>${esc(guestName)}</strong>,</p>
+      <p>Bonne nouvelle ! Votre réservation à <strong>${esc(listingTitle)}</strong> est confirmée.</p>
       <div style="background:#e6f9f0;border-radius:10px;padding:16px;margin:20px 0">
-        <p style="margin:4px 0"><strong>📅 Arrivée :</strong> ${checkIn}</p>
-        <p style="margin:4px 0"><strong>📅 Départ :</strong> ${checkOut}</p>
-        <p style="margin:4px 0"><strong>👤 Hôte :</strong> ${hostName}</p>
-        ${hostPhone ? `<p style="margin:4px 0"><strong>📞 Contact :</strong> ${hostPhone}</p>` : ''}
+        <p style="margin:4px 0"><strong>📅 Arrivée :</strong> ${esc(checkIn)}</p>
+        <p style="margin:4px 0"><strong>📅 Départ :</strong> ${esc(checkOut)}</p>
+        <p style="margin:4px 0"><strong>👤 Hôte :</strong> ${esc(hostName)}</p>
+        ${hostPhone ? `<p style="margin:4px 0"><strong>📞 Contact :</strong> ${esc(hostPhone)}</p>` : ''}
       </div>
       <p>Bon séjour en Algérie ! 🇩🇿</p>
     `),
@@ -86,8 +90,8 @@ function mailReservationCancelled({ to, name, listingTitle, checkIn, checkOut })
     to, subject: `❌ Réservation annulée — ${listingTitle}`,
     html: wrap(`
       <h2 style="color:#b91c1c;margin-top:0">Réservation annulée</h2>
-      <p>Bonjour <strong>${name}</strong>,</p>
-      <p>La réservation pour <strong>${listingTitle}</strong> du <strong>${checkIn}</strong> au <strong>${checkOut}</strong> a été annulée.</p>
+      <p>Bonjour <strong>${esc(name)}</strong>,</p>
+      <p>La réservation pour <strong>${esc(listingTitle)}</strong> du <strong>${esc(checkIn)}</strong> au <strong>${esc(checkOut)}</strong> a été annulée.</p>
       <p style="color:#666;font-size:13px">Si vous avez effectué un paiement, un remboursement sera traité dans les meilleurs délais.</p>
     `),
   });
@@ -98,9 +102,9 @@ function mailNewMessage({ to, senderName, listingTitle, preview }) {
     to, subject: `💬 Nouveau message de ${senderName}`,
     html: wrap(`
       <h2 style="margin-top:0">Vous avez un nouveau message</h2>
-      <p><strong>${senderName}</strong> vous a envoyé un message concernant <strong>${listingTitle}</strong> :</p>
+      <p><strong>${esc(senderName)}</strong> vous a envoyé un message concernant <strong>${esc(listingTitle)}</strong> :</p>
       <div style="background:#f9f9f9;border-left:4px solid #E8261A;padding:12px 16px;border-radius:0 8px 8px 0;margin:16px 0;font-style:italic;color:#444">
-        "${preview.length > 120 ? preview.slice(0, 120) + '…' : preview}"
+        "${esc(preview.length > 120 ? preview.slice(0, 120) + '…' : preview)}"
       </div>
       <a href="https://locavac.dz" style="display:inline-block;background:#E8261A;color:#fff;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:700">Répondre sur Locavac →</a>
     `),
@@ -112,12 +116,12 @@ function mailNewReservationToHost({ hostName, hostEmail, guestName, listingTitle
     to: hostEmail, subject: `📅 Nouvelle réservation — ${listingTitle}`,
     html: wrap(`
       <h2 style="color:#222;margin-top:0">Vous avez une nouvelle réservation ! 🎉</h2>
-      <p>Bonjour <strong>${hostName}</strong>,</p>
-      <p><strong>${guestName}</strong> souhaite réserver votre logement <strong>${listingTitle}</strong>.</p>
+      <p>Bonjour <strong>${esc(hostName)}</strong>,</p>
+      <p><strong>${esc(guestName)}</strong> souhaite réserver votre logement <strong>${esc(listingTitle)}</strong>.</p>
       <div style="background:#f9f9f9;border-radius:10px;padding:16px;margin:20px 0">
-        <p style="margin:4px 0"><strong>👤 Voyageur :</strong> ${guestName}</p>
-        <p style="margin:4px 0"><strong>📅 Arrivée :</strong> ${checkIn}</p>
-        <p style="margin:4px 0"><strong>📅 Départ :</strong> ${checkOut}</p>
+        <p style="margin:4px 0"><strong>👤 Voyageur :</strong> ${esc(guestName)}</p>
+        <p style="margin:4px 0"><strong>📅 Arrivée :</strong> ${esc(checkIn)}</p>
+        <p style="margin:4px 0"><strong>📅 Départ :</strong> ${esc(checkOut)}</p>
         <p style="margin:4px 0"><strong>🌙 Nuits :</strong> ${nights}</p>
         <p style="margin:4px 0"><strong>💰 Total voyageur :</strong> ${Number(total).toLocaleString('fr-DZ')} DZD</p>
       </div>
@@ -168,7 +172,7 @@ function mailWelcome({ name, email }) {
   return sendMail({
     to: email, subject: '🏡 Bienvenue sur Locavac !',
     html: wrap(`
-      <h2 style="color:#222;margin-top:0">Bienvenue, ${name} ! 🎉</h2>
+      <h2 style="color:#222;margin-top:0">Bienvenue, ${esc(name)} ! 🎉</h2>
       <p>Votre compte Locavac est prêt. Vous pouvez dès maintenant :</p>
       <ul style="line-height:2;color:#444">
         <li>🔍 Rechercher un logement parmi toutes les wilayas d'Algérie</li>
@@ -186,12 +190,12 @@ function mailCheckInReminder({ guestName, guestEmail, listingTitle, checkIn, hos
     to: guestEmail, subject: `📅 Rappel : arrivée demain — ${listingTitle}`,
     html: wrap(`
       <h2 style="color:#222;margin-top:0">Votre arrivée est demain ! 🏡</h2>
-      <p>Bonjour <strong>${guestName}</strong>,</p>
-      <p>Rappel : vous arrivez demain à <strong>${listingTitle}</strong>.</p>
+      <p>Bonjour <strong>${esc(guestName)}</strong>,</p>
+      <p>Rappel : vous arrivez demain à <strong>${esc(listingTitle)}</strong>.</p>
       <div style="background:#eff6ff;border-radius:10px;padding:16px;margin:20px 0">
-        <p style="margin:4px 0"><strong>📅 Arrivée :</strong> ${checkIn}</p>
-        <p style="margin:4px 0"><strong>👤 Hôte :</strong> ${hostName}</p>
-        ${hostPhone ? `<p style="margin:4px 0"><strong>📞 Contact hôte :</strong> ${hostPhone}</p>` : ''}
+        <p style="margin:4px 0"><strong>📅 Arrivée :</strong> ${esc(checkIn)}</p>
+        <p style="margin:4px 0"><strong>👤 Hôte :</strong> ${esc(hostName)}</p>
+        ${hostPhone ? `<p style="margin:4px 0"><strong>📞 Contact hôte :</strong> ${esc(hostPhone)}</p>` : ''}
       </div>
       <p style="font-size:13px;color:#666">Pensez à confirmer votre heure d'arrivée avec l'hôte via la messagerie Locavac.</p>
       <a href="https://locavac.dz" style="display:inline-block;background:#E8261A;color:#fff;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:700">Ouvrir la messagerie →</a>
@@ -204,8 +208,8 @@ function mailReviewReminder({ guestName, guestEmail, listingTitle, listingId }) 
     to: guestEmail, subject: `⭐ Votre avis sur ${listingTitle}`,
     html: wrap(`
       <h2 style="color:#222;margin-top:0">Comment s'est passé votre séjour ?</h2>
-      <p>Bonjour <strong>${guestName}</strong>,</p>
-      <p>Votre séjour à <strong>${listingTitle}</strong> est maintenant terminé. Votre avis aide les autres voyageurs à choisir leur logement.</p>
+      <p>Bonjour <strong>${esc(guestName)}</strong>,</p>
+      <p>Votre séjour à <strong>${esc(listingTitle)}</strong> est maintenant terminé. Votre avis aide les autres voyageurs à choisir leur logement.</p>
       <div style="text-align:center;margin:24px 0;font-size:32px">⭐ ⭐ ⭐ ⭐ ⭐</div>
       <a href="https://locavac.dz" style="display:inline-block;background:#E8261A;color:#fff;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:700">Laisser un avis →</a>
       <p style="margin-top:16px;font-size:12px;color:#999">Vous avez 30 jours pour déposer votre avis.</p>
@@ -218,7 +222,7 @@ function mailPasswordReset({ name, email, resetUrl }) {
     to: email, subject: '🔑 Réinitialisation de votre mot de passe — Locavac',
     html: wrap(`
       <h2 style="color:#222;margin-top:0">Réinitialisation du mot de passe</h2>
-      <p>Bonjour <strong>${name}</strong>,</p>
+      <p>Bonjour <strong>${esc(name)}</strong>,</p>
       <p>Vous avez demandé à réinitialiser votre mot de passe. Cliquez sur le bouton ci-dessous pour choisir un nouveau mot de passe :</p>
       <div style="text-align:center;margin:28px 0">
         <a href="${resetUrl}" style="display:inline-block;background:#E8261A;color:#fff;padding:14px 32px;border-radius:10px;text-decoration:none;font-weight:700;font-size:15px">Réinitialiser mon mot de passe →</a>
@@ -234,7 +238,7 @@ function mailVerifyEmail({ name, email, verifyUrl }) {
     to: email, subject: '✅ Confirmez votre adresse email — Locavac',
     html: wrap(`
       <h2 style="color:#222;margin-top:0">Confirmez votre adresse email</h2>
-      <p>Bonjour <strong>${name}</strong>,</p>
+      <p>Bonjour <strong>${esc(name)}</strong>,</p>
       <p>Merci de vous être inscrit sur Locavac ! Pour activer votre compte, confirmez votre adresse email :</p>
       <div style="text-align:center;margin:28px 0">
         <a href="${verifyUrl}" style="display:inline-block;background:#0a7c47;color:#fff;padding:14px 32px;border-radius:10px;text-decoration:none;font-weight:700;font-size:15px">Confirmer mon email →</a>

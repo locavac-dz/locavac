@@ -57,6 +57,8 @@ router.post('/', auth, async (req, res) => {
   const { to_id, listing_id, body } = req.body;
   if (!to_id || !listing_id || !body?.trim())
     return res.status(400).json({ error: 'Destinataire, annonce et message requis.' });
+  if (body.length > 2000)
+    return res.status(400).json({ error: 'Le message ne peut pas dépasser 2000 caractères.' });
   if (Number(to_id) === req.user.id)
     return res.status(400).json({ error: 'Vous ne pouvez pas vous envoyer un message.' });
 

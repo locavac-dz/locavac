@@ -36,9 +36,19 @@ const authLimiter = rateLimit({
   message: { error: 'Trop de tentatives. Réessayez dans 15 minutes.' },
   skip: () => process.env.NODE_ENV === 'test',
 });
-// Appliqué uniquement sur login et register
+// Appliqué sur login, register et upload
 app.use('/api/auth/login',    authLimiter);
 app.use('/api/auth/register', authLimiter);
+
+const uploadLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000, // 1 heure
+  max: 50,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Trop d\'uploads. Réessayez dans 1 heure.' },
+  skip: () => process.env.NODE_ENV === 'test',
+});
+app.use('/api/upload', uploadLimiter);
 
 app.use(express.json());
 // Service Worker : no-cache obligatoire pour que le navigateur détecte les mises à jour
