@@ -4,7 +4,7 @@
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
 <title>Locavac — Location de vacances en Algérie</title>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Cairo:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Cairo:wght@300;400;500;600;700&family=Sora:wght@300;700;800&display=swap" rel="stylesheet"/>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
@@ -52,9 +52,8 @@ body{font-family:'Inter',sans-serif;color:var(--g800);background:#fff}
 /* ── HEADER ── */
 header{position:sticky;top:0;z-index:200;background:#fff;border-bottom:1px solid var(--g200)}
 .hi{max-width:1280px;margin:0 auto;padding:0 24px;height:80px;display:flex;align-items:center;justify-content:space-between;gap:16px}
-.logo{display:flex;align-items:center;gap:8px;text-decoration:none}
-.logo-icon{width:36px;height:36px;background:var(--red);border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;font-size:18px}
-.logo-text{font-size:22px;font-weight:700;color:var(--red);letter-spacing:-.5px}
+.logo{display:flex;align-items:center;gap:8px;text-decoration:none;line-height:1;user-select:none}
+.logo-text{font-size:22px;font-weight:700;color:var(--txt);letter-spacing:-.5px;font-family:'Sora',system-ui,sans-serif}
 .search-pill{display:flex;align-items:center;border:1.5px solid var(--g200);border-radius:40px;box-shadow:var(--sh);cursor:pointer;background:#fff;transition:box-shadow .2s}
 .search-pill:hover{box-shadow:var(--shlg)}
 .seg{padding:12px 20px;font-size:14px;font-weight:500;border-right:1px solid var(--g200)}
@@ -563,7 +562,23 @@ footer{background:var(--g100);border-top:1px solid var(--g200);padding:48px 24px
 <!-- HEADER -->
 <header>
   <div class="hi">
-    <a class="logo" href="#"><div class="logo-icon">⌂</div><span class="logo-text">Locavac</span></a>
+    <a class="logo" href="#">
+      <svg width="30" height="38" viewBox="0 0 56 68" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <linearGradient id="lgPin" x1="28" y1="3" x2="28" y2="65" gradientUnits="userSpaceOnUse">
+            <stop offset="0" stop-color="#FF4535"/>
+            <stop offset="1" stop-color="#C11510"/>
+          </linearGradient>
+        </defs>
+        <path d="M28 3C15.8 3 6 12.8 6 25C6 40.8 28 65 28 65C28 65 50 40.8 50 25C50 12.8 40.2 3 28 3Z" fill="url(#lgPin)"/>
+        <polygon points="28,14 14,26 42,26" fill="white"/>
+        <rect x="14" y="26" width="28" height="16" fill="white"/>
+        <path d="M24 42 L24 33 Q28 29 32 33 L32 42" fill="#E8261A"/>
+        <rect x="16" y="28" width="7" height="6" rx="1" fill="none" stroke="rgba(232,38,26,0.35)" stroke-width="1.5"/>
+        <rect x="33" y="28" width="7" height="6" rx="1" fill="none" stroke="rgba(232,38,26,0.35)" stroke-width="1.5"/>
+      </svg>
+      <span class="logo-text">locavac</span>
+    </a>
     <div class="search-pill" id="header-pill">
       <div class="seg">Où ?<span>Destination</span></div>
       <div class="seg">Arrivée<span>Dates</span></div>
