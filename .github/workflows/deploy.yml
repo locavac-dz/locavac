@@ -1,0 +1,21 @@
+name: Deploy to VPS
+
+on:
+  push:
+    branches: [master]
+
+jobs:
+  deploy:
+    name: Déploiement production
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: SSH → deploy.sh
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host:     ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key:      ${{ secrets.VPS_KEY }}
+          port:     ${{ secrets.VPS_PORT }}
+          script: |
+            bash /opt/locavac/deploy.sh

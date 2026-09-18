@@ -2804,7 +2804,20 @@ function getSelectedAmenities() {
 }
 
 // ── WILAYAS (autocomplete) ────────────────────────────────
-const WILAYAS = ['Adrar','Aïn Defla','Aïn Témouchent','Alger','Annaba','Batna','Béchar','Béjaïa','Bordj Badji Mokhtar','Bordj Bou Arréridj','Boumerdès','Bouira','Chlef','Constantine','Djanet','Djelfa','El Bayadh','El M\'Ghair','El Meniaa','El Oued','El Tarf','Ghardaïa','Guelma','Illizi','In Guezzam','In Salah','Jijel','Khenchela','Laghouat','Mascara','Médéa','Mila','Mostaganem','M\'Sila','Naâma','Oran','Ouargla','Ouled Djellal','Oum El Bouaghi','Relizane','Saïda','Sétif','Sidi Bel Abbès','Skikda','Souk Ahras','Tamanrasset','Tébessa','Tiaret','Timimoun','Tindouf','Tipaza','Tissemsilt','Tizi Ouzou','Tlemcen','Touggourt'];
+// ── Wilayas d'Algérie — 69 wilayas (loi n°26-06 du 4 avril 2026)
+const WILAYAS = [
+  'Adrar','Chlef','Laghouat','Oum El Bouaghi','Batna','Béjaïa','Biskra','Béchar',
+  'Blida','Bouira','Tamanrasset','Tébessa','Tlemcen','Tiaret','Tizi Ouzou','Alger',
+  'Djelfa','Jijel','Sétif','Saïda','Skikda','Sidi Bel Abbès','Annaba','Guelma',
+  'Constantine','Médéa','Mostaganem','M\'Sila','Mascara','Ouargla','Oran','El Bayadh',
+  'Illizi','Bordj Bou Arreridj','Boumerdès','El Tarf','Tindouf','Tissemsilt','El Oued',
+  'Khenchela','Souk Ahras','Tipaza','Mila','Aïn Defla','Naâma','Aïn Témouchent',
+  'Ghardaïa','Relizane','Timimoun','Bordj Badji Mokhtar','Ouled Djellal','Béni Abbès',
+  'In Salah','In Guezzam','Touggourt','Djanet','El M\'Ghair','El Menia',
+  // Nouvelles wilayas — codes 59-69 (loi n°26-06 du 4 avril 2026)
+  'Aflou','Barika','El Kantara','Bir El Ater','El Aricha','Ksar Chellala',
+  'Aïn Ouessara','Messaad','Ksar El Boukhari','Bou Saâda','El Abiodh Sidi Cheikh'
+];
 
 const SEARCH_HISTORY_KEY = 'locavac_searches';
 function saveSearchHistory(q) {
