@@ -73,7 +73,7 @@ router.get('/:id', async (req, res) => {
 // POST /api/listings
 router.post('/', auth, async (req, res) => {
   const { title, description, location, wilaya, category, price, guests, beds, baths, image, photos, lat, lng, amenities } = req.body;
-  if (!title || !location || !wilaya || !category || !price)
+  if (!title || !location || !wilaya || !category || price === undefined || price === null || price === '')
     return res.status(400).json({ error: 'Champs obligatoires manquants.' });
   if (typeof title !== 'string' || title.trim().length < 5 || title.length > 120)
     return res.status(400).json({ error: 'Le titre doit contenir entre 5 et 120 caractères.' });

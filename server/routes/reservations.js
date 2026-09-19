@@ -235,3 +235,6 @@ router.patch('/:id/status', auth, async (req, res) => {
 });
 
 module.exports = router;
+// Exportés pour les tests unitaires
+module.exports.calcRefund = calcRefund;
+module.exports.nights     = nights;

@@ -4790,9 +4790,9 @@ function connectWs() {
   _ws.onopen  = () => { _wsRetryCount = 0; };
   _ws.onclose = e => {
     _ws = null;
-    if (currentUser && e.code !== 4001 && _wsRetryCount < 5) {
+    if (currentUser && e.code !== 4001 && _wsRetryCount < 10) {
       _wsRetryCount++;
-      setTimeout(connectWs, Math.min(2000 * _wsRetryCount, 15000));
+      setTimeout(connectWs, Math.min(1000 * Math.pow(2, _wsRetryCount), 30000));
     }
   };
   _ws.onerror = () => {};
@@ -4839,6 +4839,9 @@ function connectWs() {
 function closeWs() {
   if (_ws) { _ws.onclose = null; _ws.close(); _ws = null; }
 }
+
+// Reconnexion automatique dès que le navigateur retrouve le réseau
+window.addEventListener('online', () => { _wsRetryCount = 0; connectWs(); });
 
 // ── STATISTIQUES HÔTE ─────────────────────────────────────
 async function loadStats() {

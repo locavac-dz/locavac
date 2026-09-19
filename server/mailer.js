@@ -20,6 +20,39 @@ function getTransporter() {
   return transporter;
 }
 
+// File d'attente pour les emails échoués — retry avec backoff exponentiel
+const _queue = [];
+const MAX_RETRIES = 3;
+const RETRY_DELAYS = [30_000, 120_000, 600_000]; // 30s, 2min, 10min
+
+async function _drainQueue() {
+  if (!_queue.length) return;
+  const now = Date.now();
+  const due = _queue.filter(item => item.nextAt <= now);
+  for (const item of due) {
+    _queue.splice(_queue.indexOf(item), 1);
+    const t = getTransporter();
+    if (!t) continue;
+    try {
+      await t.sendMail({ from: `"Locavac 🇩🇿" <${process.env.EMAIL_USER}>`, to: item.to, subject: item.subject, html: item.html });
+    } catch (e) {
+      if (item.retries < MAX_RETRIES) {
+        item.retries++;
+        item.nextAt = now + (RETRY_DELAYS[item.retries - 1] || 600_000);
+        _queue.push(item);
+        console.error(`[Mailer] retry ${item.retries}/${MAX_RETRIES} pour <${item.to}>:`, e.message);
+      } else {
+        console.error(`[Mailer] abandon après ${MAX_RETRIES} tentatives pour <${item.to}>:`, e.message);
+      }
+    }
+  }
+}
+
+// Lancer la vérification toutes les 30 secondes (sauf en test)
+if (process.env.NODE_ENV !== 'test') {
+  setInterval(_drainQueue, 30_000);
+}
+
 async function sendMail({ to, subject, html }) {
   const t = getTransporter();
   if (!t || !to) return; // Silencieux si non configuré
@@ -29,7 +62,8 @@ async function sendMail({ to, subject, html }) {
       to, subject, html,
     });
   } catch (e) {
-    console.error('[Mailer]', e.message);
+    console.error('[Mailer] premier envoi échoué, mise en file:', e.message);
+    _queue.push({ to, subject, html, retries: 0, nextAt: Date.now() + RETRY_DELAYS[0] });
   }
 }
 

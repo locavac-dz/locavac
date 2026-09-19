@@ -30,6 +30,8 @@ router.post('/register', async (req, res) => {
   const { name, email, password, phone } = req.body;
   if (!name || !email || !password)
     return res.status(400).json({ error: 'Nom, email et mot de passe obligatoires.' });
+  if (String(name).trim().length < 2 || String(name).trim().length > 100)
+    return res.status(400).json({ error: 'Le nom doit contenir entre 2 et 100 caractères.' });
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))
     return res.status(400).json({ error: 'Adresse email invalide.' });
   if (password.length < 6)

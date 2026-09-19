@@ -167,20 +167,25 @@ app.use((err, req, res, next) => { // eslint-disable-line no-unused-vars
   res.status(err.status || 500).json({ error: msg });
 });
 
-const PORT = process.env.PORT || 3000;
+// Exporté pour les tests (supertest)
+module.exports = app;
 
-db.connect()
-  .then(() => {
-    const server = http.createServer(app);
-    wsModule.setup(server);
-    server.listen(PORT, () => {
-      console.log(`\n🚀 Locavac démarré sur http://localhost:${PORT}`);
-      console.log(`   API disponible sur http://localhost:${PORT}/api\n`);
-      require('./agent').start();
-      require('./cron');
+// Démarrage uniquement en exécution directe (pas lors des imports de test)
+if (require.main === module) {
+  const PORT = process.env.PORT || 3000;
+  db.connect()
+    .then(() => {
+      const server = http.createServer(app);
+      wsModule.setup(server);
+      server.listen(PORT, () => {
+        console.log(`\n🚀 Locavac démarré sur http://localhost:${PORT}`);
+        console.log(`   API disponible sur http://localhost:${PORT}/api\n`);
+        require('./agent').start();
+        require('./cron');
+      });
+    })
+    .catch(err => {
+      console.error('❌ Connexion PostgreSQL échouée :', err.message);
+      process.exit(1);
     });
-  })
-  .catch(err => {
-    console.error('❌ Connexion PostgreSQL échouée :', err.message);
-    process.exit(1);
-  });
+}
