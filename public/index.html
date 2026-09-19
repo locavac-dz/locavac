@@ -336,6 +336,7 @@ main{max-width:1280px;margin:0 auto;padding:32px 24px 64px}
 .card-img img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;transition:transform .4s}
 .card:hover .card-img img{transform:scale(1.04)}
 .badge{position:absolute;top:12px;left:12px;background:#fff;font-size:11px;font-weight:700;padding:4px 10px;border-radius:20px;box-shadow:0 1px 6px rgba(0,0,0,.2)}
+.badge-new{position:absolute;bottom:12px;left:12px;background:#16a34a;color:#fff;font-size:10px;font-weight:700;padding:3px 9px;border-radius:20px;z-index:1;box-shadow:0 1px 4px rgba(0,0,0,.25)}
 .wish{position:absolute;top:10px;right:10px;background:none;border:none;font-size:22px;cursor:pointer;color:rgba(255,255,255,.85);text-shadow:0 1px 4px rgba(0,0,0,.5);transition:color .2s,transform .2s;line-height:1}
 .wish:hover,.wish.liked{color:var(--red);transform:scale(1.15);text-shadow:none}
 .card-body{padding:12px 0 0}
@@ -587,6 +588,13 @@ footer{background:var(--g100);border-top:1px solid var(--g200);padding:48px 24px
 .profile-avatar-edit{position:absolute;bottom:0;right:0;background:#fff;border:2px solid var(--g200);border-radius:50%;width:26px;height:26px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:13px;box-shadow:var(--sh)}
 .profile-info h3{font-size:20px;font-weight:700;margin-bottom:4px}
 .profile-info .profile-meta{font-size:13px;color:var(--g600)}
+.profile-completion{margin:0 0 20px;padding:12px 14px;background:var(--g50);border-radius:12px;border:1px solid var(--g200)}
+.profile-completion-lbl{display:flex;justify-content:space-between;font-size:12px;font-weight:600;color:var(--g700);margin-bottom:6px}
+.profile-completion-bar-bg{height:7px;background:var(--g200);border-radius:4px;overflow:hidden}
+.profile-completion-bar{height:100%;border-radius:4px;background:linear-gradient(90deg,var(--red),#ff7a6a);transition:width .5s}
+.profile-completion-items{display:flex;flex-wrap:wrap;gap:5px;margin-top:8px}
+.pci{font-size:11px;padding:2px 8px;border-radius:20px;background:var(--g200);color:var(--g500)}
+.pci.done{background:#dcfce7;color:#15803d}
 .verified-badge{display:inline-flex;align-items:center;gap:4px;background:#e6f9f0;color:#0a7c47;font-size:11px;font-weight:700;padding:3px 9px;border-radius:12px;margin-left:8px}
 .host-badge{display:inline-flex;align-items:center;gap:4px;background:#fff5f4;color:#E8261A;font-size:11px;font-weight:700;padding:3px 9px;border-radius:12px;margin-left:4px}
 
@@ -1374,6 +1382,7 @@ footer{background:var(--g100);border-top:1px solid var(--g200);padding:48px 24px
         <div class="tab active" data-tab="details">Détails</div>
         <div class="tab" data-tab="avis">Avis</div>
         <div class="tab" data-tab="reserver">Réserver</div>
+        <div class="tab" data-tab="carte">📍 Carte</div>
       </div>
 
       <!-- Détails -->
@@ -1433,6 +1442,12 @@ footer{background:var(--g100);border-top:1px solid var(--g200);padding:48px 24px
         </div>
         <div class="ferr" id="bk-err"></div>
         <button class="book-btn" id="bk-btn">🔒 Réserver maintenant</button>
+      </div>
+
+      <!-- Carte -->
+      <div class="tab-panel" id="tp-carte">
+        <div id="detail-minimap" style="height:260px;border-radius:12px;overflow:hidden;margin:4px 0 12px"></div>
+        <p id="detail-nomap" style="color:var(--g400);font-size:14px;text-align:center;padding:40px 0;display:none">📍 Localisation non disponible pour ce logement.</p>
       </div>
     </div>
   </div>
@@ -1586,6 +1601,11 @@ footer{background:var(--g100);border-top:1px solid var(--g200);padding:48px 24px
           <h3 id="prof-display-name">—</h3>
           <div class="profile-meta" id="prof-display-meta"></div>
         </div>
+      </div>
+      <div class="profile-completion" id="prof-completion" style="display:none">
+        <div class="profile-completion-lbl"><span>Complétion du profil</span><span id="prof-completion-pct">0 %</span></div>
+        <div class="profile-completion-bar-bg"><div class="profile-completion-bar" id="prof-completion-bar" style="width:0%"></div></div>
+        <div class="profile-completion-items" id="prof-completion-items"></div>
       </div>
       <div class="fg"><label>Nom complet</label><input type="text" id="prof-name" placeholder="Votre nom"/></div>
       <div class="fg"><label>Téléphone</label><input type="tel" id="prof-phone" placeholder="+213 6XX XXX XXX"/></div>
@@ -3088,6 +3108,7 @@ function renderListingsPage() {
       <div class="card-img">
         <img src="${(l.photos && l.photos[0]) || l.image || ''}" alt="${l.title}" loading="lazy" onerror="this.src='https://images.unsplash.com/photo-1564013799919-ab600027ffc6?w=600&q=80'"/>
         ${l.rating >= 4.9 ? '<div class="badge">Coup de cœur</div>' : ''}
+        ${(Date.now() - new Date(l.created_at || 0)) < 7*86400000 ? '<div class="badge-new">Nouveau</div>' : ''}
         <button class="wish ${liked.has(l.id)?'liked':''}" data-wid="${l.id}">${liked.has(l.id)?'❤':'♡'}</button>
         <button class="save-btn" data-sid="${l.id}" title="Sauvegarder dans une liste">🔖</button>
         <button class="card-cmp-btn ${compareSet.has(l.id)?'active':''}" data-cid="${l.id}">⊞ Comparer</button>
@@ -3187,12 +3208,17 @@ function renderGrid(data, checkIn = '', checkOut = '') {
 }
 
 // ── LISTING DETAIL ─────────────────────────────────────────
+let _detailMapLat = null, _detailMapLng = null;
 async function openListing(id) {
   currentListingId = id;
   let l = allListings.find(x => x.id === id) || STATIC.find(x => x.id === id);
   try { l = await apiFetch('/listings/' + id); } catch {}
   if (!l) return;
   currentHostId = l.host_id;
+  _detailMapLat = l.lat || null;
+  _detailMapLng = l.lng || null;
+  // Réinitialiser la minimap si elle existe
+  if (window._detailMapInst) { window._detailMapInst.remove(); window._detailMapInst = null; }
 
   // Galerie
   currentPhotos = l.photos && l.photos.length ? l.photos : [l.image].filter(Boolean);
@@ -3276,6 +3302,25 @@ async function openListing(id) {
 function showListingTab(name) {
   document.querySelectorAll('.tabs .tab').forEach(t => t.classList.toggle('active', t.dataset.tab === name));
   document.querySelectorAll('.tab-panel').forEach(p => p.classList.toggle('active', p.id === 'tp-' + name));
+  if (name === 'carte') {
+    const nomap = document.getElementById('detail-nomap');
+    if (_detailMapLat && _detailMapLng) {
+      nomap.style.display = 'none';
+      if (!window._detailMapInst) {
+        window._detailMapInst = L.map('detail-minimap', { zoomControl: true, scrollWheelZoom: false })
+          .setView([_detailMapLat, _detailMapLng], 14);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+          { attribution: '© <a href="https://openstreetmap.org">OpenStreetMap</a>', maxZoom: 19 })
+          .addTo(window._detailMapInst);
+        L.marker([_detailMapLat, _detailMapLng])
+          .addTo(window._detailMapInst)
+          .bindPopup('<strong>Ce logement</strong>').openPopup();
+      }
+      window._detailMapInst.invalidateSize();
+    } else {
+      nomap.style.display = 'block';
+    }
+  }
 }
 
 function renderGallery() {
@@ -4020,6 +4065,23 @@ async function openProfile() {
     cb.checked = userLangs.includes(cb.value);
     cb.closest('.amenity-check-item').classList.toggle('checked', cb.checked);
   });
+  // Barre de complétion du profil
+  const steps = [
+    { key:'name',        label:'Nom',          done: !!(user.name && user.name.trim()) },
+    { key:'phone',       label:'Téléphone',    done: !!(user.phone && user.phone.trim()) },
+    { key:'bio',         label:'Bio',          done: !!(user.bio && user.bio.trim()) },
+    { key:'avatar',      label:'Photo',        done: !!(user.avatar && user.avatar.trim()) },
+    { key:'id_verified', label:'CNI vérifiée', done: !!user.id_verified },
+  ];
+  const doneCount = steps.filter(s => s.done).length;
+  const pct = Math.round((doneCount / steps.length) * 100);
+  const compEl = document.getElementById('prof-completion');
+  compEl.style.display = 'block';
+  document.getElementById('prof-completion-pct').textContent = pct + ' %';
+  document.getElementById('prof-completion-bar').style.width = pct + '%';
+  document.getElementById('prof-completion-items').innerHTML =
+    steps.map(s => `<span class="pci${s.done?' done':''}">${s.done?'✓':''} ${s.label}</span>`).join('');
+
   // Badge vérification identité
   const badge = document.getElementById('prof-id-badge');
   if (user.id_verified) {
@@ -5567,7 +5629,7 @@ document.addEventListener('DOMContentLoaded', function() {
   loadListings('all');
   loadHomeEtab();
   loadDestCounts();
-  loadStats();
+  loadStatsBand();
   initAutocomplete();
   initHoverCard();
   initDarkMode();
@@ -5600,7 +5662,7 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 // ── STATS BAND ────────────────────────────────────────────
-async function loadStats() {
+async function loadStatsBand() {
   try {
     const data = await apiFetch('/listings');
     const listingsEl = document.getElementById('stat-listings');
