@@ -459,6 +459,26 @@ footer{background:var(--g100);border-top:1px solid var(--g200);padding:48px 24px
 .msg-bubble.mine{background:var(--red);color:#fff;margin-left:auto;border-radius:16px 16px 4px 16px}
 .msg-bubble.theirs{background:var(--g100);color:var(--g800);border-radius:16px 16px 16px 4px}
 .msg-time{font-size:10px;opacity:.6;margin-top:3px;text-align:right}
+/* ── TYPING INDICATOR ── */
+.typing-indicator{padding:6px 16px;display:none;align-items:center;gap:6px;font-size:12px;color:var(--g400)}
+.typing-indicator.show{display:flex}
+.typing-dots{display:flex;gap:3px}
+.typing-dots span{width:5px;height:5px;border-radius:50%;background:var(--g400);animation:tdot 1.2s infinite}
+.typing-dots span:nth-child(2){animation-delay:.2s}
+.typing-dots span:nth-child(3){animation-delay:.4s}
+@keyframes tdot{0%,80%,100%{transform:scale(0.8);opacity:.5}40%{transform:scale(1.1);opacity:1}}
+/* ── BARRES DE NOTES ── */
+.rating-bars{margin-bottom:18px}
+.rating-bar-row{display:flex;align-items:center;gap:8px;margin-bottom:5px;font-size:12px}
+.rating-bar-lbl{width:16px;text-align:right;flex-shrink:0;font-weight:700;color:var(--g700)}
+.rating-bar-track{flex:1;height:6px;background:var(--g200);border-radius:3px;overflow:hidden}
+.rating-bar-fill{height:100%;background:#f59e0b;border-radius:3px;transition:width .5s}
+.rating-bar-cnt{width:22px;text-align:right;color:var(--g400);font-size:11px;flex-shrink:0}
+/* ── POPUP CARTE ENRICHIE ── */
+.map-popup-img{width:100%;height:76px;object-fit:cover;display:block;border-radius:6px 6px 0 0;margin-bottom:6px}
+.map-popup-title{font-size:13px;font-weight:700;margin-bottom:2px;line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.map-popup-meta{font-size:11px;color:#666;margin-bottom:5px}
+.map-popup-btn{display:block;width:100%;background:#e33d3d;color:#fff;border:none;border-radius:6px;padding:5px 0;font-size:12px;font-weight:700;cursor:pointer;text-align:center}
 .msg-input-row{display:flex;gap:8px;padding:12px 16px;border-top:1px solid var(--g200)}
 .msg-input-row input{flex:1;border:1.5px solid var(--g200);border-radius:24px;padding:10px 16px;font-size:14px;font-family:inherit;outline:none}
 .msg-input-row input:focus{border-color:var(--red)}
@@ -1624,6 +1644,7 @@ footer{background:var(--g100);border-top:1px solid var(--g200);padding:48px 24px
         <div id="thread-content" style="display:none;height:100%;display:none;flex-direction:column">
           <div class="thread-hd" id="thread-hd"></div>
           <div class="thread-msgs" id="thread-msgs"></div>
+          <div class="typing-indicator" id="typing-indicator"><div class="typing-dots"><span></span><span></span><span></span></div><span id="typing-name"></span> est en train d'écrire</div>
           <div class="msg-input-row">
             <input type="text" id="msg-input" placeholder="Écrivez un message…"/>
             <button class="msg-send-btn" id="msg-send-btn">➤</button>
@@ -2782,6 +2803,17 @@ function toggleListingsMapView() {
   }
 }
 
+function mapPopupHtml(l) {
+  const img = (Array.isArray(l.photos) && l.photos[0]) || l.image || '';
+  return `<div style="width:160px">
+    ${img ? `<img class="map-popup-img" src="${escapeHtml(img)}" alt="" onerror="this.style.display='none'"/>` : ''}
+    <div style="padding:0 4px 4px">
+      <div class="map-popup-title">${escapeHtml(l.title)}</div>
+      <div class="map-popup-meta">${l.rating ? '⭐ ' + l.rating + ' · ' : ''}${Number(l.price).toLocaleString('fr-DZ')} DZD/nuit</div>
+      <button class="map-popup-btn" onclick="openListing(${l.id})">Voir l'annonce →</button>
+    </div>
+  </div>`;
+}
 function renderListingsMapMarkers() {
   if (!listingsMapObj) return;
   listingsMapObj.eachLayer(l => { if (l instanceof L.Marker) listingsMapObj.removeLayer(l); });
@@ -2789,7 +2821,7 @@ function renderListingsMapMarkers() {
   allFilteredListings.forEach(l => {
     if (!l.lat || !l.lng) return;
     const marker = L.marker([l.lat, l.lng]).addTo(listingsMapObj);
-    marker.bindPopup(`<strong>${escapeHtml(l.title)}</strong><br>${escapeHtml(l.location)}<br><em>${Number(l.price).toLocaleString('fr-DZ')} DZD / nuit</em><br><a href="/?listing=${l.id}" onclick="event.preventDefault();openListing(${l.id})">Voir l'annonce →</a>`);
+    marker.bindPopup(mapPopupHtml(l), { maxWidth: 180 });
     bounds.push([l.lat, l.lng]);
   });
   if (bounds.length) listingsMapObj.fitBounds(bounds, { padding: [40, 40], maxZoom: 10 });
@@ -3290,7 +3322,7 @@ function renderListingsPage() {
     </div>`;
   }).join('');
 
-  // Bouton "Voir plus"
+  // Infinite scroll + bouton "Voir plus"
   let moreBtn = document.getElementById('load-more-btn');
   if (visible.length < allFilteredListings.length) {
     if (!moreBtn) {
@@ -3301,8 +3333,18 @@ function renderListingsPage() {
     }
     moreBtn.textContent = `Voir plus (${allFilteredListings.length - visible.length} restants)`;
     grid.after(moreBtn);
+    // IntersectionObserver pour le chargement automatique au scroll
+    if (window._gridObserver) window._gridObserver.disconnect();
+    window._gridObserver = new IntersectionObserver(entries => {
+      if (entries[0].isIntersecting && visible.length < allFilteredListings.length) {
+        listingsPage++;
+        renderListingsPage();
+      }
+    }, { rootMargin: '200px' });
+    window._gridObserver.observe(moreBtn);
   } else {
     if (moreBtn) moreBtn.remove();
+    if (window._gridObserver) { window._gridObserver.disconnect(); window._gridObserver = null; }
   }
 
   grid.querySelectorAll('.card').forEach(c => {
@@ -3554,9 +3596,11 @@ function showListingTab(name) {
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
           { attribution: '© <a href="https://openstreetmap.org">OpenStreetMap</a>', maxZoom: 19 })
           .addTo(window._detailMapInst);
+        const detailListing = allListings.find(x => x.id === currentListingId);
+        const popHtml = detailListing ? mapPopupHtml(detailListing) : '<strong>Ce logement</strong>';
         L.marker([_detailMapLat, _detailMapLng])
           .addTo(window._detailMapInst)
-          .bindPopup('<strong>Ce logement</strong>').openPopup();
+          .bindPopup(popHtml, { maxWidth: 180 }).openPopup();
       }
       window._detailMapInst.invalidateSize();
     } else {
@@ -3594,7 +3638,21 @@ function updateBookSummary(pricePerNight) {
 function renderReviews(reviews) {
   const el = document.getElementById('reviews-list');
   if (!reviews.length) { el.innerHTML = '<p style="color:var(--g400);font-size:14px;padding:8px 0">Aucun avis pour l\'instant.</p>'; return; }
-  el.innerHTML = reviews.map(r => `
+  // Calcul de la distribution des notes
+  const dist = {5:0,4:0,3:0,2:0,1:0};
+  reviews.forEach(r => { if (r.rating >= 1 && r.rating <= 5) dist[r.rating]++; });
+  const avg = (reviews.reduce((s,r) => s + (r.rating||0), 0) / reviews.length).toFixed(1);
+  const barsHtml = `<div class="rating-bars">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
+      <span style="font-size:28px;font-weight:800;line-height:1">${avg}</span>
+      <div><div class="stars" style="font-size:15px">${'★'.repeat(Math.round(Number(avg)))}${'☆'.repeat(5-Math.round(Number(avg)))}</div><div style="font-size:11px;color:var(--g400);margin-top:2px">${reviews.length} avis</div></div>
+    </div>
+    ${[5,4,3,2,1].map(n => {
+      const pct = reviews.length ? Math.round(dist[n] / reviews.length * 100) : 0;
+      return `<div class="rating-bar-row"><span class="rating-bar-lbl">${n}</span><div class="rating-bar-track"><div class="rating-bar-fill" style="width:${pct}%"></div></div><span class="rating-bar-cnt">${dist[n]}</span></div>`;
+    }).join('')}
+  </div>`;
+  el.innerHTML = barsHtml + reviews.map(r => `
     <div class="review-card">
       <div class="review-hd">
         <div class="review-avatar">${(r.user_name||'?').charAt(0).toUpperCase()}</div>
@@ -4452,10 +4510,16 @@ function connectWs() {
           threadEl.appendChild(div);
           threadEl.scrollTop = threadEl.scrollHeight;
           apiFetch(`/messages/${m.listing_id}/${m.from_id}`).catch(()=>{});
+          hideTypingIndicator();
         }
         checkUnread();
         if (!isOpen) {
           showBrowserNotif(`💬 ${m.sender_name||'Message'}`, m.body ? m.body.slice(0,60) : '');
+        }
+      } else if (data.type === 'typing') {
+        const isOpen = document.getElementById('ov-msgs')?.classList.contains('open');
+        if (isOpen && activeConvOther === data.from && activeConvListing === data.listing_id) {
+          showTypingIndicator();
         }
       }
     } catch {}
@@ -4807,6 +4871,23 @@ async function openThread(lid, oid, oname) {
     }
     checkUnread();
   } catch(e) { document.getElementById('thread-msgs').innerHTML='<p style="color:var(--red);padding:16px">'+e.message+'</p>'; }
+}
+let _typingTid = null;
+function showTypingIndicator() {
+  const ind = document.getElementById('typing-indicator');
+  if (!ind) return;
+  const nameEl = document.getElementById('typing-name');
+  if (nameEl) nameEl.textContent = document.getElementById('thread-hd')?.textContent || '';
+  ind.classList.add('show');
+  clearTimeout(_typingTid);
+  _typingTid = setTimeout(hideTypingIndicator, 3000);
+}
+function hideTypingIndicator() {
+  document.getElementById('typing-indicator')?.classList.remove('show');
+}
+function sendTyping() {
+  if (!_ws || _ws.readyState !== 1 || !activeConvOther || !activeConvListing) return;
+  try { _ws.send(JSON.stringify({ type: 'typing', to: activeConvOther, listing_id: activeConvListing })); } catch {}
 }
 async function sendMsg() {
   const input = document.getElementById('msg-input');
@@ -5786,6 +5867,11 @@ document.addEventListener('DOMContentLoaded', function() {
   // Messagerie
   document.getElementById('msg-send-btn').addEventListener('click', () => sendMsg());
   document.getElementById('msg-input').addEventListener('keydown', e => { if(e.key==='Enter') sendMsg(); });
+  let _typingSendTid = null;
+  document.getElementById('msg-input').addEventListener('input', () => {
+    clearTimeout(_typingSendTid);
+    _typingSendTid = setTimeout(sendTyping, 300);
+  });
 
   // Dashboard hôte tabs
   document.querySelectorAll('.hd-tab').forEach(t => t.addEventListener('click', () => showHdTab(t.dataset.hdtab)));

@@ -24,6 +24,15 @@ function setup(server) {
     if (!clients.has(userId)) clients.set(userId, new Set());
     clients.get(userId).add(ws);
 
+    ws.on('message', raw => {
+      try {
+        const data = JSON.parse(raw);
+        // Relayer les événements de frappe au destinataire
+        if (data.type === 'typing' && data.to && userId) {
+          send(Number(data.to), { type: 'typing', from: userId, listing_id: data.listing_id });
+        }
+      } catch {}
+    });
     ws.on('close', () => {
       const s = clients.get(userId);
       if (s) { s.delete(ws); if (!s.size) clients.delete(userId); }
