@@ -3219,6 +3219,22 @@ async function loadListings(cat) {
   } catch {
     allListings = (cat === 'all' ? STATIC : STATIC.filter(l => l.category === cat));
   }
+  // Persistance URL des filtres actifs
+  const fp = new URLSearchParams();
+  const fWilaya2 = document.getElementById('f-wilaya')?.value;
+  const fPrice2  = document.getElementById('f-price')?.value;
+  const fGuests2 = document.getElementById('f-guests')?.value;
+  const fBeds2   = document.getElementById('f-beds')?.value;
+  const fSort2   = document.getElementById('f-sort')?.value;
+  if (checkIn)   fp.set('ci', checkIn);
+  if (checkOut)  fp.set('co', checkOut);
+  if (fWilaya2)  fp.set('w',  fWilaya2);
+  if (fPrice2)   fp.set('p',  fPrice2);
+  if (fGuests2)  fp.set('g',  fGuests2);
+  if (fBeds2)    fp.set('b',  fBeds2);
+  if (fSort2)    fp.set('s',  fSort2);
+  if (cat && cat !== 'all') fp.set('cat', cat);
+  history.replaceState({}, '', fp.toString() ? '?' + fp.toString() : '/');
   renderGrid(allListings, checkIn, checkOut);
   updateMapMarkers(allListings);
   updateDateSummary(checkIn, checkOut, allListings.length);
@@ -3475,20 +3491,50 @@ async function openResas() {
   try {
     const data = await apiFetch('/reservations/mine');
     if (!data.length) { list.innerHTML='<p style="color:var(--g400);text-align:center;padding:24px">Aucune réservation.</p>'; return; }
-    list.innerHTML = data.map(r => `
+    const now = new Date();
+    list.innerHTML = data.map(r => {
+      const daysUntil = Math.ceil((new Date(r.check_in) - now) / 86400000);
+      const isOngoing = new Date(r.check_in) <= now && new Date(r.check_out) >= now;
+      const isPast    = new Date(r.check_out) < now;
+      let countdown = '';
+      if (r.status === 'confirmed') {
+        if (isOngoing)        countdown = '<div style="font-size:11px;font-weight:700;color:#047857;margin-top:4px">🏠 Séjour en cours</div>';
+        else if (isPast)      countdown = '<div style="font-size:11px;color:var(--g400);margin-top:4px">✅ Séjour terminé</div>';
+        else if (daysUntil <= 30) countdown = `<div style="font-size:11px;font-weight:700;color:var(--red);margin-top:4px">⏳ Dans ${daysUntil} jour${daysUntil > 1 ? 's' : ''}</div>`;
+      }
+      const canCancel = (r.status === 'pending' || r.status === 'confirmed') && !isPast;
+      const policy = r.cancellation_policy || 'flexible';
+      return `
       <div class="resa-card">
         <img src="${r.image||''}" alt="" onerror="this.style.display='none'"/>
         <div class="resa-info" style="flex:1">
           <div class="resa-title">${r.title||'Logement'}</div>
           <div class="resa-dates">📅 ${r.check_in} → ${r.check_out}</div>
           <div class="resa-dates">💰 ${Number(r.total_price).toLocaleString('fr-DZ')} DZD</div>
+          ${countdown}
           ${r.can_review ? `<button class="btn-sm" style="margin-top:6px;background:var(--accent);color:#fff;border:none;padding:5px 12px;border-radius:8px;cursor:pointer" onclick="openReviewModal(${r.listing_id})">⭐ Laisser un avis</button>` : ''}
           ${r.status==='pending' ? `<button class="btn-sm" style="margin-top:6px;background:var(--red);color:#fff;border:none;padding:5px 12px;border-radius:8px;cursor:pointer;font-weight:600" onclick="openPayment(${r.id},${r.total_price})">💳 Payer maintenant</button>` : ''}
+          ${canCancel ? `<button class="btn-sm" style="margin-top:6px;background:#fff;border:1.5px solid var(--g300);color:var(--g700);padding:5px 12px;border-radius:8px;cursor:pointer" onclick="cancelResa(${r.id},${r.total_price},'${r.check_in}','${policy}')">✕ Annuler</button>` : ''}
           <button class="btn-sm" style="margin-top:6px;background:var(--g100);color:var(--g800);border:none;padding:5px 12px;border-radius:8px;cursor:pointer" onclick='printResa(${JSON.stringify(r).replace(/'/g,"&#39;")})'>📄 PDF</button>
         </div>
         <span class="resa-status-badge ${r.status}">${r.status==='pending'?'En attente':r.status==='confirmed'?'Confirmée ✅':'Annulée'}</span>
-      </div>`).join('');
+      </div>`;
+    }).join('');
   } catch(e) { list.innerHTML='<p style="color:var(--red);text-align:center;padding:24px">'+e.message+'</p>'; }
+}
+
+async function cancelResa(id, totalPrice, checkIn, policy) {
+  const daysUntil = Math.ceil((new Date(checkIn) - new Date()) / 86400000);
+  let refundLabel;
+  if (policy === 'flexible')     refundLabel = daysUntil >= 1 ? '100 % remboursé' : 'Aucun remboursement';
+  else if (policy === 'moderee') refundLabel = daysUntil >= 5 ? '100 % remboursé' : daysUntil >= 2 ? '50 % remboursé' : 'Aucun remboursement';
+  else /* stricte */             refundLabel = daysUntil > 7  ? '50 % remboursé'  : 'Aucun remboursement';
+  if (!confirm(`Annuler cette réservation ?\n\nPolitique d'annulation : ${refundLabel}\nTotal payé : ${Number(totalPrice).toLocaleString('fr-DZ')} DZD`)) return;
+  try {
+    await apiFetch(`/reservations/${id}/status`, { method:'PATCH', body: JSON.stringify({ status:'cancelled' }) });
+    toast(`Réservation annulée — ${refundLabel}`);
+    openResas();
+  } catch(e) { toast(e.message || 'Erreur lors de l\'annulation'); }
 }
 
 // ── PAGES LÉGALES ────────────────────────────────────────
@@ -5716,6 +5762,29 @@ document.addEventListener('DOMContentLoaded', function() {
     history.replaceState({}, '', '/');
     setTimeout(() => toast('❌ Lien de vérification invalide ou expiré.'), 300);
   }
+  // Deep link ?listing=X : ouvre la modale après chargement des annonces
+  if (urlP.get('listing')) {
+    const dlId = Number(urlP.get('listing'));
+    if (dlId) {
+      // Attendre que loadListings finisse avant d'ouvrir
+      const tryOpen = () => {
+        if (allListings.length || document.getElementById('grid').children.length) {
+          openListing(dlId);
+        } else {
+          setTimeout(tryOpen, 200);
+        }
+      };
+      setTimeout(tryOpen, 500);
+    }
+  }
+  // Restauration des filtres depuis l'URL (partage de recherche)
+  if (urlP.get('ci')) document.getElementById('f-in').value  = urlP.get('ci');
+  if (urlP.get('co')) document.getElementById('f-out').value = urlP.get('co');
+  if (urlP.get('w'))  { const sel = document.getElementById('f-wilaya'); if (sel) sel.value = urlP.get('w'); }
+  if (urlP.get('p'))  { const sel = document.getElementById('f-price');  if (sel) sel.value = urlP.get('p'); }
+  if (urlP.get('g'))  { const sel = document.getElementById('f-guests'); if (sel) sel.value = urlP.get('g'); }
+  if (urlP.get('b'))  { const sel = document.getElementById('f-beds');   if (sel) sel.value = urlP.get('b'); }
+  if (urlP.get('s'))  { const sel = document.getElementById('f-sort');   if (sel) sel.value = urlP.get('s'); }
 
   // Scroll to top
   const scrollTopBtn = document.getElementById('scroll-top');

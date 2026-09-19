@@ -90,7 +90,7 @@ router.get('/mine', auth, async (req, res) => {
       const existing = await db.reviews.findOne(rv => rv.listing_id === r.listing_id && (rv.author_id === req.user.id || rv.user_id === req.user.id));
       can_review = !existing;
     }
-    return { ...r, title: l?.title, location: l?.location, image: l?.image, price_per_night: l?.price, can_review };
+    return { ...r, title: l?.title, location: l?.location, image: l?.image, price_per_night: l?.price, cancellation_policy: l?.cancellation_policy || 'flexible', can_review };
   }));
   res.json(result);
 });
