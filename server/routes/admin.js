@@ -72,16 +72,30 @@ router.patch('/users/:id', async (req, res) => {
   res.json({ ok: true, ...changes });
 });
 
-// DELETE /api/admin/users/:id
+// DELETE /api/admin/users/:id — anonymisation RGPD (loi 18-07) au lieu du hard-delete
+// L'historique des réservations et paiements est conservé avec données pseudonymisées.
 router.delete('/users/:id', async (req, res) => {
   const uid = Number(req.params.id);
   if (uid === req.user.id) return res.status(400).json({ error: 'Impossible de supprimer votre propre compte.' });
   const user = await db.users.findById(uid);
   if (!user) return res.status(404).json({ error: 'Utilisateur introuvable.' });
-  await db.listings.deleteByHost(uid);
-  await db.reservations.deleteByGuest(uid);
+  // Désactiver et rendre les annonces indisponibles (ne pas les supprimer — elles sont dans l'historique)
+  await db.listings.setAvailableByHost(uid, false);
   await db.messages.deleteByUser(uid);
-  await db.users.deleteById(uid);
+  // Pseudonymisation : effacement des données personnelles, conservation de l'ID
+  await db.users.updateById(uid, {
+    name:               'Utilisateur supprimé',
+    email:              `deleted_${uid}@locavac.dz`,
+    phone:              null,
+    password:           '',
+    bio:                null,
+    avatar:             null,
+    verification_token: null,
+    reset_token:        null,
+    is_host:            false,
+    is_admin:           false,
+    banned:             true,
+  });
   res.json({ ok: true });
 });
 

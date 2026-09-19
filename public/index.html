@@ -2458,7 +2458,16 @@ async function apiFetch(path, opts = {}) {
   if (token) headers['Authorization'] = 'Bearer ' + token;
   const res  = await fetch(API + path, { ...opts, headers });
   const data = await res.json();
-  if (!res.ok) throw new Error(data.error || 'Erreur serveur');
+  if (!res.ok) {
+    // Token expiré ou révoqué : déconnexion automatique
+    if (res.status === 401) {
+      token = null; currentUser = null;
+      try { localStorage.removeItem('dz_token'); localStorage.removeItem('dz_user'); } catch(e) {}
+      refreshAuthUI();
+      toast('Votre session a expiré. Veuillez vous reconnecter.');
+    }
+    throw new Error(data.error || 'Erreur serveur');
+  }
   return data;
 }
 
