@@ -46,6 +46,12 @@ router.post('/', auth, async (req, res) => {
   if (listing.host_id === req.user.id)
     return res.status(400).json({ error: 'Vous ne pouvez pas réserver votre propre logement.' });
 
+  const numGuests = guests_count ? Number(guests_count) : 1;
+  if (!Number.isInteger(numGuests) || numGuests < 1)
+    return res.status(400).json({ error: 'Le nombre de voyageurs doit être au moins 1.' });
+  if (listing.guests && numGuests > listing.guests)
+    return res.status(400).json({ error: `Ce logement accepte au maximum ${listing.guests} voyageur(s).` });
+
   const n = nights(check_in, check_out);
   if (n < 1) return res.status(400).json({ error: "La date de départ doit être après la date d'arrivée." });
 
@@ -76,7 +82,7 @@ router.post('/', auth, async (req, res) => {
     const result = await client.query(
       `INSERT INTO reservations (listing_id, guest_id, check_in, check_out, guests_count, total_price, status)
        VALUES ($1, $2, $3, $4, $5, $6, 'pending') RETURNING *`,
-      [lid, req.user.id, check_in, check_out, guests_count || 1, total]
+      [lid, req.user.id, check_in, check_out, numGuests, total]
     );
     resa = result.rows[0];
     await client.query('COMMIT');

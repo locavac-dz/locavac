@@ -179,10 +179,14 @@ router.get('/admin/payouts', auth, async (req, res) => {
   const user = await db.users.findById(req.user.id);
   if (!user?.is_admin) return res.status(403).json({ error: 'Accès refusé.' });
   const list = await db.payouts.findAll();
-  const enriched = await Promise.all(list.map(async p => {
-    const host = await db.users.findById(p.host_id);
-    return { ...p, host_name: host?.name || '—', host_email: host?.email || '—', host_rib: host?.rib || null, host_ccp: host?.ccp || null };
-  }));
+  // Chargement batch des hôtes (anti N+1)
+  const hostIds  = [...new Set(list.map(p => p.host_id))];
+  const hosts    = await db.users.findByIds(hostIds);
+  const hostMap  = Object.fromEntries(hosts.map(h => [h.id, h]));
+  const enriched = list.map(p => {
+    const h = hostMap[p.host_id];
+    return { ...p, host_name: h?.name || '—', host_email: h?.email || '—', host_rib: h?.rib || null, host_ccp: h?.ccp || null };
+  });
   enriched.sort((a, b) => String(b.requested_at).localeCompare(String(a.requested_at)));
   res.json(enriched);
 });

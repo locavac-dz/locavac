@@ -3553,8 +3553,8 @@ function renderListingsPage() {
         ${dotsHtml}
       </div>
       <div class="card-body">
-        <div class="card-hd"><div class="card-title">${l.title}</div><div class="card-rating">⭐ ${l.rating||'—'} <span>(${l.reviews||0})</span></div></div>
-        <div class="card-sub">${l.location}</div>
+        <div class="card-hd"><div class="card-title">${escHtml(l.title)}</div><div class="card-rating">⭐ ${l.rating||'—'} <span>(${l.reviews||0})</span></div></div>
+        <div class="card-sub">${escHtml(l.location)}</div>
         <div class="card-price"><strong>${Number(l.price).toLocaleString('fr-DZ')} DZD</strong> <span class="night">${t('card.night')}</span></div>
         ${(()=>{ const la = Array.isArray(l.amenities) ? l.amenities : []; const top = la.slice(0,4).map(a=>{ const d=AMENITIES_DEF.find(x=>x.id===a); return d?`<span class="card-amenity-icon" title="${d.label}">${d.icon}</span>`:''; }).join(''); return top?`<div class="card-amenities">${top}</div>`:''; })()}
         ${totalPrice}
@@ -3742,7 +3742,7 @@ async function openListing(id) {
     <div class="detail-row"><span class="lbl">Salles de bain</span><span class="val">${l.baths}</span></div>
     <div class="detail-row"><span class="lbl">Note</span><span class="val">⭐ ${l.rating||'—'} (${l.reviews||0} avis)</span></div>
     <div class="detail-row"><span class="lbl">Annulation</span><span class="val" title="${CANCEL_DESC[policy]}">${CANCEL_LABELS[policy]||policy}</span></div>
-    ${l.description ? `<div class="detail-row"><span class="lbl">Description</span><span class="val">${l.description}</span></div>` : ''}
+    ${l.description ? `<div class="detail-row"><span class="lbl">Description</span><span class="val">${escHtml(l.description)}</span></div>` : ''}
     <div style="background:#f9f9f9;border-radius:8px;padding:10px 12px;margin-top:8px;font-size:12px;color:var(--g600)">ℹ️ ${CANCEL_DESC[policy]}</div>
     ${(()=>{
       const la = Array.isArray(l.amenities) ? l.amenities : [];
@@ -3907,12 +3907,12 @@ function renderReviews(reviews) {
       <div class="review-hd">
         <div class="review-avatar">${(r.user_name||'?').charAt(0).toUpperCase()}</div>
         <div class="review-meta">
-          <div class="review-name">${r.user_name || 'Anonyme'}</div>
+          <div class="review-name">${escHtml(r.user_name || 'Anonyme')}</div>
           <div class="review-date">${r.created_at ? r.created_at.slice(0,10) : ''}</div>
         </div>
         <div class="stars">${'★'.repeat(r.rating)}${'☆'.repeat(5-r.rating)}</div>
       </div>
-      <div class="review-text">${r.comment || ''}</div>
+      <div class="review-text">${escHtml(r.comment || '')}</div>
     </div>`).join('');
 }
 async function submitReview() {
@@ -4426,8 +4426,8 @@ async function loadAdmUsers() {
       <tbody>${users.map(u => `
         <tr>
           <td style="color:var(--g400)">#${u.id}</td>
-          <td><strong>${u.name}</strong></td>
-          <td style="color:var(--g600);font-size:12px">${u.email}</td>
+          <td><strong>${escHtml(u.name)}</strong></td>
+          <td style="color:var(--g600);font-size:12px">${escHtml(u.email)}</td>
           <td>
             ${u.is_admin  ? '<span class="admin-badge admin">Admin</span> ' : ''}
             ${u.is_host   ? '<span class="admin-badge host">Hôte</span> '  : ''}
@@ -4496,8 +4496,8 @@ async function loadAdmListings() {
       <tbody>${listings.map(l => `
         <tr>
           <td><img class="listing-thumb" src="${l.image||''}" alt="" onerror="this.style.display='none'"/></td>
-          <td><strong>${l.title}</strong><br><span style="color:var(--g400);font-size:11px">📍 ${l.location}</span></td>
-          <td style="font-size:12px;color:var(--g600)">${l.host_name}<br>${l.host_email||''}</td>
+          <td><strong>${escHtml(l.title)}</strong><br><span style="color:var(--g400);font-size:11px">📍 ${escHtml(l.location)}</span></td>
+          <td style="font-size:12px;color:var(--g600)">${escHtml(l.host_name)}<br>${escHtml(l.host_email||'')}</td>
           <td style="font-weight:600;color:var(--red);white-space:nowrap">${Number(l.price).toLocaleString('fr-DZ')} DZD</td>
           <td><span class="admin-badge ${l.available?'active':'inactive'}">${l.available?'Active':'Inactive'}</span></td>
           <td style="text-align:center">${l.rating||'—'}<br><span style="font-size:10px;color:var(--g400)">(${l.reviews})</span></td>
@@ -5175,11 +5175,11 @@ function _renderConvList(convs) {
   const list = document.getElementById('conv-list');
   if (!convs.length) { list.innerHTML='<div style="padding:24px;color:var(--g400);font-size:14px;text-align:center">Aucune conversation.</div>'; return; }
   list.innerHTML = convs.map(c => `
-    <div class="conv-item" data-key="${c.key}" data-lid="${c.listing_id}" data-oid="${c.other_id}" data-oname="${c.other_name}">
-      <div class="conv-avatar">${c.other_name.charAt(0).toUpperCase()}</div>
+    <div class="conv-item" data-key="${c.key}" data-lid="${c.listing_id}" data-oid="${c.other_id}" data-oname="${escHtml(c.other_name)}">
+      <div class="conv-avatar">${escHtml(c.other_name).charAt(0).toUpperCase()}</div>
       <div class="conv-info">
-        <div class="conv-name">${c.other_name}</div>
-        <div class="conv-preview">${c.listing_title} · ${c.last_msg}</div>
+        <div class="conv-name">${escHtml(c.other_name)}</div>
+        <div class="conv-preview">${escHtml(c.listing_title)} · ${escHtml(c.last_msg)}</div>
       </div>
       ${c.unread > 0 ? `<div class="conv-badge">${c.unread}</div>` : ''}
     </div>`).join('');
@@ -5431,8 +5431,8 @@ function _renderHostResaPanel(data, filter) {
   const rows = filtered.length ? filtered.map(r => `
     <div class="resa-row">
       <div class="resa-row-info">
-        <div style="font-weight:600;font-size:14px;margin-bottom:3px">${r.title||''}</div>
-        <div style="font-size:13px;color:var(--g600)">👤 ${r.guest_name} · 📅 ${r.check_in} → ${r.check_out} · 💰 ${Number(r.total_price).toLocaleString('fr-DZ')} DZD</div>
+        <div style="font-weight:600;font-size:14px;margin-bottom:3px">${escHtml(r.title||'')}</div>
+        <div style="font-size:13px;color:var(--g600)">👤 ${escHtml(r.guest_name||'')} · 📅 ${r.check_in} → ${r.check_out} · 💰 ${Number(r.total_price).toLocaleString('fr-DZ')} DZD</div>
       </div>
       <div style="display:flex;gap:6px;align-items:center;flex-shrink:0;flex-wrap:wrap">
         <span class="resa-status ${r.status}">${r.status==='pending'?'En attente':r.status==='confirmed'?'Confirmée':'Annulée'}</span>

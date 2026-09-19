@@ -95,6 +95,43 @@ const messageLimiter = rateLimit({
 });
 app.use('/api/messages', messageLimiter);
 
+const reservationLimiter = rateLimit({
+  windowMs: 60 * 1000, // 1 minute
+  max: 10, // 10 réservations max par minute par IP
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Trop de demandes de réservation. Réessayez dans une minute.' },
+  skip: () => process.env.NODE_ENV === 'test',
+});
+const paymentLimiter = rateLimit({
+  windowMs: 60 * 1000, // 1 minute
+  max: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Trop de tentatives de paiement. Réessayez dans une minute.' },
+  skip: () => process.env.NODE_ENV === 'test',
+});
+const listingLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000, // 1 heure
+  max: 20, // 20 annonces max par heure par IP
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Trop de publications d\'annonces. Réessayez dans une heure.' },
+  skip: () => process.env.NODE_ENV === 'test',
+});
+const adminLimiter = rateLimit({
+  windowMs: 60 * 1000, // 1 minute
+  max: 60,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Trop de requêtes admin. Réessayez dans une minute.' },
+  skip: () => process.env.NODE_ENV === 'test',
+});
+app.use('/api/reservations', reservationLimiter);
+app.use('/api/payments',     paymentLimiter);
+app.post('/api/listings',    listingLimiter);
+app.use('/api/admin',        adminLimiter);
+
 app.use(express.json({ limit: '2mb' }));
 // Service Worker : no-cache obligatoire pour que le navigateur détecte les mises à jour
 app.get('/sw.js', (_, res) => {
@@ -124,7 +161,10 @@ app.get('*', (_, res) => res.sendFile(path.join(__dirname, '..', 'public', 'inde
 // Middleware d'erreur global
 app.use((err, req, res, next) => { // eslint-disable-line no-unused-vars
   console.error('[Erreur]', err.message);
-  res.status(err.status || 500).json({ error: err.message || 'Erreur serveur.' });
+  // Ne pas exposer les détails d'erreur interne (stack, messages PostgreSQL) en production
+  const isProd = process.env.NODE_ENV === 'production';
+  const msg = (err.status && err.status < 500) ? (err.message || 'Erreur.') : (isProd ? 'Erreur serveur.' : (err.message || 'Erreur serveur.'));
+  res.status(err.status || 500).json({ error: msg });
 });
 
 const PORT = process.env.PORT || 3000;

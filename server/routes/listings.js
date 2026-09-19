@@ -82,6 +82,25 @@ router.post('/', auth, async (req, res) => {
   const numPrice = Number(price);
   if (!Number.isFinite(numPrice) || numPrice <= 0 || numPrice > 1_000_000)
     return res.status(400).json({ error: 'Le prix doit être compris entre 1 et 1 000 000 DZD.' });
+  const numGuests = guests !== undefined ? Number(guests) : 1;
+  const numBeds   = beds   !== undefined ? Number(beds)   : 1;
+  const numBaths  = baths  !== undefined ? Number(baths)  : 1;
+  if (!Number.isInteger(numGuests) || numGuests < 1 || numGuests > 50)
+    return res.status(400).json({ error: 'Le nombre de voyageurs doit être compris entre 1 et 50.' });
+  if (!Number.isInteger(numBeds) || numBeds < 1 || numBeds > 30)
+    return res.status(400).json({ error: 'Le nombre de chambres doit être compris entre 1 et 30.' });
+  if (!Number.isInteger(numBaths) || numBaths < 1 || numBaths > 20)
+    return res.status(400).json({ error: 'Le nombre de salles de bain doit être compris entre 1 et 20.' });
+  if (lat !== undefined && lat !== null && lat !== '') {
+    const numLat = Number(lat);
+    if (!Number.isFinite(numLat) || numLat < -90 || numLat > 90)
+      return res.status(400).json({ error: 'Latitude invalide (doit être entre -90 et 90).' });
+  }
+  if (lng !== undefined && lng !== null && lng !== '') {
+    const numLng = Number(lng);
+    if (!Number.isFinite(numLng) || numLng < -180 || numLng > 180)
+      return res.status(400).json({ error: 'Longitude invalide (doit être entre -180 et 180).' });
+  }
   const finalImage    = image || (Array.isArray(photos) && photos[0]) || '';
   const finalPhotos   = Array.isArray(photos) && photos.length ? photos : (finalImage ? [finalImage] : []);
   const finalAmenities = Array.isArray(amenities) ? amenities : [];
@@ -89,7 +108,7 @@ router.post('/', auth, async (req, res) => {
   const VALID_POLICIES = ['flexible', 'moderee', 'stricte'];
   const listing = await db.listings.create({
     host_id: req.user.id, title, description: description || '', location, wilaya,
-    category, price: numPrice, guests: guests || 1, beds: beds || 1, baths: baths || 1,
+    category, price: numPrice, guests: numGuests, beds: numBeds, baths: numBaths,
     image: finalImage, photos: JSON.stringify(finalPhotos),
     amenities: JSON.stringify(finalAmenities),
     lat: lat ? Number(lat) : null, lng: lng ? Number(lng) : null,
