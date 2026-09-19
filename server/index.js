@@ -85,7 +85,7 @@ const uploadLimiter = rateLimit({
 });
 app.use('/api/upload', uploadLimiter);
 
-app.use(express.json());
+app.use(express.json({ limit: '2mb' }));
 // Service Worker : no-cache obligatoire pour que le navigateur détecte les mises à jour
 app.get('/sw.js', (_, res) => {
   res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');

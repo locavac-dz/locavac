@@ -34,6 +34,16 @@ router.post('/', auth, async (req, res) => {
   if (!listing_id || !check_in || !check_out)
     return res.status(400).json({ error: "Logement, dates d'arrivée et de départ requis." });
 
+  // Validation format et cohérence des dates
+  const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+  if (!DATE_RE.test(check_in) || !DATE_RE.test(check_out))
+    return res.status(400).json({ error: 'Format de date invalide. Utilisez AAAA-MM-JJ.' });
+  const today = new Date().toISOString().slice(0, 10);
+  if (check_in < today)
+    return res.status(400).json({ error: "La date d'arrivée ne peut pas être dans le passé." });
+  if (check_out <= check_in)
+    return res.status(400).json({ error: "La date de départ doit être après la date d'arrivée." });
+
   const lid     = Number(listing_id);
   const listing = await db.listings.findById(lid);
   if (!listing || !listing.available) return res.status(404).json({ error: 'Logement introuvable ou indisponible.' });

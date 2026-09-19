@@ -44,6 +44,7 @@ async function initSchema() {
 // ═══════════════════════════════════════════════════════════════
 const users = {
   findById:                id     => _one('SELECT * FROM users WHERE id = $1', [id]),
+  findByIds:               ids    => ids.length ? _q('SELECT * FROM users WHERE id = ANY($1)', [ids]) : Promise.resolve([]),
   findByEmail:             email  => _one('SELECT * FROM users WHERE email = $1', [email]),
   findByVerificationToken: token  => _one('SELECT * FROM users WHERE verification_token = $1', [token]),
   findAll:                 ()     => _q('SELECT * FROM users ORDER BY id'),

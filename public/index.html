@@ -2707,6 +2707,9 @@ async function doLogin() {
 async function doRegister() {
   const name=document.getElementById('r-name').value.trim(),email=document.getElementById('r-email').value.trim(),phone=document.getElementById('r-phone').value.trim(),pass=document.getElementById('r-pass').value;
   const errEl=document.getElementById('r-err'); errEl.classList.remove('show');
+  if (!name) { errEl.textContent='Le nom est requis.'; errEl.classList.add('show'); return; }
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { errEl.textContent='Adresse email invalide.'; errEl.classList.add('show'); return; }
+  if (pass.length < 6) { errEl.textContent='Le mot de passe doit contenir au moins 6 caractères.'; errEl.classList.add('show'); return; }
   try {
     const data = await apiFetch('/auth/register', { method:'POST', body: JSON.stringify({ name, email, phone, password:pass }) });
     token = data.token; currentUser = data.user;
@@ -5452,14 +5455,21 @@ async function editListing(id) {
 async function publishListing() {
   if (!currentUser) { openAuth('login'); return; }
   const errEl = document.getElementById('h-err'); errEl.classList.remove('show');
-  const title = document.getElementById('h-title').value.trim();
-  if (!title) { errEl.textContent = 'Le titre est obligatoire.'; errEl.classList.add('show'); return; }
+  const title    = document.getElementById('h-title').value.trim();
+  const wilaya   = document.getElementById('h-wilaya').value.trim();
+  const location = document.getElementById('h-loc').value.trim();
+  const priceVal = Number(document.getElementById('h-price').value);
+  if (title.length < 5)   { errEl.textContent = 'Le titre doit contenir au moins 5 caractères.'; errEl.classList.add('show'); return; }
+  if (title.length > 120) { errEl.textContent = 'Le titre ne peut pas dépasser 120 caractères.'; errEl.classList.add('show'); return; }
+  if (!wilaya)   { errEl.textContent = 'La wilaya est obligatoire.'; errEl.classList.add('show'); return; }
+  if (!location) { errEl.textContent = 'La localisation est obligatoire.'; errEl.classList.add('show'); return; }
+  if (!priceVal || priceVal <= 0) { errEl.textContent = 'Le prix doit être supérieur à 0 DZD.'; errEl.classList.add('show'); return; }
   const body = {
     title,
-    wilaya:      document.getElementById('h-wilaya').value.trim(),
-    location:    document.getElementById('h-loc').value.trim(),
+    wilaya,
+    location,
     category:    document.getElementById('h-cat').value,
-    price:       Number(document.getElementById('h-price').value),
+    price:       priceVal,
     guests:      Number(document.getElementById('h-guests').value) || 1,
     beds:        Number(document.getElementById('h-beds').value)   || 1,
     baths:       Number(document.getElementById('h-baths').value)  || 1,

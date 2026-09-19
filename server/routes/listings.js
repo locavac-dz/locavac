@@ -2,14 +2,22 @@ const router = require('express').Router();
 const db     = require('../db');
 const auth   = require('../middleware/auth');
 
+// Enrichit une liste d'annonces avec les données hôte en une seule requête (anti N+1)
+async function attachHosts(listings) {
+  if (!listings.length) return listings;
+  const ids  = [...new Set(listings.map(l => l.host_id))];
+  const hosts = await db.users.findByIds(ids);
+  const byId  = Object.fromEntries(hosts.map(h => [h.id, h]));
+  return listings.map(l => {
+    const h = byId[l.host_id];
+    return { ...l, host_name: h?.name || 'Inconnu', host_phone: h?.phone || null, host_languages: h?.languages || [] };
+  });
+}
+
+// Enrichit une seule annonce (pour GET /:id)
 async function withHost(listing) {
-  const host = await db.users.findById(listing.host_id);
-  return {
-    ...listing,
-    host_name:      host ? host.name      : 'Inconnu',
-    host_phone:     host ? host.phone     : null,
-    host_languages: host ? (host.languages || []) : [],
-  };
+  const [enriched] = await attachHosts([listing]);
+  return enriched;
 }
 
 // GET /api/listings
@@ -45,7 +53,9 @@ router.get('/', async (req, res) => {
   }
 
   results.sort((a, b) => b.rating - a.rating);
-  res.json(await Promise.all(results.map(withHost)));
+  // Cache public 30s — cohérent avec la fréquence de mise à jour des annonces
+  res.set('Cache-Control', 'public, max-age=30, stale-while-revalidate=60');
+  res.json(await attachHosts(results));
 });
 
 // GET /api/listings/:id
@@ -56,6 +66,7 @@ router.get('/:id', async (req, res) => {
   db.listings.incrementViews(listing.id).catch(() => {});
   // Les avis sont retournés avec le nom de l'auteur directement par le DAO
   const reviews = await db.reviews.findWithAuthor(listing.id, 10);
+  res.set('Cache-Control', 'public, max-age=60, stale-while-revalidate=120');
   res.json({ ...await withHost(listing), reviews });
 });
 
@@ -64,6 +75,13 @@ router.post('/', auth, async (req, res) => {
   const { title, description, location, wilaya, category, price, guests, beds, baths, image, photos, lat, lng, amenities } = req.body;
   if (!title || !location || !wilaya || !category || !price)
     return res.status(400).json({ error: 'Champs obligatoires manquants.' });
+  if (typeof title !== 'string' || title.trim().length < 5 || title.length > 120)
+    return res.status(400).json({ error: 'Le titre doit contenir entre 5 et 120 caractères.' });
+  if (description && description.length > 3000)
+    return res.status(400).json({ error: 'La description ne peut pas dépasser 3000 caractères.' });
+  const numPrice = Number(price);
+  if (!Number.isFinite(numPrice) || numPrice <= 0 || numPrice > 1_000_000)
+    return res.status(400).json({ error: 'Le prix doit être compris entre 1 et 1 000 000 DZD.' });
   const finalImage    = image || (Array.isArray(photos) && photos[0]) || '';
   const finalPhotos   = Array.isArray(photos) && photos.length ? photos : (finalImage ? [finalImage] : []);
   const finalAmenities = Array.isArray(amenities) ? amenities : [];
@@ -71,7 +89,7 @@ router.post('/', auth, async (req, res) => {
   const VALID_POLICIES = ['flexible', 'moderee', 'stricte'];
   const listing = await db.listings.create({
     host_id: req.user.id, title, description: description || '', location, wilaya,
-    category, price: Number(price), guests: guests || 1, beds: beds || 1, baths: baths || 1,
+    category, price: numPrice, guests: guests || 1, beds: beds || 1, baths: baths || 1,
     image: finalImage, photos: JSON.stringify(finalPhotos),
     amenities: JSON.stringify(finalAmenities),
     lat: lat ? Number(lat) : null, lng: lng ? Number(lng) : null,
@@ -89,10 +107,19 @@ router.put('/:id', auth, async (req, res) => {
   if (listing.host_id !== req.user.id) return res.status(403).json({ error: 'Accès refusé.' });
   const { title, description, price, available, cancellation_policy, amenities } = req.body;
   const VALID_POLICIES = ['flexible', 'moderee', 'stricte'];
+  if (title !== undefined && (typeof title !== 'string' || title.trim().length < 5 || title.length > 120))
+    return res.status(400).json({ error: 'Le titre doit contenir entre 5 et 120 caractères.' });
+  if (description !== undefined && description.length > 3000)
+    return res.status(400).json({ error: 'La description ne peut pas dépasser 3000 caractères.' });
+  if (price !== undefined) {
+    const np = Number(price);
+    if (!Number.isFinite(np) || np <= 0 || np > 1_000_000)
+      return res.status(400).json({ error: 'Le prix doit être compris entre 1 et 1 000 000 DZD.' });
+  }
   const changes = {};
-  if (title               !== undefined) changes.title               = title;
+  if (title               !== undefined) changes.title               = title.trim();
   if (description         !== undefined) changes.description         = description;
-  if (price               !== undefined) changes.price               = price;
+  if (price               !== undefined) changes.price               = Number(price);
   if (available           !== undefined) changes.available           = available;
   if (cancellation_policy !== undefined && VALID_POLICIES.includes(cancellation_policy))
     changes.cancellation_policy = cancellation_policy;
