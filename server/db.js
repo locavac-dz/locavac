@@ -80,6 +80,7 @@ const users = {
 // ═══════════════════════════════════════════════════════════════
 const listings = {
   findById:   id     => _one('SELECT * FROM listings WHERE id = $1', [id]),
+  findByIds:  ids    => ids.length ? _q('SELECT * FROM listings WHERE id = ANY($1)', [ids]) : Promise.resolve([]),
   findByHost: hostId => _q('SELECT * FROM listings WHERE host_id = $1 ORDER BY id', [hostId]),
   findAll:    ()     => _q('SELECT * FROM listings ORDER BY id'),
 
@@ -191,6 +192,11 @@ const reviews = {
     'SELECT id FROM reviews WHERE listing_id = $1 AND (author_id = $2 OR user_id = $2) LIMIT 1',
     [listingId, authorId]
   ),
+  // Retourne les listing_ids pour lesquels l'auteur a déjà laissé un avis
+  reviewedListingIds: authorId => _q(
+    'SELECT DISTINCT listing_id FROM reviews WHERE author_id = $1 OR user_id = $1',
+    [authorId]
+  ).then(rows => new Set(rows.map(r => r.listing_id))),
 
   // Avis enrichis avec nom auteur pour listing detail
   findWithAuthor: async (listingId, limit = 10) => _q(

@@ -5866,6 +5866,9 @@ function toggleSignaler() {
 async function submitSignalement() {
   const motif   = document.getElementById('sig-motif').value;
   const message = document.getElementById('sig-message').value.trim();
+  if (!motif) { toast('❌ Veuillez sélectionner un motif.'); return; }
+  if (message.length < 10) { toast('❌ Précisez le problème (10 caractères minimum).'); return; }
+  if (message.length > 500) { toast('❌ Le message ne peut pas dépasser 500 caractères.'); return; }
   try {
     await apiFetch('/listings/' + currentListingId + '/signaler', {
       method: 'POST',

@@ -26,8 +26,11 @@ router.post('/:listing_id/block', auth, async (req, res) => {
   if (listing.host_id !== req.user.id) return res.status(403).json({ error: 'Accès refusé.' });
 
   const { start, end, reason } = req.body;
-  if (!start || !end || start >= end)
-    return res.status(400).json({ error: 'Dates invalides (start < end requis).' });
+  const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+  if (!start || !end || !DATE_RE.test(start) || !DATE_RE.test(end) || start >= end)
+    return res.status(400).json({ error: 'Dates invalides — format AAAA-MM-JJ requis, start < end.' });
+  if (reason && reason.length > 200)
+    return res.status(400).json({ error: 'La raison ne peut pas dépasser 200 caractères.' });
 
   const ranges = [...(listing.blocked_ranges || []), { start, end, reason: reason || '' }];
   await db.listings.updateById(lid, { blocked_ranges: JSON.stringify(ranges) });

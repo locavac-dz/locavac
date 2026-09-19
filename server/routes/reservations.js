@@ -113,35 +113,49 @@ router.post('/', auth, async (req, res) => {
   res.status(201).json({ id: resa.id, total_price: total, nights: n, status: 'pending' });
 });
 
-// GET /api/reservations/mine
+// GET /api/reservations/mine — batch listings + reviews pour éviter N+1
 router.get('/mine', auth, async (req, res) => {
   const resas = await db.reservations.findByGuest(req.user.id);
   resas.sort((a, b) => String(b.created_at).localeCompare(String(a.created_at)));
+
+  const listingIds = [...new Set(resas.map(r => r.listing_id))];
+  const [listings, reviewedIds] = await Promise.all([
+    db.listings.findByIds(listingIds),
+    db.reviews.reviewedListingIds(req.user.id),
+  ]);
+  const listingMap = Object.fromEntries(listings.map(l => [l.id, l]));
   const now = new Date();
-  const result = await Promise.all(resas.map(async r => {
-    const l = await db.listings.findById(r.listing_id);
+
+  const result = resas.map(r => {
+    const l      = listingMap[r.listing_id];
     const stayed = r.status === 'confirmed' && new Date(r.check_out) < now;
-    let can_review = false;
-    if (stayed) {
-      const existing = await db.reviews.findOne(r.listing_id, req.user.id);
-      can_review = !existing;
-    }
-    return { ...r, title: l?.title, location: l?.location, image: l?.image, price_per_night: l?.price, cancellation_policy: l?.cancellation_policy || 'flexible', can_review };
-  }));
+    return {
+      ...r,
+      title: l?.title, location: l?.location, image: l?.image,
+      price_per_night: l?.price, cancellation_policy: l?.cancellation_policy || 'flexible',
+      can_review: stayed && !reviewedIds.has(r.listing_id),
+    };
+  });
   res.json(result);
 });
 
-// GET /api/reservations/hosting
+// GET /api/reservations/hosting — batch guests pour éviter N+1 (listings déjà en mémoire)
 router.get('/hosting', auth, async (req, res) => {
   const myListings = await db.listings.findByHost(req.user.id);
-  const myIds = myListings.map(l => l.id);
-  const resas = await db.reservations.findByListings(myIds);
+  const myIds      = myListings.map(l => l.id);
+  const resas      = await db.reservations.findByListings(myIds);
   resas.sort((a, b) => String(b.created_at).localeCompare(String(a.created_at)));
-  const result = await Promise.all(resas.map(async r => {
-    const l = await db.listings.findById(r.listing_id);
-    const g = await db.users.findById(r.guest_id);
+
+  const listingMap = Object.fromEntries(myListings.map(l => [l.id, l]));
+  const guestIds   = [...new Set(resas.map(r => r.guest_id))];
+  const guests     = await db.users.findByIds(guestIds);
+  const guestMap   = Object.fromEntries(guests.map(g => [g.id, g]));
+
+  const result = resas.map(r => {
+    const l = listingMap[r.listing_id];
+    const g = guestMap[r.guest_id];
     return { ...r, title: l?.title, location: l?.location, guest_name: g?.name, guest_email: g?.email };
-  }));
+  });
   res.json(result);
 });
 

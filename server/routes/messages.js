@@ -3,31 +3,47 @@ const db     = require('../db');
 const auth   = require('../middleware/auth');
 const ws     = require('../ws');
 
-// GET /api/messages — conversations de l'utilisateur
+// GET /api/messages — conversations de l'utilisateur — batch users+listings (anti N+1)
 router.get('/', auth, async (req, res) => {
   const uid  = req.user.id;
   const msgs = await db.messages.findByUser(uid);
+  if (!msgs.length) return res.json([]);
 
-  const convMap = {};
+  // Passe 1 (purement JS) : dernier message et compteur non-lus par conversation
+  const convLatest = {};
+  const unreadCount = {};
   for (const m of msgs) {
     const otherId = m.from_id === uid ? m.to_id : m.from_id;
     const key     = `${m.listing_id}-${otherId}`;
-    if (!convMap[key] || String(m.created_at) > convMap[key].last_at) {
-      const other   = await db.users.findById(otherId);
-      const listing = await db.listings.findById(m.listing_id);
-      convMap[key] = {
-        key, listing_id: m.listing_id,
-        listing_title: listing?.title || '',
-        listing_img:   listing?.image || '',
-        other_id:     otherId,
-        other_name:   other?.name || 'Inconnu',
-        last_msg:     m.body,
-        last_at:      String(m.created_at),
-        unread:       msgs.filter(x => x.from_id === otherId && x.to_id === uid && !x.read && x.listing_id === m.listing_id).length,
-      };
-    }
+    if (!convLatest[key] || String(m.created_at) > convLatest[key].last_at)
+      convLatest[key] = { key, listing_id: m.listing_id, other_id: otherId, last_msg: m.body, last_at: String(m.created_at) };
+    if (m.from_id !== uid && m.to_id === uid && !m.read)
+      unreadCount[key] = (unreadCount[key] || 0) + 1;
   }
-  res.json(Object.values(convMap).sort((a,b) => b.last_at.localeCompare(a.last_at)));
+
+  // Passe 2 : chargement batch de tous les autres et annonces distincts
+  const allConvs     = Object.values(convLatest);
+  const otherIds     = [...new Set(allConvs.map(c => c.other_id))];
+  const listingIds   = [...new Set(allConvs.map(c => c.listing_id))];
+  const [otherUsers, listings] = await Promise.all([
+    db.users.findByIds(otherIds),
+    db.listings.findByIds(listingIds),
+  ]);
+  const userMap    = Object.fromEntries(otherUsers.map(u => [u.id, u]));
+  const listingMap = Object.fromEntries(listings.map(l => [l.id, l]));
+
+  const result = allConvs.map(c => ({
+    key:           c.key,
+    listing_id:    c.listing_id,
+    listing_title: listingMap[c.listing_id]?.title || '',
+    listing_img:   listingMap[c.listing_id]?.image || '',
+    other_id:      c.other_id,
+    other_name:    userMap[c.other_id]?.name || 'Inconnu',
+    last_msg:      c.last_msg,
+    last_at:       c.last_at,
+    unread:        unreadCount[c.key] || 0,
+  }));
+  res.json(result.sort((a, b) => b.last_at.localeCompare(a.last_at)));
 });
 
 // GET /api/messages/:listing_id/:other_id
