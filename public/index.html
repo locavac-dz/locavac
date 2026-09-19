@@ -537,6 +537,7 @@ footer{background:var(--g100);border-top:1px solid var(--g200);padding:48px 24px
 .row2 .fg{flex:1}
 .ferr{color:var(--red);font-size:13px;margin-bottom:10px;display:none}
 .ferr.show{display:block}
+.char-count{font-size:11px;color:var(--g400);text-align:right;margin-top:3px;transition:color .2s}
 .btn-submit{width:100%;background:var(--red);color:#fff;border:none;padding:14px;border-radius:12px;font-size:15px;font-weight:700;cursor:pointer;transition:background .2s}
 .btn-submit:hover{background:var(--red-dk)}
 .btn-submit:disabled{opacity:.6;cursor:not-allowed}
@@ -1542,7 +1543,7 @@ footer{background:var(--g100);border-top:1px solid var(--g200);padding:48px 24px
           <div class="star-input" id="star-input">
             <span data-v="1">★</span><span data-v="2">★</span><span data-v="3">★</span><span data-v="4">★</span><span data-v="5">★</span>
           </div>
-          <div class="fg"><textarea id="rev-comment" placeholder="Partagez votre expérience…" rows="3"></textarea></div>
+          <div class="fg"><textarea id="rev-comment" placeholder="Partagez votre expérience…" rows="3" maxlength="1000" oninput="charCount(this,1000)"></textarea><div class="char-count" id="rev-comment-count">0 / 1000</div></div>
           <div class="ferr" id="rev-err"></div>
           <button class="btn-submit" id="rev-btn">Publier l'avis</button>
         </div>
@@ -1749,7 +1750,7 @@ footer{background:var(--g100);border-top:1px solid var(--g200);padding:48px 24px
       </div>
       <div class="fg"><label>Nom complet</label><input type="text" id="prof-name" placeholder="Votre nom"/></div>
       <div class="fg"><label>Téléphone</label><input type="tel" id="prof-phone" placeholder="+213 6XX XXX XXX"/></div>
-      <div class="fg"><label>Bio</label><textarea id="prof-bio" rows="3" placeholder="Parlez de vous, de vos logements…"></textarea></div>
+      <div class="fg"><label>Bio</label><textarea id="prof-bio" rows="3" placeholder="Parlez de vous, de vos logements…" maxlength="500" oninput="charCount(this,500)"></textarea><div class="char-count" id="prof-bio-count">0 / 500</div></div>
       <div class="fg"><label>Photo de profil (URL ou upload)</label>
         <div style="display:flex;gap:8px">
           <input type="text" id="prof-avatar-url" placeholder="https://… ou laissez vide"/>
@@ -1805,7 +1806,7 @@ footer{background:var(--g100);border-top:1px solid var(--g200);padding:48px 24px
         <div class="row2"><div class="fg"><label>Prix/nuit (DZD)</label><input type="number" id="h-price" placeholder="10000"/></div><div class="fg"><label>Voyageurs max</label><input type="number" id="h-guests" value="4"/></div></div>
         <div class="row2"><div class="fg"><label>Chambres</label><input type="number" id="h-beds" value="2"/></div><div class="fg"><label>Salles de bain</label><input type="number" id="h-baths" value="1"/></div></div>
         <div class="row2"><div class="fg"><label>Latitude</label><input type="number" id="h-lat" placeholder="36.73" step="0.0001"/></div><div class="fg"><label>Longitude</label><input type="number" id="h-lng" placeholder="3.08" step="0.0001"/></div></div>
-        <div class="fg"><label>Description</label><textarea id="h-desc" placeholder="Décrivez votre logement…" rows="3"></textarea></div>
+        <div class="fg"><label>Description</label><textarea id="h-desc" placeholder="Décrivez votre logement…" rows="3" maxlength="3000" oninput="charCount(this,3000)"></textarea><div class="char-count" id="h-desc-count">0 / 3000</div></div>
         <div class="fg"><label>Politique d'annulation</label><select id="h-cancel"><option value="flexible">🟢 Flexible — gratuit jusqu'à 24h avant</option><option value="moderee">🟡 Modérée — 100% jusqu'à 5j, 50% jusqu'à 2j</option><option value="stricte">🔴 Stricte — 50% jusqu'à 7j, aucun après</option></select></div>
         <div class="fg">
           <label>Équipements &amp; commodités</label>
@@ -2671,6 +2672,15 @@ function showAuthTab(tab) {
   document.getElementById('tab-login').classList.toggle('active',    isLogin);
   document.getElementById('tab-register').classList.toggle('active', !isLogin);
 }
+function charCount(el, max) {
+  const n    = el.value.length;
+  const id   = el.id + '-count';
+  const disp = document.getElementById(id);
+  if (!disp) return;
+  disp.textContent = n + ' / ' + max;
+  disp.style.color = n > max * 0.9 ? (n >= max ? 'var(--red)' : '#f97316') : 'var(--g400)';
+}
+
 function updatePwStrength(pw) {
   const bar   = document.getElementById('pw-strength-bar');
   const fill  = document.getElementById('pw-strength-fill');

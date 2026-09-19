@@ -226,6 +226,7 @@ const payments = {
     ? _q('SELECT * FROM payments WHERE status = $1 ORDER BY id DESC', [status])
     : _q('SELECT * FROM payments ORDER BY id DESC'),
 
+  findByIds: ids => ids.length ? _q('SELECT * FROM payments WHERE id = ANY($1)', [ids]) : Promise.resolve([]),
   create:    doc           => _insert('payments', doc),
   updateById: (id, changes) => _updateById('payments', id, changes),
 };

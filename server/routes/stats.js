@@ -65,9 +65,14 @@ router.get('/host/earnings', auth, async (req, res) => {
   const allResas  = await db.reservations.findByListings(myIds);
   const confirmed = allResas.filter(r => r.status === 'confirmed');
 
-  const transactions = await Promise.all(confirmed.map(async r => {
+  // Chargement des paiements en une seule requête (anti N+1)
+  const paymentIds = confirmed.map(r => r.payment_id).filter(Boolean);
+  const paymentsRows = await db.payments.findByIds(paymentIds);
+  const paymentMap   = Object.fromEntries(paymentsRows.map(p => [p.id, p]));
+
+  const transactions = confirmed.map(r => {
     const listing = myListings.find(l => l.id === r.listing_id);
-    const payment = await db.payments.findById(r.payment_id);
+    const payment = paymentMap[r.payment_id] || null;
     const gross   = Number(r.total_price || 0);
     const fee     = Math.round(gross * COMMISSION);
     const net     = gross - fee;
@@ -78,7 +83,7 @@ router.get('/host/earnings', auth, async (req, res) => {
       method:  payment?.status === 'success' ? (payment?.method  || '—') : '—',
       paid_at: payment?.status === 'success' ? (payment?.processed_at || r.created_at) : r.created_at,
     };
-  }));
+  });
   transactions.sort((a, b) => String(b.paid_at).localeCompare(String(a.paid_at)));
 
   const totalGross = transactions.reduce((s, t) => s + t.gross, 0);

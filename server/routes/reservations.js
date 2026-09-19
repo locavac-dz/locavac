@@ -1,8 +1,9 @@
-const router = require('express').Router();
-const db     = require('../db');
-const auth   = require('../middleware/auth');
-const mailer = require('../mailer');
-const ws     = require('../ws');
+const router   = require('express').Router();
+const db       = require('../db');
+const { pool } = require('../db');
+const auth     = require('../middleware/auth');
+const mailer   = require('../mailer');
+const ws       = require('../ws');
 
 function nights(checkIn, checkOut) {
   return Math.round((new Date(checkOut) - new Date(checkIn)) / 86400000);
@@ -21,11 +22,6 @@ function calcRefund(policy, totalPrice, checkIn) {
   // stricte
   if (daysLeft >= 7) return { pct: 50, days: daysLeft };
   return { pct: 0, days: daysLeft };
-}
-
-async function isAvailable(listingId, checkIn, checkOut, excludeId = null) {
-  const conflict = await db.reservations.findConflict(listingId, checkIn, checkOut, excludeId);
-  return !conflict;
 }
 
 // POST /api/reservations
@@ -52,19 +48,44 @@ router.post('/', auth, async (req, res) => {
 
   const n = nights(check_in, check_out);
   if (n < 1) return res.status(400).json({ error: "La date de départ doit être après la date d'arrivée." });
-  if (!await isAvailable(lid, check_in, check_out))
-    return res.status(409).json({ error: "Ce logement n'est pas disponible pour ces dates." });
 
+  // Vérification blocked_ranges (données JS/JSON, hors transaction)
   const ranges = Array.isArray(listing.blocked_ranges) ? listing.blocked_ranges
     : (listing.blocked_ranges ? JSON.parse(listing.blocked_ranges) : []);
   if (ranges.some(b => b.start < check_out && b.end > check_in))
     return res.status(409).json({ error: "Ces dates sont indisponibles (logement bloqué par l'hôte)." });
 
   const total = listing.price * n;
-  const resa  = await db.reservations.create({
-    listing_id: lid, guest_id: req.user.id, check_in, check_out,
-    guests_count: guests_count || 1, total_price: total, status: 'pending',
-  });
+
+  // Transaction avec advisory lock pour éviter la race condition (double-réservation)
+  const client = await pool.connect();
+  let resa;
+  try {
+    await client.query('BEGIN');
+    // Verrou exclusif par logement — bloque les réservations concurrentes sur le même lid
+    await client.query('SELECT pg_advisory_xact_lock($1)', [lid]);
+    // Re-vérification de disponibilité à l'intérieur de la transaction
+    const conflict = await client.query(
+      `SELECT id FROM reservations WHERE listing_id = $1 AND status != 'cancelled' AND check_in < $2 AND check_out > $3 LIMIT 1`,
+      [lid, check_out, check_in]
+    );
+    if (conflict.rows[0]) {
+      await client.query('ROLLBACK');
+      return res.status(409).json({ error: "Ce logement n'est pas disponible pour ces dates." });
+    }
+    const result = await client.query(
+      `INSERT INTO reservations (listing_id, guest_id, check_in, check_out, guests_count, total_price, status)
+       VALUES ($1, $2, $3, $4, $5, $6, 'pending') RETURNING *`,
+      [lid, req.user.id, check_in, check_out, guests_count || 1, total]
+    );
+    resa = result.rows[0];
+    await client.query('COMMIT');
+  } catch(e) {
+    await client.query('ROLLBACK').catch(() => {});
+    throw e;
+  } finally {
+    client.release();
+  }
 
   const guest = await db.users.findById(req.user.id);
   const host  = await db.users.findById(listing.host_id);
