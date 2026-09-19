@@ -804,6 +804,11 @@ footer{background:var(--g100);border-top:1px solid var(--g200);padding:48px 24px
 /* Bouton copier */
 .copy-btn{background:none;border:1.5px solid var(--g200);border-radius:6px;cursor:pointer;font-size:12px;padding:2px 7px;color:var(--g600);transition:background .15s,color .15s;line-height:1.4;flex-shrink:0}
 .copy-btn:hover{background:var(--g100);color:var(--g800)}
+/* Filtres statut réservations */
+.res-filter-bar{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px}
+.res-filter-btn{background:var(--g100);border:1.5px solid var(--g200);border-radius:20px;padding:4px 12px;font-size:12px;font-weight:700;cursor:pointer;color:var(--g600);transition:all .2s;font-family:inherit}
+.res-filter-btn.active{background:var(--g800);border-color:var(--g800);color:#fff}
+.res-filter-btn:hover:not(.active){background:var(--g200)}
 .photo-preview-item{position:relative;aspect-ratio:1;border-radius:8px;overflow:hidden;background:var(--g100)}
 .photo-preview-item img{width:100%;height:100%;object-fit:cover;display:block}
 .photo-preview-item .rm-photo{position:absolute;top:3px;right:3px;background:rgba(0,0,0,.65);border:none;color:#fff;width:20px;height:20px;border-radius:50%;cursor:pointer;font-size:12px;line-height:20px;text-align:center;padding:0}
@@ -1807,7 +1812,7 @@ footer{background:var(--g100);border-top:1px solid var(--g200);padding:48px 24px
 <div class="overlay" id="ov-resas">
   <div class="modal wide">
     <button class="modal-x" id="x-resas">✕</button>
-    <div class="mp"><h2>Mes réservations</h2><p class="sub">Historique de vos séjours</p><div id="resa-list"></div></div>
+    <div class="mp"><h2>Mes réservations</h2><p class="sub">Historique de vos séjours</p><div id="resa-filter-bar"></div><div id="resa-list"></div></div>
   </div>
 </div>
 
@@ -1861,7 +1866,7 @@ footer{background:var(--g100);border-top:1px solid var(--g200);padding:48px 24px
         <h2 id="pay-result-title" style="margin-bottom:8px"></h2>
         <p id="pay-result-msg" style="color:var(--g600);font-size:14px;margin-bottom:20px;line-height:1.6"></p>
         <div id="pay-receipt" style="background:var(--g50);border-radius:12px;padding:14px;text-align:left;margin-bottom:20px;display:none">
-          <div class="detail-row" style="padding:8px 0"><span class="lbl">Référence</span><span class="val" id="rec-ref" style="font-family:monospace;font-size:13px"></span></div>
+          <div class="detail-row" style="padding:8px 0"><span class="lbl">Référence</span><span style="display:flex;align-items:center;gap:8px"><span class="val" id="rec-ref" style="font-family:monospace;font-size:13px"></span><button class="copy-btn" id="rec-ref-copy" style="display:none" onclick="copyText(document.getElementById('rec-ref').textContent,this)">📋</button></span></div>
           <div class="detail-row" style="padding:8px 0"><span class="lbl">Montant</span><span class="val" id="rec-amount"></span></div>
           <div class="detail-row" style="padding:8px 0"><span class="lbl" id="rec-card-label">Carte</span><span class="val" id="rec-card"></span></div>
           <div class="detail-row" style="padding:8px 0;border:none"><span class="lbl">Statut</span><span class="val" id="rec-status" style="color:#0a7c47">✅ Approuvé</span></div>
@@ -2532,8 +2537,16 @@ function initUploadZone() {
 }
 
 // ── TOAST ─────────────────────────────────────────────────
-let toastTid;
+const _toastQ = [];
+let _toastActive = false;
 function toast(msg, type = '', action = null) {
+  if (_toastQ.length < 5) _toastQ.push({ msg, type, action });
+  if (!_toastActive) _nextToast();
+}
+function _nextToast() {
+  if (!_toastQ.length) { _toastActive = false; return; }
+  _toastActive = true;
+  const { msg, type, action } = _toastQ.shift();
   const el = document.getElementById('toast');
   el.innerHTML = '';
   const span = document.createElement('span');
@@ -2543,12 +2556,11 @@ function toast(msg, type = '', action = null) {
     const btn = document.createElement('button');
     btn.className = 'toast-action';
     btn.textContent = action.label;
-    btn.addEventListener('click', () => { el.classList.remove('show'); action.fn(); });
+    btn.addEventListener('click', () => { el.classList.remove('show'); _toastQ.length = 0; _toastActive = false; action.fn(); });
     el.appendChild(btn);
   }
   el.className = 'toast show' + (type ? ' toast-' + type : '');
-  clearTimeout(toastTid);
-  toastTid = setTimeout(() => el.classList.remove('show'), type === 'error' ? 5000 : 3200);
+  setTimeout(() => { el.classList.remove('show'); setTimeout(_nextToast, 350); }, type === 'error' ? 5000 : 3200);
 }
 
 // ── OVERLAYS ──────────────────────────────────────────────
@@ -3855,40 +3867,59 @@ async function openResas() {
   if (!currentUser) { openAuth('login'); return; }
   openOverlay('ov-resas');
   const list = document.getElementById('resa-list');
+  const fbar = document.getElementById('resa-filter-bar');
+  fbar.innerHTML = '';
   list.innerHTML = '<p style="color:var(--g400);text-align:center;padding:24px">Chargement…</p>';
   try {
     const data = await apiFetch('/reservations/mine');
     if (!data.length) { list.innerHTML='<p style="color:var(--g400);text-align:center;padding:24px">Aucune réservation.</p>'; return; }
-    const now = new Date();
-    list.innerHTML = data.map(r => {
-      const daysUntil = Math.ceil((new Date(r.check_in) - now) / 86400000);
-      const isOngoing = new Date(r.check_in) <= now && new Date(r.check_out) >= now;
-      const isPast    = new Date(r.check_out) < now;
-      let countdown = '';
-      if (r.status === 'confirmed') {
-        if (isOngoing)        countdown = '<div style="font-size:11px;font-weight:700;color:#047857;margin-top:4px">🏠 Séjour en cours</div>';
-        else if (isPast)      countdown = '<div style="font-size:11px;color:var(--g400);margin-top:4px">✅ Séjour terminé</div>';
-        else if (daysUntil <= 30) countdown = `<div style="font-size:11px;font-weight:700;color:var(--red);margin-top:4px">⏳ Dans ${daysUntil} jour${daysUntil > 1 ? 's' : ''}</div>`;
-      }
-      const canCancel = (r.status === 'pending' || r.status === 'confirmed') && !isPast;
-      const policy = r.cancellation_policy || 'flexible';
-      return `
-      <div class="resa-card">
-        <img src="${r.image||''}" alt="" onerror="this.style.display='none'"/>
-        <div class="resa-info" style="flex:1">
-          <div class="resa-title">${r.title||'Logement'}</div>
-          <div class="resa-dates">📅 ${r.check_in} → ${r.check_out}</div>
-          <div class="resa-dates">💰 ${Number(r.total_price).toLocaleString('fr-DZ')} DZD</div>
-          ${countdown}
-          ${r.can_review ? `<button class="btn-sm" style="margin-top:6px;background:var(--accent);color:#fff;border:none;padding:5px 12px;border-radius:8px;cursor:pointer" onclick="openReviewModal(${r.listing_id})">⭐ Laisser un avis</button>` : ''}
-          ${r.status==='pending' ? `<button class="btn-sm" style="margin-top:6px;background:var(--red);color:#fff;border:none;padding:5px 12px;border-radius:8px;cursor:pointer;font-weight:600" onclick="openPayment(${r.id},${r.total_price})">💳 Payer maintenant</button>` : ''}
-          ${canCancel ? `<button class="btn-sm" style="margin-top:6px;background:#fff;border:1.5px solid var(--g300);color:var(--g700);padding:5px 12px;border-radius:8px;cursor:pointer" onclick="cancelResa(${r.id},${r.total_price},'${r.check_in}','${policy}',${JSON.stringify(r.title||'').replace(/</g,'&lt;')})">✕ Annuler</button>` : ''}
-          <button class="btn-sm" style="margin-top:6px;background:var(--g100);color:var(--g800);border:none;padding:5px 12px;border-radius:8px;cursor:pointer" onclick='printResa(${JSON.stringify(r).replace(/'/g,"&#39;")})'>📄 PDF</button>
-        </div>
-        <span class="resa-status-badge ${r.status}">${r.status==='pending'?'En attente':r.status==='confirmed'?'Confirmée ✅':'Annulée'}</span>
-      </div>`;
-    }).join('');
+    window._guestResasData = data;
+    _renderResaCards(data, 'all');
   } catch(e) { list.innerHTML='<p style="color:var(--red);text-align:center;padding:24px">'+e.message+'</p>'; }
+}
+function _renderResaCards(data, filter) {
+  const now = new Date();
+  const cats = {
+    all:       data,
+    upcoming:  data.filter(r => r.status !== 'cancelled' && new Date(r.check_in) > now),
+    ongoing:   data.filter(r => r.status !== 'cancelled' && new Date(r.check_in) <= now && new Date(r.check_out) >= now),
+    past:      data.filter(r => r.status !== 'cancelled' && new Date(r.check_out) < now),
+    cancelled: data.filter(r => r.status === 'cancelled'),
+  };
+  const labels = { all:'Toutes', upcoming:'À venir', ongoing:'En cours', past:'Passées', cancelled:'Annulées' };
+  const fbar = document.getElementById('resa-filter-bar');
+  fbar.innerHTML = `<div class="res-filter-bar">${Object.keys(cats).map(f=>`<button class="res-filter-btn${f===filter?' active':''}" onclick="_renderResaCards(window._guestResasData,'${f}')">${labels[f]} <span style="font-size:11px;opacity:.7">(${cats[f].length})</span></button>`).join('')}</div>`;
+  const list = document.getElementById('resa-list');
+  const filtered = cats[filter] || data;
+  if (!filtered.length) { list.innerHTML='<p style="color:var(--g400);text-align:center;padding:24px">Aucune réservation dans cette catégorie.</p>'; return; }
+  list.innerHTML = filtered.map(r => {
+    const daysUntil = Math.ceil((new Date(r.check_in) - now) / 86400000);
+    const isOngoing = new Date(r.check_in) <= now && new Date(r.check_out) >= now;
+    const isPast    = new Date(r.check_out) < now;
+    let countdown = '';
+    if (r.status === 'confirmed') {
+      if (isOngoing)        countdown = '<div style="font-size:11px;font-weight:700;color:#047857;margin-top:4px">🏠 Séjour en cours</div>';
+      else if (isPast)      countdown = '<div style="font-size:11px;color:var(--g400);margin-top:4px">✅ Séjour terminé</div>';
+      else if (daysUntil <= 30) countdown = `<div style="font-size:11px;font-weight:700;color:var(--red);margin-top:4px">⏳ Dans ${daysUntil} jour${daysUntil > 1 ? 's' : ''}</div>`;
+    }
+    const canCancel = (r.status === 'pending' || r.status === 'confirmed') && !isPast;
+    const policy = r.cancellation_policy || 'flexible';
+    return `
+    <div class="resa-card">
+      <img src="${r.image||''}" alt="" onerror="this.style.display='none'"/>
+      <div class="resa-info" style="flex:1">
+        <div class="resa-title">${r.title||'Logement'}</div>
+        <div class="resa-dates">📅 ${r.check_in} → ${r.check_out}</div>
+        <div class="resa-dates">💰 ${Number(r.total_price).toLocaleString('fr-DZ')} DZD</div>
+        ${countdown}
+        ${r.can_review ? `<button class="btn-sm" style="margin-top:6px;background:var(--accent);color:#fff;border:none;padding:5px 12px;border-radius:8px;cursor:pointer" onclick="openReviewModal(${r.listing_id})">⭐ Laisser un avis</button>` : ''}
+        ${r.status==='pending' ? `<button class="btn-sm" style="margin-top:6px;background:var(--red);color:#fff;border:none;padding:5px 12px;border-radius:8px;cursor:pointer;font-weight:600" onclick="openPayment(${r.id},${r.total_price})">💳 Payer maintenant</button>` : ''}
+        ${canCancel ? `<button class="btn-sm" style="margin-top:6px;background:#fff;border:1.5px solid var(--g300);color:var(--g700);padding:5px 12px;border-radius:8px;cursor:pointer" onclick="cancelResa(${r.id},${r.total_price},'${r.check_in}','${policy}',${JSON.stringify(r.title||'').replace(/</g,'&lt;')})">✕ Annuler</button>` : ''}
+        <button class="btn-sm" style="margin-top:6px;background:var(--g100);color:var(--g800);border:none;padding:5px 12px;border-radius:8px;cursor:pointer" onclick='printResa(${JSON.stringify(r).replace(/'/g,"&#39;")})'>📄 PDF</button>
+      </div>
+      <span class="resa-status-badge ${r.status}">${r.status==='pending'?'En attente':r.status==='confirmed'?'Confirmée ✅':'Annulée'}</span>
+    </div>`;
+  }).join('');
 }
 
 let _cancelResaId = null;
@@ -5213,20 +5244,30 @@ async function loadMyHostResas() {
   try {
     const data = await apiFetch('/reservations/hosting');
     if (!data.length) { el.innerHTML='<p style="color:var(--g400);font-size:14px;padding:8px 0">Aucune réservation reçue.</p>'; return; }
-    const exportBtn = `<div style="display:flex;justify-content:flex-end;margin-bottom:12px"><button class="btn-sm" onclick="exportResasCSV(window._hostResasData)">📥 Exporter CSV</button></div>`;
     window._hostResasData = data;
-    el.innerHTML = exportBtn + data.map(r => `
-      <div class="resa-row">
-        <div class="resa-row-info">
-          <div style="font-weight:600;font-size:14px;margin-bottom:3px">${r.title||''}</div>
-          <div style="font-size:13px;color:var(--g600)">👤 ${r.guest_name} · 📅 ${r.check_in} → ${r.check_out} · 💰 ${Number(r.total_price).toLocaleString('fr-DZ')} DZD</div>
-        </div>
-        <div style="display:flex;gap:6px;align-items:center;flex-shrink:0;flex-wrap:wrap">
-          <span class="resa-status ${r.status}">${r.status==='pending'?'En attente':r.status==='confirmed'?'Confirmée':'Annulée'}</span>
-          ${r.status==='pending'?`<button class="btn-sm" onclick="updateResaStatus(${r.id},'confirmed')">✅ Confirmer</button><button class="btn-sm danger" onclick="updateResaStatus(${r.id},'cancelled')">✕</button>`:''}
-        </div>
-      </div>`).join('');
+    _renderHostResaPanel(data, 'all');
   } catch(e) { el.innerHTML='<p style="color:var(--red);font-size:14px">'+e.message+'</p>'; }
+}
+function _renderHostResaPanel(data, filter) {
+  const el = document.getElementById('hdp-reservations');
+  const counts = { all: data.length, pending: 0, confirmed: 0, cancelled: 0 };
+  data.forEach(r => { if (counts[r.status] !== undefined) counts[r.status]++; });
+  const tabDefs = [['all','Toutes'],['pending','En attente'],['confirmed','Confirmées'],['cancelled','Annulées']];
+  const tabBar = `<div class="res-filter-bar">${tabDefs.map(([f,lbl])=>`<button class="res-filter-btn${f===filter?' active':''}" onclick="_renderHostResaPanel(window._hostResasData,'${f}')">${lbl} <span style="font-size:11px;opacity:.7">(${counts[f]})</span></button>`).join('')}</div>`;
+  const exportBtn = `<div style="display:flex;justify-content:flex-end;margin-bottom:12px"><button class="btn-sm" onclick="exportResasCSV(window._hostResasData)">📥 Exporter CSV</button></div>`;
+  const filtered = filter === 'all' ? data : data.filter(r => r.status === filter);
+  const rows = filtered.length ? filtered.map(r => `
+    <div class="resa-row">
+      <div class="resa-row-info">
+        <div style="font-weight:600;font-size:14px;margin-bottom:3px">${r.title||''}</div>
+        <div style="font-size:13px;color:var(--g600)">👤 ${r.guest_name} · 📅 ${r.check_in} → ${r.check_out} · 💰 ${Number(r.total_price).toLocaleString('fr-DZ')} DZD</div>
+      </div>
+      <div style="display:flex;gap:6px;align-items:center;flex-shrink:0;flex-wrap:wrap">
+        <span class="resa-status ${r.status}">${r.status==='pending'?'En attente':r.status==='confirmed'?'Confirmée':'Annulée'}</span>
+        ${r.status==='pending'?`<button class="btn-sm" onclick="updateResaStatus(${r.id},'confirmed')">✅ Confirmer</button><button class="btn-sm danger" onclick="updateResaStatus(${r.id},'cancelled')">✕</button>`:''}
+      </div>
+    </div>`).join('') : '<p style="color:var(--g400);font-size:14px;padding:8px 0">Aucune réservation dans cette catégorie.</p>';
+  el.innerHTML = tabBar + exportBtn + rows;
 }
 async function updateResaStatus(id, status) {
   try { await apiFetch('/reservations/'+id+'/status', { method:'PATCH', body: JSON.stringify({ status }) }); toast('Statut mis à jour.'); loadMyHostResas(); } catch(e) { toast(e.message); }
@@ -5446,6 +5487,7 @@ function showPayResult({ icon, title, msg, ref, amount, instrument, instrumentLa
   document.getElementById('pay-result-title').textContent = title;
   document.getElementById('pay-result-msg').textContent   = msg;
   document.getElementById('rec-ref').textContent          = ref || '';
+  const _rfc = document.getElementById('rec-ref-copy'); if (_rfc) _rfc.style.display = ref ? '' : 'none';
   document.getElementById('rec-amount').textContent       = amount ? Number(amount).toLocaleString('fr-DZ') + ' DZD' : '';
   document.getElementById('rec-card-label').textContent   = instrumentLabel || 'Moyen';
   document.getElementById('rec-card').textContent         = instrument || '';
