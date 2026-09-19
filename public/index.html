@@ -784,6 +784,23 @@ footer{background:var(--g100);border-top:1px solid var(--g200);padding:48px 24px
 .photo-preview-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(90px,1fr));gap:8px;margin-top:12px}
 .photo-preview-item[draggable]{cursor:grab}
 .photo-preview-item.drag-over{opacity:.4;outline:2px dashed var(--red);border-radius:8px}
+/* Stepper de paiement */
+.pay-stepper{display:flex;align-items:flex-start;justify-content:center;margin-bottom:24px}
+.pay-step-item{display:flex;flex-direction:column;align-items:center;gap:5px;flex:1;max-width:90px}
+.pay-step-circle{width:28px;height:28px;border-radius:50%;border:2px solid var(--g200);background:var(--g100);color:var(--g400);font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center;transition:all .3s}
+.pay-step-item.active .pay-step-circle{border-color:var(--primary);background:var(--primary);color:#fff}
+.pay-step-item.done .pay-step-circle{border-color:#0a7c47;background:#0a7c47;color:#fff}
+.pay-step-lbl{font-size:11px;color:var(--g400);font-weight:600;transition:color .3s;text-align:center}
+.pay-step-item.active .pay-step-lbl{color:var(--primary)}
+.pay-step-item.done .pay-step-lbl{color:#0a7c47}
+.pay-step-line{flex:1;height:2px;background:var(--g200);margin-top:14px;min-width:16px;transition:background .3s}
+.pay-step-line.done{background:#0a7c47}
+/* Skeleton loader */
+.skeleton{background:linear-gradient(90deg,var(--g100) 25%,var(--g200) 50%,var(--g100) 75%);background-size:200% 100%;animation:skel-anim 1.4s infinite}
+@keyframes skel-anim{0%{background-position:200% 0}100%{background-position:-200% 0}}
+.skel-line{height:14px;border-radius:6px;margin-bottom:10px}
+.skel-title{height:26px;width:65%;border-radius:6px;margin-bottom:10px}
+.skel-block{height:190px;border-radius:10px;margin-bottom:16px}
 .photo-preview-item{position:relative;aspect-ratio:1;border-radius:8px;overflow:hidden;background:var(--g100)}
 .photo-preview-item img{width:100%;height:100%;object-fit:cover;display:block}
 .photo-preview-item .rm-photo{position:absolute;top:3px;right:3px;background:rgba(0,0,0,.65);border:none;color:#fff;width:20px;height:20px;border-radius:50%;cursor:pointer;font-size:12px;line-height:20px;text-align:center;padding:0}
@@ -1786,6 +1803,13 @@ footer{background:var(--g100);border-top:1px solid var(--g200);padding:48px 24px
   <div class="modal">
     <button class="modal-x" id="x-pay">✕</button>
     <div class="mp">
+      <div class="pay-stepper" id="pay-stepper">
+        <div class="pay-step-item active" id="psi-1"><div class="pay-step-circle">1</div><div class="pay-step-lbl">Méthode</div></div>
+        <div class="pay-step-line" id="psl-1"></div>
+        <div class="pay-step-item" id="psi-2"><div class="pay-step-circle">2</div><div class="pay-step-lbl">Détails</div></div>
+        <div class="pay-step-line" id="psl-2"></div>
+        <div class="pay-step-item" id="psi-3"><div class="pay-step-circle">3</div><div class="pay-step-lbl">Confirmation</div></div>
+      </div>
       <div id="pay-step1">
         <div style="text-align:center;margin-bottom:20px"><div style="font-size:40px;margin-bottom:8px">🔒</div><h2>Paiement sécurisé</h2><p class="sub" id="pay-amount-label" style="margin-bottom:0"></p></div>
         <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:20px">
@@ -3543,9 +3567,15 @@ function renderGrid(data, checkIn = '', checkOut = '') {
 let _detailMapLat = null, _detailMapLng = null;
 async function openListing(id) {
   currentListingId = id;
+  // Afficher immédiatement le modal avec un skeleton pendant le chargement
+  document.getElementById('m-title').innerHTML  = '<div class="skeleton skel-title"></div>';
+  document.getElementById('m-loc').innerHTML    = '<div class="skeleton skel-line" style="width:55%"></div>';
+  document.getElementById('m-price').innerHTML  = '<div class="skeleton skel-line" style="height:28px;width:32%"></div>';
+  document.getElementById('m-details').innerHTML = '<div class="skeleton skel-block"></div><div class="skeleton skel-line"></div><div class="skeleton skel-line" style="width:70%"></div><div class="skeleton skel-line" style="width:45%"></div>';
+  openOverlay('ov-listing');
   let l = allListings.find(x => x.id === id) || STATIC.find(x => x.id === id);
   try { l = await apiFetch('/listings/' + id); } catch {}
-  if (!l) return;
+  if (!l) { closeOverlay('ov-listing'); return; }
   currentHostId = l.host_id;
   _detailMapLat = l.lat || null;
   _detailMapLng = l.lng || null;
@@ -3661,7 +3691,7 @@ async function openListing(id) {
   // Reset tabs
   showListingTab('details');
   document.getElementById('bk-err').classList.remove('show');
-  openOverlay('ov-listing');
+  // La modal est déjà ouverte (skeleton affiché avant le fetch)
 }
 
 function showListingTab(name) {
@@ -4607,6 +4637,11 @@ function connectWs() {
         toast(msg, 'success', { label: 'Voir', fn: () => { openDashboard(); showHdTab('reservations'); } });
         showBrowserNotif('Locavac — Nouvelle réservation', `${data.guest_name} souhaite réserver ${data.listing_title}`);
         checkPendingResas();
+      } else if (data.type === 'reservation_status_changed') {
+        const label = data.status === 'confirmed' ? '✅ Réservation confirmée' : '❌ Réservation annulée';
+        const msg   = `${label} — ${data.listing_title || ''}`;
+        toast(msg, data.status === 'confirmed' ? 'success' : 'error', { label: 'Mes réservations', fn: openResas });
+        showBrowserNotif('Locavac', msg);
       }
     } catch {}
   };
@@ -4718,6 +4753,7 @@ async function loadGains() {
       apiFetch('/stats/host/payouts'),
     ]);
     const { summary, bank_info, transactions } = data;
+    window._gainsData = transactions;
     const fmt = n => Number(n).toLocaleString('fr-DZ') + ' DZD';
 
     // Solde disponible = net total − virements paid ou pending
@@ -4793,7 +4829,7 @@ async function loadGains() {
       </div>
 
       <!-- Tableau des transactions -->
-      <h4 style="margin:0 0 12px">Détail des réservations</h4>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px"><h4 style="margin:0">Détail des réservations</h4><button class="btn-sm" onclick="exportGainsCSV(window._gainsData)">📥 Exporter CSV</button></div>
       <div style="overflow-x:auto;border-radius:10px;border:1px solid var(--g200)">
         <table style="width:100%;border-collapse:collapse">
           <thead><tr style="background:var(--g50);font-size:12px;color:var(--g600)">
@@ -5098,6 +5134,21 @@ function exportResasCSV(data) {
   a.download = `locavac-reservations-${new Date().toISOString().slice(0,10)}.csv`;
   a.click();
 }
+function exportGainsCSV(data) {
+  if (!data || !data.length) { toast('Aucune transaction à exporter.', 'info'); return; }
+  const headers = ['Date','Annonce','Arrivée','Départ','Brut DZD','Frais DZD','Net DZD'];
+  const rows = data.map(t => [
+    String(t.paid_at).slice(0,10),
+    `"${(t.listing_title||'').replace(/"/g,'""')}"`,
+    t.check_in, t.check_out,
+    Number(t.gross), Number(t.fee), Number(t.net),
+  ]);
+  const csv = [headers, ...rows].map(row => row.join(',')).join('\n');
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8' }));
+  a.download = `locavac-gains-${new Date().toISOString().slice(0,10)}.csv`;
+  a.click();
+}
 async function loadMyHostResas() {
   const el = document.getElementById('hdp-reservations');
   el.innerHTML = '<p style="color:var(--g400);font-size:14px">Chargement…</p>';
@@ -5245,6 +5296,20 @@ const PAY_ALL_STEPS = ['pay-step1','pay-step2','pay-step3','pay-step4','pay-step
 function showPayStep(id) {
   const target = (typeof id === 'number') ? 'pay-step' + id : id;
   PAY_ALL_STEPS.forEach(s => { const el=document.getElementById(s); if(el) el.style.display = s===target?'block':'none'; });
+  // Mettre à jour le stepper visuel
+  const step = (target === 'pay-step1') ? 1
+    : (['pay-step2','pay-step-baridimob','pay-step-virement','pay-step-especes'].includes(target)) ? 2
+    : 3;
+  [1,2,3].forEach(n => {
+    const item = document.getElementById('psi-' + n);
+    if (!item) return;
+    item.classList.toggle('active', n === step);
+    item.classList.toggle('done', n < step);
+  });
+  [1,2].forEach(n => {
+    const line = document.getElementById('psl-' + n);
+    if (line) line.classList.toggle('done', n < step);
+  });
 }
 function openPayment(resa_id, amount) {
   activeResaId = resa_id; activePaymentId = null; selectedMethod = null;

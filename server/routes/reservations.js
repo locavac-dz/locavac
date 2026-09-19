@@ -158,6 +158,16 @@ router.patch('/:id/status', auth, async (req, res) => {
     if (isGuest && host) mailer.mailReservationCancelled({ to: host.email, name: host.name, listingTitle: listing?.title, checkIn: resa.check_in, checkOut: resa.check_out });
   }
 
+  // Notifier le voyageur en temps réel (confirmation ou annulation par l'hôte)
+  if (!isGuest) {
+    ws.send(resa.guest_id, {
+      type: 'reservation_status_changed',
+      reservation_id: resa.id,
+      status,
+      listing_title: listing?.title,
+    });
+  }
+
   res.json({ ok: true, status, refund });
 });
 
