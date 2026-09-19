@@ -809,6 +809,8 @@ footer{background:var(--g100);border-top:1px solid var(--g200);padding:48px 24px
 .res-filter-btn{background:var(--g100);border:1.5px solid var(--g200);border-radius:20px;padding:4px 12px;font-size:12px;font-weight:700;cursor:pointer;color:var(--g600);transition:all .2s;font-family:inherit}
 .res-filter-btn.active{background:var(--g800);border-color:var(--g800);color:#fff}
 .res-filter-btn:hover:not(.active){background:var(--g200)}
+/* Fade-in image carte au lazy-load */
+.card-img img{opacity:0;transition:opacity .35s}
 .photo-preview-item{position:relative;aspect-ratio:1;border-radius:8px;overflow:hidden;background:var(--g100)}
 .photo-preview-item img{width:100%;height:100%;object-fit:cover;display:block}
 .photo-preview-item .rm-photo{position:absolute;top:3px;right:3px;background:rgba(0,0,0,.65);border:none;color:#fff;width:20px;height:20px;border-radius:50%;cursor:pointer;font-size:12px;line-height:20px;text-align:center;padding:0}
@@ -1978,6 +1980,20 @@ footer{background:var(--g100);border-top:1px solid var(--g200);padding:48px 24px
   </div>
 </div>
 
+<!-- MODAL SUPPRESSION ANNONCE -->
+<div class="overlay" id="ov-delete">
+  <div class="modal" style="max-width:380px">
+    <button class="modal-x" id="x-delete">✕</button>
+    <div class="mp" style="text-align:center;padding:20px 0 8px">
+      <div style="font-size:44px;margin-bottom:10px">🗑</div>
+      <h2 style="margin-bottom:8px">Supprimer l'annonce ?</h2>
+      <p id="delete-listing-title" style="color:var(--g600);font-size:13px;margin-bottom:16px;font-weight:600"></p>
+      <p style="font-size:13px;color:var(--g400);margin-bottom:20px;line-height:1.6">Cette action est irréversible. L'annonce sera définitivement retirée de la plateforme.</p>
+      <button class="btn-submit" id="delete-confirm-btn" style="background:var(--red)">🗑 Supprimer définitivement</button>
+      <button id="delete-cancel-btn" style="display:block;width:100%;margin-top:10px;padding:10px;background:none;border:1.5px solid var(--g200);border-radius:10px;color:var(--g700);cursor:pointer;font-size:14px;font-family:inherit">← Annuler</button>
+    </div>
+  </div>
+</div>
 <!-- PANEL ADMIN -->
 
 <div class="overlay" id="ov-admin">
@@ -3454,7 +3470,7 @@ function renderListingsPage() {
     return `
     <div class="card" data-id="${l.id}">
       <div class="card-img" data-photos="${photosJson}" data-cidx="0">
-        <img src="${cardPhotos[0] || ''}" alt="${l.title}" loading="lazy" onerror="this.src='https://images.unsplash.com/photo-1564013799919-ab600027ffc6?w=600&q=80'"/>
+        <img src="${cardPhotos[0] || ''}" alt="${l.title}" loading="lazy" onload="this.style.opacity=1" onerror="this.src='https://images.unsplash.com/photo-1564013799919-ab600027ffc6?w=600&q=80';this.style.opacity=1"/>
         ${l.rating >= 4.9 ? '<div class="badge">Coup de cœur</div>' : ''}
         ${(Date.now() - new Date(l.created_at || 0)) < 7*86400000 ? '<div class="badge-new">Nouveau</div>' : ''}
         <button class="wish ${liked.has(l.id)?'liked':''}" data-wid="${l.id}">${liked.has(l.id)?'❤':'♡'}</button>
@@ -5164,6 +5180,7 @@ async function loadMyListings() {
     const all = await apiFetch('/listings');
     const mine = all.filter(l => l.host_id === currentUser.id);
     if (!mine.length) { el.innerHTML='<p style="color:var(--g400);font-size:14px;padding:8px 0">Aucune annonce publiée.</p>'; return; }
+    window._myListingsData = mine;
     el.innerHTML = `<div id="cal-container" style="display:none;margin-bottom:20px;border:1.5px solid var(--g200);border-radius:14px;padding:16px">
       <div class="cal-header"><button class="cal-nav" id="cal-prev">‹</button><span class="cal-title" id="cal-month-title"></span><button class="cal-nav" id="cal-next">›</button></div>
       <div class="cal-grid">
@@ -5176,39 +5193,65 @@ async function loadMyListings() {
         <div class="cal-legend-item"><div class="cal-legend-dot" style="background:#fff7e6"></div> Bloqué (cliquer pour débloquer)</div>
         <div class="cal-legend-item"><div class="cal-legend-dot" style="background:var(--g100)"></div> Disponible (cliquer pour bloquer)</div>
       </div>
-    </div>` + mine.map(l => `
-      <div class="annonce-row">
-        <img src="${(l.photos&&l.photos[0])||l.image||''}" alt="" onerror="this.style.display='none'"/>
-        <div class="annonce-info">
-          <div class="annonce-title">${l.title}</div>
-          <div class="annonce-meta">${l.location} · ${Number(l.price).toLocaleString('fr-DZ')} DZD/nuit · ⭐${l.rating||'—'} (${l.reviews||0})${(l.views||0)>0?' · 👁 '+l.views+' vue'+(l.views>1?'s':''):''}</div>
-        </div>
-        <div class="annonce-actions">
-          <button class="btn-sm" data-action="edit" data-id="${l.id}">✏️ Éditer</button>
-          <button class="btn-sm" data-action="cal" data-id="${l.id}">📅 Calendrier</button>
-          <button class="btn-sm" data-action="toggle" data-id="${l.id}" data-avail="${!l.available}">${l.available?'⏸ Désactiver':'▶ Activer'}</button>
-          <button class="btn-sm danger" data-action="delete" data-id="${l.id}">🗑</button>
-        </div>
-      </div>`).join('');
-    el.querySelectorAll('[data-action="edit"]').forEach(btn => btn.addEventListener('click', () => editListing(Number(btn.dataset.id))));
-    el.querySelectorAll('[data-action="cal"]').forEach(btn => btn.addEventListener('click', () => {
-      const cal = document.getElementById('cal-container');
-      const isOpen = cal.style.display !== 'none' && calListingId === Number(btn.dataset.id);
-      cal.style.display = isOpen ? 'none' : 'block';
-      if (!isOpen) openCalendar(Number(btn.dataset.id));
-      document.getElementById('cal-prev').onclick = () => { calDate.setMonth(calDate.getMonth()-1); renderCalendar(); };
-      document.getElementById('cal-next').onclick = () => { calDate.setMonth(calDate.getMonth()+1); renderCalendar(); };
-    }));
-    el.querySelectorAll('[data-action="toggle"]').forEach(btn => btn.addEventListener('click', () => toggleAvailability(Number(btn.dataset.id), btn.dataset.avail === 'true')));
-    el.querySelectorAll('[data-action="delete"]').forEach(btn => btn.addEventListener('click', () => deleteListing(Number(btn.dataset.id))));
+    </div>
+    <div style="display:flex;justify-content:flex-end;margin-bottom:10px">
+      <select id="listings-sort" style="font-size:12px;padding:4px 8px;border-radius:8px;border:1.5px solid var(--g200);background:var(--g50);cursor:pointer;font-family:inherit;color:var(--g800)">
+        <option value="">Tri : Par défaut</option>
+        <option value="views">Vues ↓</option>
+        <option value="rating">Note ↓</option>
+        <option value="active">Actifs d'abord</option>
+      </select>
+    </div>
+    <div id="listings-list"></div>`;
+    _renderListingsRows(mine);
+    document.getElementById('listings-sort').addEventListener('change', function() {
+      let sorted = [...window._myListingsData];
+      if (this.value === 'views')       sorted.sort((a,b) => (b.views||0)-(a.views||0));
+      else if (this.value === 'rating') sorted.sort((a,b) => (b.rating||0)-(a.rating||0));
+      else if (this.value === 'active') sorted.sort((a,b) => (b.available?1:0)-(a.available?1:0));
+      _renderListingsRows(sorted);
+    });
+    document.getElementById('cal-prev').onclick = () => { calDate.setMonth(calDate.getMonth()-1); renderCalendar(); };
+    document.getElementById('cal-next').onclick = () => { calDate.setMonth(calDate.getMonth()+1); renderCalendar(); };
   } catch(e) { el.innerHTML='<p style="color:var(--red);font-size:14px">'+e.message+'</p>'; }
+}
+function _renderListingsRows(data) {
+  const listEl = document.getElementById('listings-list');
+  listEl.innerHTML = data.map(l => `
+    <div class="annonce-row">
+      <img src="${(l.photos&&l.photos[0])||l.image||''}" alt="" onerror="this.style.display='none'"/>
+      <div class="annonce-info">
+        <div class="annonce-title">${l.title}</div>
+        <div class="annonce-meta">${l.location} · ${Number(l.price).toLocaleString('fr-DZ')} DZD/nuit · ⭐${l.rating||'—'} (${l.reviews||0})${(l.views||0)>0?' · 👁 '+l.views+' vue'+(l.views>1?'s':''):''}</div>
+      </div>
+      <div class="annonce-actions">
+        <button class="btn-sm" data-action="edit" data-id="${l.id}">✏️ Éditer</button>
+        <button class="btn-sm" data-action="cal" data-id="${l.id}">📅 Calendrier</button>
+        <button class="btn-sm" data-action="toggle" data-id="${l.id}" data-avail="${!l.available}">${l.available?'⏸ Désactiver':'▶ Activer'}</button>
+        <button class="btn-sm danger" data-action="delete" data-id="${l.id}">🗑</button>
+      </div>
+    </div>`).join('');
+  listEl.querySelectorAll('[data-action="edit"]').forEach(btn => btn.addEventListener('click', () => editListing(Number(btn.dataset.id))));
+  listEl.querySelectorAll('[data-action="cal"]').forEach(btn => btn.addEventListener('click', () => {
+    const cal = document.getElementById('cal-container');
+    const isOpen = cal.style.display !== 'none' && calListingId === Number(btn.dataset.id);
+    cal.style.display = isOpen ? 'none' : 'block';
+    if (!isOpen) openCalendar(Number(btn.dataset.id));
+  }));
+  listEl.querySelectorAll('[data-action="toggle"]').forEach(btn => btn.addEventListener('click', () => toggleAvailability(Number(btn.dataset.id), btn.dataset.avail === 'true')));
+  listEl.querySelectorAll('[data-action="delete"]').forEach(btn => btn.addEventListener('click', () => deleteListing(Number(btn.dataset.id))));
 }
 async function toggleAvailability(id, avail) {
   try { await apiFetch('/listings/'+id, { method:'PUT', body: JSON.stringify({ available: avail }) }); toast('Statut mis à jour.'); loadMyListings(); } catch(e) { toast(e.message); }
 }
-async function deleteListing(id) {
-  if (!confirm('Supprimer cette annonce ?')) return;
-  try { await apiFetch('/listings/'+id, { method:'DELETE' }); toast('Annonce supprimée.'); loadMyListings(); loadListings(currentCat); } catch(e) { toast(e.message); }
+let _deleteListingId = null;
+function deleteListing(id) {
+  _deleteListingId = id;
+  const l = (window._myListingsData || []).find(x => x.id === id);
+  document.getElementById('delete-listing-title').textContent = l ? l.title : '';
+  const btn = document.getElementById('delete-confirm-btn');
+  btn.disabled = false; btn.textContent = '🗑 Supprimer définitivement';
+  openOverlay('ov-delete');
 }
 function exportResasCSV(data) {
   const headers = ['ID','Logement','Voyageur','Email','Arrivée','Départ','Total DZD','Statut'];
@@ -6120,6 +6163,26 @@ document.addEventListener('DOMContentLoaded', function() {
   document.getElementById('cancel-keep-btn').addEventListener('click', () => closeOverlay('ov-cancel'));
   document.getElementById('x-cancel').addEventListener('click', () => closeOverlay('ov-cancel'));
 
+  // Modal suppression annonce
+  document.getElementById('delete-confirm-btn').addEventListener('click', async () => {
+    if (!_deleteListingId) return;
+    const btn = document.getElementById('delete-confirm-btn');
+    btn.disabled = true; btn.textContent = 'Suppression…';
+    try {
+      await apiFetch('/listings/' + _deleteListingId, { method: 'DELETE' });
+      closeOverlay('ov-delete');
+      toast('Annonce supprimée.', 'success');
+      loadMyListings();
+      loadListings(currentCat);
+      _deleteListingId = null;
+    } catch(e) {
+      toast(e.message || 'Erreur lors de la suppression', 'error');
+      btn.disabled = false; btn.textContent = '🗑 Supprimer définitivement';
+    }
+  });
+  document.getElementById('delete-cancel-btn').addEventListener('click', () => closeOverlay('ov-delete'));
+  document.getElementById('x-delete').addEventListener('click', () => closeOverlay('ov-delete'));
+
   [['x-listing','ov-listing'],['x-auth','ov-auth'],['x-msgs','ov-msgs'],['x-dashboard','ov-dashboard'],['x-resas','ov-resas'],['x-pay','ov-pay'],['x-profile','ov-profile'],['x-admin','ov-admin'],['x-review','ov-review'],['x-legal','ov-legal']].forEach(([x,ov]) => {
     document.getElementById(x).addEventListener('click', () => closeOverlay(ov));
     document.getElementById(ov).addEventListener('click', function(e) { if(e.target===this) closeOverlay(ov); });
@@ -6178,12 +6241,18 @@ document.addEventListener('DOMContentLoaded', function() {
   document.getElementById('lb-prev').addEventListener('click',    () => { lbIdx--; renderLightbox(); });
   document.getElementById('lb-next').addEventListener('click',    () => { lbIdx++; renderLightbox(); });
   document.getElementById('lightbox').addEventListener('click', e => { if (e.target.id === 'lightbox') closeLightbox(); });
-  // Lightbox keyboard
+  // Keyboard global : lightbox + fermeture overlay par Escape
   document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') {
+      if (document.getElementById('lightbox').classList.contains('open')) { closeLightbox(); return; }
+      // Fermer le dernier overlay ouvert
+      const opens = [...document.querySelectorAll('.overlay.open')];
+      if (opens.length) closeOverlay(opens[opens.length - 1].id);
+      return;
+    }
     if (!document.getElementById('lightbox').classList.contains('open')) return;
     if (e.key === 'ArrowLeft')  { lbIdx--; renderLightbox(); }
     if (e.key === 'ArrowRight') { lbIdx++; renderLightbox(); }
-    if (e.key === 'Escape') closeLightbox();
   });
   // Lightbox touch swipe
   document.getElementById('lb-main').addEventListener('touchstart', e => { lbTouchX = e.touches[0].clientX; }, { passive: true });
