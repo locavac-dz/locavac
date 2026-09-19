@@ -1072,6 +1072,16 @@ footer{background:var(--g100);border-top:1px solid var(--g200);padding:48px 24px
         <option value="5">5+</option>
       </select>
     </div>
+    <div class="qf-group">
+      <label>Trier par</label>
+      <select id="f-sort">
+        <option value="">Recommandés</option>
+        <option value="price-asc">Prix ↑</option>
+        <option value="price-desc">Prix ↓</option>
+        <option value="rating">Mieux notés</option>
+        <option value="newest">Plus récents</option>
+      </select>
+    </div>
     <button class="btn-clear-qf" id="btn-clear-qf" style="display:none">✕ Filtres</button>
   </div>
   <div class="amenity-filter-bar" id="amenity-filter-bar">
@@ -1100,7 +1110,10 @@ footer{background:var(--g100);border-top:1px solid var(--g200);padding:48px 24px
 
   <hr class="section-divider"/>
   <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:8px">
-    <h2 class="sec-title" id="sec-title" style="margin-bottom:0" data-i18n="main.popular">Logements populaires</h2>
+    <div style="display:flex;align-items:baseline;gap:10px">
+      <h2 class="sec-title" id="sec-title" style="margin-bottom:0" data-i18n="main.popular">Logements populaires</h2>
+      <span id="result-count" style="font-size:13px;font-weight:600;color:var(--g400)"></span>
+    </div>
     <button id="view-toggle-btn" style="display:inline-flex;align-items:center;gap:6px;border:1.5px solid var(--border);border-radius:24px;padding:8px 18px;font-size:13px;font-weight:600;background:var(--surface);color:var(--text);cursor:pointer;transition:all .2s;white-space:nowrap">🗺 Vue carte</button>
   </div>
   <div class="grid" id="grid"></div>
@@ -1376,6 +1389,7 @@ footer{background:var(--g100);border-top:1px solid var(--g200);padding:48px 24px
       <div class="share-bar">
         <button class="share-btn whatsapp" id="share-wa">📱 WhatsApp</button>
         <button class="share-btn" id="share-copy">🔗 Copier le lien</button>
+        <button class="share-btn" id="share-native" style="display:none">📤 Partager</button>
       </div>
 
       <div class="tabs">
@@ -1393,6 +1407,10 @@ footer{background:var(--g100);border-top:1px solid var(--g200);padding:48px 24px
         </div>
         <div style="margin-top:10px;text-align:center">
           <button onclick="toggleSignaler()" style="background:none;border:none;color:var(--g400);font-size:12px;cursor:pointer;text-decoration:underline;padding:4px">⚑ Signaler cette annonce</button>
+        </div>
+        <div id="similar-listings" style="display:none;margin-top:24px;padding-top:20px;border-top:1px solid var(--g100)">
+          <h3 style="font-size:14px;font-weight:700;margin-bottom:12px;color:var(--g700)">Logements similaires</h3>
+          <div id="similar-listings-grid" style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px"></div>
         </div>
         <div id="signaler-form" style="display:none;margin-top:10px;background:var(--g50);border-radius:10px;padding:14px;border:1px solid var(--g200)">
           <p style="font-size:13px;font-weight:600;margin-bottom:10px;color:var(--g700)">Signaler un problème</p>
@@ -3060,6 +3078,9 @@ function initPriceSlider() {
   const sel = document.getElementById('f-price');
   if (!sel) return;
   sel.addEventListener('change', () => loadListings(currentCat || 'all'));
+  // Tri : re-render sans re-fetcher
+  const sortSel = document.getElementById('f-sort');
+  if (sortSel) sortSel.addEventListener('change', () => { listingsPage = 1; renderListingsPage(); });
 }
 
 // ── NEWSLETTER ────────────────────────────────────────────
@@ -3094,7 +3115,17 @@ let allFilteredListings = [];
 
 function renderListingsPage() {
   const grid = document.getElementById('grid');
-  const visible = allFilteredListings.slice(0, listingsPage * PAGE_SIZE);
+  // Tri côté client
+  const sortVal = document.getElementById('f-sort')?.value || '';
+  let sortedList = [...allFilteredListings];
+  if (sortVal === 'price-asc')  sortedList.sort((a, b) => a.price - b.price);
+  else if (sortVal === 'price-desc') sortedList.sort((a, b) => b.price - a.price);
+  else if (sortVal === 'rating') sortedList.sort((a, b) => (b.rating || 0) - (a.rating || 0));
+  else if (sortVal === 'newest') sortedList.sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
+  // Compteur de résultats
+  const countEl = document.getElementById('result-count');
+  if (countEl) countEl.textContent = sortedList.length ? sortedList.length + ' logement' + (sortedList.length > 1 ? 's' : '') : '';
+  const visible = sortedList.slice(0, listingsPage * PAGE_SIZE);
   const nights = (() => {
     const ci = document.getElementById('f-in')?.value, co = document.getElementById('f-out')?.value;
     return (ci && co) ? Math.round((new Date(co) - new Date(ci)) / 86400000) : 0;
@@ -3284,14 +3315,47 @@ async function openListing(id) {
   // Share buttons
   const listingUrl = `${location.origin}/?listing=${id}`;
   const waMsg = encodeURIComponent(`🏠 ${l.title}\n📍 ${l.location}\n💰 ${Number(l.price).toLocaleString('fr-DZ')} DZD / nuit\n${listingUrl}`);
-  document.getElementById('share-wa').onclick = () => window.open(`https://wa.me/?text=${waMsg}`, '_blank');
-  document.getElementById('share-copy').onclick = () => {
-    navigator.clipboard.writeText(listingUrl).then(() => {
-      const btn = document.getElementById('share-copy');
-      btn.textContent = '✅ Copié !';
-      setTimeout(() => { btn.textContent = '🔗 Copier le lien'; }, 2000);
-    });
-  };
+  if (navigator.share) {
+    document.getElementById('share-wa').style.display    = 'none';
+    document.getElementById('share-copy').style.display  = 'none';
+    document.getElementById('share-native').style.display = '';
+    document.getElementById('share-native').onclick = () =>
+      navigator.share({ title: l.title, text: `📍 ${l.location} · ${Number(l.price).toLocaleString('fr-DZ')} DZD / nuit`, url: listingUrl }).catch(() => {});
+  } else {
+    document.getElementById('share-wa').style.display    = '';
+    document.getElementById('share-copy').style.display  = '';
+    document.getElementById('share-native').style.display = 'none';
+    document.getElementById('share-wa').onclick = () => window.open(`https://wa.me/?text=${waMsg}`, '_blank');
+    document.getElementById('share-copy').onclick = () => {
+      navigator.clipboard.writeText(listingUrl).then(() => {
+        const btn = document.getElementById('share-copy');
+        btn.textContent = '✅ Copié !';
+        setTimeout(() => { btn.textContent = '🔗 Copier le lien'; }, 2000);
+      });
+    };
+  }
+
+  // Logements similaires
+  const simWrap = document.getElementById('similar-listings');
+  const simGrid = document.getElementById('similar-listings-grid');
+  if (simGrid) {
+    const sims = allListings
+      .filter(x => x.id !== id && (x.category === l.category || x.wilaya === l.wilaya))
+      .slice(0, 3);
+    if (sims.length) {
+      simGrid.innerHTML = sims.map(s => `
+        <div onclick="openListing(${s.id})" style="cursor:pointer;border-radius:10px;overflow:hidden;border:1.5px solid var(--border);background:var(--surface);transition:box-shadow .2s" onmouseenter="this.style.boxShadow='var(--sh)'" onmouseleave="this.style.boxShadow='none'">
+          <img src="${(s.photos && s.photos[0]) || s.image || ''}" alt="${s.title}" style="width:100%;height:90px;object-fit:cover;display:block" onerror="this.style.display='none'"/>
+          <div style="padding:7px 8px">
+            <div style="font-size:12px;font-weight:700;line-height:1.3;margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${s.title}</div>
+            <div style="font-size:11px;color:var(--g500)">${Number(s.price).toLocaleString('fr-DZ')} DZD/nuit</div>
+          </div>
+        </div>`).join('');
+      simWrap.style.display = 'block';
+    } else {
+      simWrap.style.display = 'none';
+    }
+  }
 
   // Reset tabs
   showListingTab('details');
