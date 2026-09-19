@@ -801,6 +801,9 @@ footer{background:var(--g100);border-top:1px solid var(--g200);padding:48px 24px
 .skel-line{height:14px;border-radius:6px;margin-bottom:10px}
 .skel-title{height:26px;width:65%;border-radius:6px;margin-bottom:10px}
 .skel-block{height:190px;border-radius:10px;margin-bottom:16px}
+/* Bouton copier */
+.copy-btn{background:none;border:1.5px solid var(--g200);border-radius:6px;cursor:pointer;font-size:12px;padding:2px 7px;color:var(--g600);transition:background .15s,color .15s;line-height:1.4;flex-shrink:0}
+.copy-btn:hover{background:var(--g100);color:var(--g800)}
 .photo-preview-item{position:relative;aspect-ratio:1;border-radius:8px;overflow:hidden;background:var(--g100)}
 .photo-preview-item img{width:100%;height:100%;object-fit:cover;display:block}
 .photo-preview-item .rm-photo{position:absolute;top:3px;right:3px;background:rgba(0,0,0,.65);border:none;color:#fff;width:20px;height:20px;border-radius:50%;cursor:pointer;font-size:12px;line-height:20px;text-align:center;padding:0}
@@ -1154,6 +1157,16 @@ footer{background:var(--g100);border-top:1px solid var(--g200);padding:48px 24px
         <option value="price-desc">Prix ↓</option>
         <option value="rating">Mieux notés</option>
         <option value="newest">Plus récents</option>
+      </select>
+    </div>
+    <div class="qf-group">
+      <label>Note minimum</label>
+      <select id="f-rating">
+        <option value="">Toutes</option>
+        <option value="3">3⭐ et +</option>
+        <option value="4">4⭐ et +</option>
+        <option value="4.5">4,5⭐ et +</option>
+        <option value="5">5⭐ seul.</option>
       </select>
     </div>
     <button class="btn-clear-qf" id="btn-clear-qf" style="display:none">✕ Filtres</button>
@@ -1891,8 +1904,8 @@ footer{background:var(--g100);border-top:1px solid var(--g200);padding:48px 24px
         <div style="background:var(--g50);border-radius:12px;padding:16px;margin-bottom:16px">
           <p style="font-size:13px;font-weight:700;margin:0 0 12px;color:var(--g800)">Effectuez un virement au compte suivant :</p>
           <div class="detail-row" style="padding:7px 0"><span class="lbl">Banque</span><span class="val">CPA — Crédit Populaire d'Algérie</span></div>
-          <div class="detail-row" style="padding:7px 0"><span class="lbl">RIB</span><span class="val" style="font-family:monospace;font-size:13px">002 00012 0000040031 97</span></div>
-          <div class="detail-row" style="padding:7px 0"><span class="lbl">CCP</span><span class="val" style="font-family:monospace;font-size:13px">1234567 — Clé 89</span></div>
+          <div class="detail-row" style="padding:7px 0"><span class="lbl">RIB</span><span style="display:flex;align-items:center;gap:8px"><span style="font-family:monospace;font-size:13px;font-weight:600">002 00012 0000040031 97</span><button class="copy-btn" onclick="copyText('002 00012 0000040031 97',this)">📋</button></span></div>
+          <div class="detail-row" style="padding:7px 0"><span class="lbl">CCP</span><span style="display:flex;align-items:center;gap:8px"><span style="font-family:monospace;font-size:13px;font-weight:600">1234567 — Clé 89</span><button class="copy-btn" onclick="copyText('1234567 — Clé 89',this)">📋</button></span></div>
           <div class="detail-row" style="padding:7px 0"><span class="lbl">Bénéficiaire</span><span class="val">Locavac SAS</span></div>
           <div class="detail-row" style="padding:7px 0"><span class="lbl">Montant</span><span class="val" id="pay-vir-amount" style="font-weight:700;color:var(--primary)"></span></div>
           <div class="detail-row" style="padding:7px 0;border:none"><span class="lbl">Référence</span><span class="val" id="pay-vir-ref" style="font-family:monospace;font-size:12px;color:var(--g700)"></span></div>
@@ -1939,6 +1952,24 @@ footer{background:var(--g100);border-top:1px solid var(--g200);padding:48px 24px
       <textarea id="rv-comment" rows="4" placeholder="Partagez votre expérience…" style="width:100%;padding:10px;border:1.5px solid var(--g200);border-radius:10px;font-size:14px;resize:vertical;box-sizing:border-box"></textarea>
     </div>
     <button class="btn-primary" style="width:100%" onclick="submitReview()">Publier l'avis</button>
+  </div>
+</div>
+
+<!-- MODAL CONFIRMATION ANNULATION -->
+<div class="overlay" id="ov-cancel">
+  <div class="modal" style="max-width:420px">
+    <button class="modal-x" id="x-cancel">✕</button>
+    <div class="mp">
+      <div style="text-align:center;margin-bottom:20px">
+        <div style="font-size:44px;margin-bottom:8px">⚠️</div>
+        <h2>Annuler la réservation ?</h2>
+        <p id="cancel-listing-name" style="color:var(--g600);font-size:13px;margin-top:4px"></p>
+      </div>
+      <div id="cancel-details" style="background:var(--g50);border-radius:12px;padding:14px;margin-bottom:16px"></div>
+      <div id="cancel-refund-info" style="border-radius:10px;padding:12px;margin-bottom:20px;font-size:13px"></div>
+      <button class="btn-submit" id="cancel-confirm-btn" style="background:var(--red)">✕ Confirmer l'annulation</button>
+      <button id="cancel-keep-btn" style="display:block;width:100%;margin-top:10px;padding:10px;background:none;border:1.5px solid var(--g200);border-radius:10px;color:var(--g700);cursor:pointer;font-size:14px">← Garder ma réservation</button>
+    </div>
   </div>
 </div>
 
@@ -3233,6 +3264,8 @@ function renderActiveFilters() {
   if (fGuests) chips.push({ label: fGuests + ' voyageur' + (fGuests > 1 ? 's' : ''), clear: () => { document.getElementById('f-guests').value = ''; loadListings(currentCat); } });
   if (fBeds)   chips.push({ label: fBeds + ' chambre' + (fBeds > 1 ? 's' : ''), clear: () => { document.getElementById('f-beds').value = ''; loadListings(currentCat); } });
   if (fIn && fOut) chips.push({ label: fmtDate(fIn) + ' → ' + fmtDate(fOut), clear: () => { document.getElementById('f-in').value = ''; document.getElementById('f-out').value = ''; loadListings(currentCat); } });
+  const fRating = document.getElementById('f-rating')?.value;
+  if (fRating) chips.push({ label: fRating + '⭐ min', clear: () => { document.getElementById('f-rating').value = ''; loadListings(currentCat); } });
   if (!chips.length) { wrap.innerHTML = ''; return; }
   wrap.innerHTML = chips.map((c, i) =>
     `<span class="af-chip">${c.label}<button data-ci="${i}">✕</button></span>`
@@ -3543,9 +3576,13 @@ async function loadListings(cat) {
   if (fSort2)    fp.set('s',  fSort2);
   if (cat && cat !== 'all') fp.set('cat', cat);
   history.replaceState({}, '', fp.toString() ? '?' + fp.toString() : '/');
-  renderGrid(allListings, checkIn, checkOut);
-  updateMapMarkers(allListings);
-  updateDateSummary(checkIn, checkOut, allListings.length);
+  // Filtre note minimum côté client (non supporté par l'API)
+  const fRating = parseFloat(document.getElementById('f-rating')?.value || '') || 0;
+  const displayListings = fRating ? allListings.filter(l => (l.rating || 0) >= fRating) : allListings;
+  if (fRating)    fp.set('r', String(fRating));
+  renderGrid(displayListings, checkIn, checkOut);
+  updateMapMarkers(displayListings);
+  updateDateSummary(checkIn, checkOut, displayListings.length);
   renderActiveFilters();
 }
 
@@ -3845,7 +3882,7 @@ async function openResas() {
           ${countdown}
           ${r.can_review ? `<button class="btn-sm" style="margin-top:6px;background:var(--accent);color:#fff;border:none;padding:5px 12px;border-radius:8px;cursor:pointer" onclick="openReviewModal(${r.listing_id})">⭐ Laisser un avis</button>` : ''}
           ${r.status==='pending' ? `<button class="btn-sm" style="margin-top:6px;background:var(--red);color:#fff;border:none;padding:5px 12px;border-radius:8px;cursor:pointer;font-weight:600" onclick="openPayment(${r.id},${r.total_price})">💳 Payer maintenant</button>` : ''}
-          ${canCancel ? `<button class="btn-sm" style="margin-top:6px;background:#fff;border:1.5px solid var(--g300);color:var(--g700);padding:5px 12px;border-radius:8px;cursor:pointer" onclick="cancelResa(${r.id},${r.total_price},'${r.check_in}','${policy}')">✕ Annuler</button>` : ''}
+          ${canCancel ? `<button class="btn-sm" style="margin-top:6px;background:#fff;border:1.5px solid var(--g300);color:var(--g700);padding:5px 12px;border-radius:8px;cursor:pointer" onclick="cancelResa(${r.id},${r.total_price},'${r.check_in}','${policy}',${JSON.stringify(r.title||'').replace(/</g,'&lt;')})">✕ Annuler</button>` : ''}
           <button class="btn-sm" style="margin-top:6px;background:var(--g100);color:var(--g800);border:none;padding:5px 12px;border-radius:8px;cursor:pointer" onclick='printResa(${JSON.stringify(r).replace(/'/g,"&#39;")})'>📄 PDF</button>
         </div>
         <span class="resa-status-badge ${r.status}">${r.status==='pending'?'En attente':r.status==='confirmed'?'Confirmée ✅':'Annulée'}</span>
@@ -3854,18 +3891,39 @@ async function openResas() {
   } catch(e) { list.innerHTML='<p style="color:var(--red);text-align:center;padding:24px">'+e.message+'</p>'; }
 }
 
-async function cancelResa(id, totalPrice, checkIn, policy) {
+let _cancelResaId = null;
+function cancelResa(id, totalPrice, checkIn, policy, title) {
+  _cancelResaId = id;
   const daysUntil = Math.ceil((new Date(checkIn) - new Date()) / 86400000);
-  let refundLabel;
-  if (policy === 'flexible')     refundLabel = daysUntil >= 1 ? '100 % remboursé' : 'Aucun remboursement';
-  else if (policy === 'moderee') refundLabel = daysUntil >= 5 ? '100 % remboursé' : daysUntil >= 2 ? '50 % remboursé' : 'Aucun remboursement';
-  else /* stricte */             refundLabel = daysUntil > 7  ? '50 % remboursé'  : 'Aucun remboursement';
-  if (!confirm(`Annuler cette réservation ?\n\nPolitique d'annulation : ${refundLabel}\nTotal payé : ${Number(totalPrice).toLocaleString('fr-DZ')} DZD`)) return;
-  try {
-    await apiFetch(`/reservations/${id}/status`, { method:'PATCH', body: JSON.stringify({ status:'cancelled' }) });
-    toast(`Réservation annulée — ${refundLabel}`, 'success', { label: 'Mes réservations', fn: openResas });
-    closeOverlay('ov-resas');
-  } catch(e) { toast(e.message || 'Erreur lors de l\'annulation'); }
+  let refundPct;
+  if (policy === 'flexible')     refundPct = daysUntil >= 1 ? 100 : 0;
+  else if (policy === 'moderee') refundPct = daysUntil >= 5 ? 100 : daysUntil >= 2 ? 50 : 0;
+  else /* stricte */             refundPct = daysUntil >= 7 ? 50 : 0;
+  const refundAmt = Math.round(Number(totalPrice) * refundPct / 100);
+  const policyLabel = policy === 'flexible' ? '🟢 Flexible' : policy === 'moderee' ? '🟡 Modérée' : '🔴 Stricte';
+  let rLabel, rColor, rBg;
+  if (refundPct === 100)     { rLabel = '✅ Remboursement intégral'; rColor = '#0a7c47'; rBg = '#f0fdf4'; }
+  else if (refundPct > 0)   { rLabel = `⚡ Remboursement partiel (${refundPct}%)`; rColor = '#92400e'; rBg = '#fffbeb'; }
+  else                      { rLabel = '❌ Aucun remboursement'; rColor = '#b91c1c'; rBg = '#fee2e2'; }
+  document.getElementById('cancel-listing-name').textContent = title || 'Votre réservation';
+  document.getElementById('cancel-details').innerHTML = `
+    <div class="detail-row" style="padding:7px 0"><span class="lbl">Arrivée</span><span class="val">${checkIn}</span></div>
+    <div class="detail-row" style="padding:7px 0"><span class="lbl">Total payé</span><span class="val">${Number(totalPrice).toLocaleString('fr-DZ')} DZD</span></div>
+    <div class="detail-row" style="padding:7px 0;border:none"><span class="lbl">Politique</span><span class="val">${policyLabel}</span></div>`;
+  const rInfoEl = document.getElementById('cancel-refund-info');
+  rInfoEl.innerHTML = `<div style="font-weight:700;color:${rColor};margin-bottom:4px">${rLabel}</div><div>Montant remboursé : <strong>${refundAmt.toLocaleString('fr-DZ')} DZD</strong></div>`;
+  rInfoEl.style.cssText = `background:${rBg};border:1.5px solid ${rColor}33;border-radius:10px;padding:12px;margin-bottom:20px;font-size:13px`;
+  const btn = document.getElementById('cancel-confirm-btn');
+  btn.disabled = false; btn.textContent = '✕ Confirmer l\'annulation';
+  openOverlay('ov-cancel');
+}
+
+function copyText(text, btn) {
+  navigator.clipboard.writeText(text).then(() => {
+    const orig = btn.textContent;
+    btn.textContent = '✅';
+    setTimeout(() => { btn.textContent = orig; }, 2000);
+  }).catch(() => toast('Impossible de copier.', 'error'));
 }
 
 // ── PAGES LÉGALES ────────────────────────────────────────
@@ -5092,7 +5150,7 @@ async function loadMyListings() {
         <img src="${(l.photos&&l.photos[0])||l.image||''}" alt="" onerror="this.style.display='none'"/>
         <div class="annonce-info">
           <div class="annonce-title">${l.title}</div>
-          <div class="annonce-meta">${l.location} · ${Number(l.price).toLocaleString('fr-DZ')} DZD/nuit · ⭐${l.rating||'—'} (${l.reviews||0})</div>
+          <div class="annonce-meta">${l.location} · ${Number(l.price).toLocaleString('fr-DZ')} DZD/nuit · ⭐${l.rating||'—'} (${l.reviews||0})${(l.views||0)>0?' · 👁 '+l.views+' vue'+(l.views>1?'s':''):''}</div>
         </div>
         <div class="annonce-actions">
           <button class="btn-sm" data-action="edit" data-id="${l.id}">✏️ Éditer</button>
@@ -6002,6 +6060,24 @@ document.addEventListener('DOMContentLoaded', function() {
   });
 
   // Fermer overlays
+  // Modal d'annulation enrichi
+  document.getElementById('cancel-confirm-btn').addEventListener('click', async () => {
+    if (!_cancelResaId) return;
+    const btn = document.getElementById('cancel-confirm-btn');
+    btn.disabled = true; btn.textContent = 'Annulation…';
+    try {
+      await apiFetch(`/reservations/${_cancelResaId}/status`, { method:'PATCH', body: JSON.stringify({ status:'cancelled' }) });
+      closeOverlay('ov-cancel'); closeOverlay('ov-resas');
+      toast('Réservation annulée.', 'success', { label: 'Mes réservations', fn: openResas });
+      _cancelResaId = null;
+    } catch(e) {
+      toast(e.message || 'Erreur lors de l\'annulation', 'error');
+      btn.disabled = false; btn.textContent = '✕ Confirmer l\'annulation';
+    }
+  });
+  document.getElementById('cancel-keep-btn').addEventListener('click', () => closeOverlay('ov-cancel'));
+  document.getElementById('x-cancel').addEventListener('click', () => closeOverlay('ov-cancel'));
+
   [['x-listing','ov-listing'],['x-auth','ov-auth'],['x-msgs','ov-msgs'],['x-dashboard','ov-dashboard'],['x-resas','ov-resas'],['x-pay','ov-pay'],['x-profile','ov-profile'],['x-admin','ov-admin'],['x-review','ov-review'],['x-legal','ov-legal']].forEach(([x,ov]) => {
     document.getElementById(x).addEventListener('click', () => closeOverlay(ov));
     document.getElementById(ov).addEventListener('click', function(e) { if(e.target===this) closeOverlay(ov); });
@@ -6114,7 +6190,7 @@ document.addEventListener('DOMContentLoaded', function() {
   initAmenityUI();
 
   // Filtres rapides (wilaya, prix, voyageurs, chambres)
-  const QF_IDS = ['f-wilaya','f-price','f-guests','f-beds'];
+  const QF_IDS = ['f-wilaya','f-price','f-guests','f-beds','f-rating'];
   function qfChanged() {
     const hasVal = QF_IDS.some(id => { const el = document.getElementById(id); return el && el.value; });
     const btn = document.getElementById('btn-clear-qf');
@@ -6263,6 +6339,7 @@ document.addEventListener('DOMContentLoaded', function() {
   if (urlP.get('g'))  { const sel = document.getElementById('f-guests'); if (sel) sel.value = urlP.get('g'); }
   if (urlP.get('b'))  { const sel = document.getElementById('f-beds');   if (sel) sel.value = urlP.get('b'); }
   if (urlP.get('s'))  { const sel = document.getElementById('f-sort');   if (sel) sel.value = urlP.get('s'); }
+  if (urlP.get('r'))  { const sel = document.getElementById('f-rating'); if (sel) sel.value = urlP.get('r'); }
 
   // Scroll to top
   const scrollTopBtn = document.getElementById('scroll-top');

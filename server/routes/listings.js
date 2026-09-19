@@ -62,6 +62,8 @@ router.get('/', async (req, res) => {
 router.get('/:id', async (req, res) => {
   const listing = await db.listings.findOne(l => l.id === Number(req.params.id));
   if (!listing) return res.status(404).json({ error: 'Annonce introuvable.' });
+  // Incrémenter le compteur de vues de façon asynchrone
+  db.listings.update(l => l.id === listing.id, { views: (listing.views || 0) + 1 }).catch(() => {});
   const revList = await db.reviews.find(r => r.listing_id === listing.id);
   const reviews = (await Promise.all(
     revList
