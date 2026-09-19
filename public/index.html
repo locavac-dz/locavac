@@ -459,6 +459,15 @@ footer{background:var(--g100);border-top:1px solid var(--g200);padding:48px 24px
 .msg-bubble.mine{background:var(--red);color:#fff;margin-left:auto;border-radius:16px 16px 4px 16px}
 .msg-bubble.theirs{background:var(--g100);color:var(--g800);border-radius:16px 16px 16px 4px}
 .msg-time{font-size:10px;opacity:.6;margin-top:3px;text-align:right}
+/* ── MIC BUTTON ── */
+.mic-btn-wrap{position:relative}
+#mic-btn{position:absolute;right:8px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;font-size:17px;color:var(--g400);padding:4px;border-radius:50%;transition:color .15s,background .15s;z-index:1;line-height:1}
+#mic-btn:hover{color:var(--red)}
+#mic-btn.listening{color:var(--red);animation:mic-pulse .8s infinite}
+@keyframes mic-pulse{0%,100%{opacity:1}50%{opacity:.35}}
+/* ── SÉPARATEURS DATE MESSAGES ── */
+.msg-date-sep{text-align:center;font-size:11px;color:var(--g400);padding:8px 0;display:flex;align-items:center;gap:8px}
+.msg-date-sep::before,.msg-date-sep::after{content:'';flex:1;height:1px;background:var(--g200)}
 /* ── TYPING INDICATOR ── */
 .typing-indicator{padding:6px 16px;display:none;align-items:center;gap:6px;font-size:12px;color:var(--g400)}
 .typing-indicator.show{display:flex}
@@ -994,7 +1003,7 @@ footer{background:var(--g100);border-top:1px solid var(--g200);padding:48px 24px
           <a id="m-profile" data-i18n="nav.profile">👤 Mon profil</a>
           <a id="m-resas" data-i18n="nav.resas">Mes réservations</a>
           <a id="m-msgs">Messages <span class="badge-count" id="msg-badge" style="display:none">0</span></a>
-          <a id="m-dashboard" data-i18n="nav.dashboard">Espace hôte</a>
+          <a id="m-dashboard" data-i18n="nav.dashboard">Espace hôte <span class="badge-count" id="pending-resas-badge" style="display:none">0</span></a>
           <a id="m-admin" style="display:none;color:var(--red)" data-i18n="nav.admin">🛡️ Administration</a>
           <hr/>
           <a onclick="openEtablissements()" style="cursor:pointer">🌟 Les Incontournables</a>
@@ -1013,7 +1022,7 @@ footer{background:var(--g100);border-top:1px solid var(--g200);padding:48px 24px
     <h1 data-i18n-html="hero.title">Découvrez l'Algérie<br>comme jamais avant</h1>
     <p data-i18n="hero.sub">Des Aurès au Sahara, du Tell à la Méditerranée</p>
     <div class="hero-search">
-      <div class="field"><label data-i18n="search.dest">Destination</label><input type="text" id="hs-q" data-i18n-placeholder="search.dest_ph" autocomplete="off"/><div class="hs-autocomplete" id="hs-autocomplete" style="display:none"></div></div>
+      <div class="field mic-btn-wrap"><label data-i18n="search.dest">Destination</label><input type="text" id="hs-q" data-i18n-placeholder="search.dest_ph" autocomplete="off" style="padding-right:32px"/><button id="mic-btn" title="Recherche vocale">🎤</button><div class="hs-autocomplete" id="hs-autocomplete" style="display:none"></div></div>
       <div class="field"><label data-i18n="search.checkin">Arrivée</label><input type="date" id="hs-in"/></div>
       <div class="field"><label data-i18n="search.checkout">Départ</label><input type="date" id="hs-out"/></div>
       <div class="field"><label data-i18n="search.guests">Voyageurs</label>
@@ -2476,12 +2485,15 @@ function refreshAuthUI() {
     const adminLink = document.getElementById('m-admin');
   if (adminLink) adminLink.style.display = currentUser.is_admin ? 'block' : 'none';
     checkUnread();
+    checkPendingResas();
   } else {
     av.textContent = '👤';
     av.style.background = '';
     out.style.display = 'block';
     inn.style.display = 'none';
     document.getElementById('notif-dot').style.display = 'none';
+    const pb = document.getElementById('pending-resas-badge');
+    if (pb) pb.style.display = 'none';
   }
 }
 let _lastUnreadCount = 0;
@@ -3169,6 +3181,40 @@ function renderActiveFilters() {
   wrap.querySelectorAll('.af-chip button').forEach(btn => {
     btn.addEventListener('click', e => { e.stopPropagation(); chips[Number(btn.dataset.ci)].clear(); });
   });
+}
+
+// ── RECHERCHE VOCALE ──────────────────────────────────────
+function initVoiceSearch() {
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  const micBtn = document.getElementById('mic-btn');
+  if (!SR || !micBtn) { if (micBtn) micBtn.style.display = 'none'; return; }
+  const rec = new SR();
+  rec.lang = 'fr-FR'; rec.continuous = false; rec.interimResults = false;
+  rec.onresult = e => {
+    const txt = e.results[0][0].transcript;
+    const input = document.getElementById('hs-q');
+    input.value = txt;
+    input.dispatchEvent(new Event('input'));
+    micBtn.classList.remove('listening');
+  };
+  rec.onerror = () => micBtn.classList.remove('listening');
+  rec.onend   = () => micBtn.classList.remove('listening');
+  micBtn.addEventListener('click', () => {
+    if (micBtn.classList.contains('listening')) { rec.stop(); return; }
+    micBtn.classList.add('listening');
+    try { rec.start(); } catch(e) { micBtn.classList.remove('listening'); }
+  });
+}
+
+// ── BADGE RÉSERVATIONS EN ATTENTE ─────────────────────────
+async function checkPendingResas() {
+  if (!currentUser) return;
+  try {
+    const data = await apiFetch('/reservations/hosting');
+    const pending = data.filter(r => r.status === 'pending').length;
+    const badge = document.getElementById('pending-resas-badge');
+    if (badge) { badge.textContent = pending; badge.style.display = pending > 0 ? 'inline-block' : 'none'; }
+  } catch {}
 }
 
 // ── ALERTES DE RECHERCHE ──────────────────────────────────
@@ -4863,9 +4909,22 @@ async function openThread(lid, oid, oname) {
     const box  = document.getElementById('thread-msgs');
     if (!msgs.length) { box.innerHTML='<p style="color:var(--g400);text-align:center;padding:16px">Commencez la conversation !</p>'; }
     else {
+      let lastDay = null;
+      const now = new Date();
+      const today = now.toDateString();
+      const yest  = new Date(now - 86400000).toDateString();
       box.innerHTML = msgs.map(m => {
         const mine = m.from_id === currentUser.id;
-        return `<div class="msg-bubble ${mine?'mine':'theirs'}">${m.body}<div class="msg-time">${m.created_at.slice(11,16)}</div></div>`;
+        const dayKey = m.created_at ? m.created_at.slice(0,10) : null;
+        let sep = '';
+        if (dayKey && dayKey !== lastDay) {
+          const d = new Date(m.created_at);
+          const label = d.toDateString() === today ? 'Aujourd\'hui' : d.toDateString() === yest ? 'Hier'
+            : d.toLocaleDateString('fr-DZ', { weekday:'long', day:'numeric', month:'long' });
+          sep = `<div class="msg-date-sep">${label}</div>`;
+          lastDay = dayKey;
+        }
+        return sep + `<div class="msg-bubble ${mine?'mine':'theirs'}">${m.body}<div class="msg-time">${m.created_at ? m.created_at.slice(11,16) : ''}</div></div>`;
       }).join('');
       box.scrollTop = box.scrollHeight;
     }
@@ -4960,11 +5019,13 @@ async function loadMyListings() {
           <div class="annonce-meta">${l.location} · ${Number(l.price).toLocaleString('fr-DZ')} DZD/nuit · ⭐${l.rating||'—'} (${l.reviews||0})</div>
         </div>
         <div class="annonce-actions">
+          <button class="btn-sm" data-action="edit" data-id="${l.id}">✏️ Éditer</button>
           <button class="btn-sm" data-action="cal" data-id="${l.id}">📅 Calendrier</button>
           <button class="btn-sm" data-action="toggle" data-id="${l.id}" data-avail="${!l.available}">${l.available?'⏸ Désactiver':'▶ Activer'}</button>
           <button class="btn-sm danger" data-action="delete" data-id="${l.id}">🗑</button>
         </div>
       </div>`).join('');
+    el.querySelectorAll('[data-action="edit"]').forEach(btn => btn.addEventListener('click', () => editListing(Number(btn.dataset.id))));
     el.querySelectorAll('[data-action="cal"]').forEach(btn => btn.addEventListener('click', () => {
       const cal = document.getElementById('cal-container');
       const isOpen = cal.style.display !== 'none' && calListingId === Number(btn.dataset.id);
@@ -5006,6 +5067,45 @@ async function loadMyHostResas() {
 async function updateResaStatus(id, status) {
   try { await apiFetch('/reservations/'+id+'/status', { method:'PATCH', body: JSON.stringify({ status }) }); toast('Statut mis à jour.'); loadMyHostResas(); } catch(e) { toast(e.message); }
 }
+let editingListingId = null;
+function resetPublishForm() {
+  editingListingId = null;
+  ['h-title','h-loc','h-price','h-desc','h-lat','h-lng'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('h-wilaya').value = '';
+  document.getElementById('h-guests').value = '4';
+  document.getElementById('h-beds').value   = '2';
+  document.getElementById('h-baths').value  = '1';
+  document.getElementById('h-cancel').value = 'flexible';
+  document.querySelectorAll('#h-amenity-list input[type=checkbox]').forEach(cb => { cb.checked = false; cb.closest('.amenity-check-item').classList.remove('checked'); });
+  document.getElementById('h-btn').textContent = 'Publier l\'annonce';
+  resetUploadZone();
+}
+async function editListing(id) {
+  let l;
+  try { l = await apiFetch('/listings/' + id); } catch(e) { toast(e.message, 'error'); return; }
+  editingListingId = id;
+  document.getElementById('h-title').value   = l.title || '';
+  document.getElementById('h-wilaya').value  = l.wilaya || '';
+  document.getElementById('h-loc').value     = l.location || '';
+  document.getElementById('h-cat').value     = l.category || 'appartement';
+  document.getElementById('h-price').value   = l.price || '';
+  document.getElementById('h-guests').value  = l.guests || 4;
+  document.getElementById('h-beds').value    = l.beds || 1;
+  document.getElementById('h-baths').value   = l.baths || 1;
+  document.getElementById('h-lat').value     = l.lat || '';
+  document.getElementById('h-lng').value     = l.lng || '';
+  document.getElementById('h-desc').value    = l.description || '';
+  document.getElementById('h-cancel').value  = l.cancellation_policy || 'flexible';
+  document.querySelectorAll('#h-amenity-list input[type=checkbox]').forEach(cb => {
+    const on = Array.isArray(l.amenities) && l.amenities.includes(cb.value);
+    cb.checked = on;
+    cb.closest('.amenity-check-item').classList.toggle('checked', on);
+  });
+  uploadedPhotoUrls = Array.isArray(l.photos) ? [...l.photos] : (l.image ? [l.image] : []);
+  document.getElementById('h-btn').textContent = '💾 Enregistrer les modifications';
+  showHdTab('nouvelle');
+  toast('Annonce chargée — modifiez puis enregistrez.', 'info');
+}
 async function publishListing() {
   if (!currentUser) { openAuth('login'); return; }
   const errEl = document.getElementById('h-err'); errEl.classList.remove('show');
@@ -5029,21 +5129,20 @@ async function publishListing() {
     photos:               uploadedPhotoUrls,
   };
   const btn = document.getElementById('h-btn');
-  btn.disabled = true; btn.textContent = 'Publication…';
+  btn.disabled = true; btn.textContent = editingListingId ? 'Enregistrement…' : 'Publication…';
   try {
-    await apiFetch('/listings', { method:'POST', body: JSON.stringify(body) });
-    toast('Annonce publiée ! 🏠');
-    // Réinitialiser le formulaire
-    ['h-title','h-wilaya','h-loc','h-price','h-desc','h-lat','h-lng'].forEach(id => document.getElementById(id).value = '');
-    document.getElementById('h-guests').value = '4';
-    document.getElementById('h-beds').value   = '2';
-    document.getElementById('h-baths').value  = '1';
-    document.querySelectorAll('#h-amenity-list input[type=checkbox]').forEach(cb => { cb.checked = false; cb.closest('.amenity-check-item').classList.remove('checked'); });
-    resetUploadZone();
+    if (editingListingId) {
+      await apiFetch('/listings/' + editingListingId, { method:'PUT', body: JSON.stringify(body) });
+      toast('Annonce mise à jour ! 🏠');
+    } else {
+      await apiFetch('/listings', { method:'POST', body: JSON.stringify(body) });
+      toast('Annonce publiée ! 🏠');
+    }
+    resetPublishForm();
     closeOverlay('ov-dashboard');
     loadListings(currentCat);
   } catch(e) { errEl.textContent = e.message; errEl.classList.add('show'); }
-  finally { btn.disabled = false; btn.textContent = 'Publier l\'annonce'; }
+  finally { btn.disabled = false; btn.textContent = editingListingId ? '💾 Enregistrer les modifications' : 'Publier l\'annonce'; }
 }
 
 // ── CARTE LEAFLET ─────────────────────────────────────────
@@ -6002,6 +6101,8 @@ document.addEventListener('DOMContentLoaded', function() {
   renderRecentlyViewed();
   if (currentUser) connectWs();
   setInterval(checkUnread, 30000);
+  setInterval(checkPendingResas, 60000);
+  initVoiceSearch();
 
   // URL param handlers
   const urlP = new URLSearchParams(location.search);
