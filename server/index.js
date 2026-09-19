@@ -85,6 +85,16 @@ const uploadLimiter = rateLimit({
 });
 app.use('/api/upload', uploadLimiter);
 
+const messageLimiter = rateLimit({
+  windowMs: 60 * 1000, // 1 minute
+  max: 20, // 20 messages max par minute par IP
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Trop de messages envoyés. Réessayez dans une minute.' },
+  skip: () => process.env.NODE_ENV === 'test',
+});
+app.use('/api/messages', messageLimiter);
+
 app.use(express.json({ limit: '2mb' }));
 // Service Worker : no-cache obligatoire pour que le navigateur détecte les mises à jour
 app.get('/sw.js', (_, res) => {

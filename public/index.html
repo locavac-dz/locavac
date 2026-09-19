@@ -3917,6 +3917,9 @@ async function doReserve() {
   const errEl = document.getElementById('bk-err');
   errEl.classList.remove('show');
   if (!check_in || !check_out) { errEl.textContent='Choisissez vos dates.'; errEl.classList.add('show'); return; }
+  const today = new Date().toISOString().slice(0, 10);
+  if (check_in < today) { errEl.textContent="La date d'arrivée ne peut pas être dans le passé."; errEl.classList.add('show'); return; }
+  if (check_out <= check_in) { errEl.textContent="La date de départ doit être après la date d'arrivée."; errEl.classList.add('show'); return; }
   const btn = document.getElementById('bk-btn');
   btn.disabled = true; btn.textContent = 'Traitement…';
   try {

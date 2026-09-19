@@ -174,8 +174,11 @@ router.delete('/:id/photos', auth, async (req, res) => {
 // POST /api/listings/:id/reviews
 router.post('/:id/reviews', auth, async (req, res) => {
   const { rating, comment } = req.body;
-  if (!rating || rating < 1 || rating > 5)
-    return res.status(400).json({ error: 'Note entre 1 et 5 requise.' });
+  const numRating = Number(rating);
+  if (!Number.isInteger(numRating) || numRating < 1 || numRating > 5)
+    return res.status(400).json({ error: 'Note entre 1 et 5 requise (entier).' });
+  if (comment && comment.length > 1000)
+    return res.status(400).json({ error: 'Le commentaire ne peut pas dépasser 1000 caractères.' });
   const lid = Number(req.params.id);
   // Vérifier séjour confirmé et terminé
   const validStay = await db.reservations.findValidStay(lid, req.user.id);
@@ -185,7 +188,7 @@ router.post('/:id/reviews', auth, async (req, res) => {
   const existing = await db.reviews.findOne(lid, req.user.id);
   if (existing)
     return res.status(409).json({ error: 'Vous avez déjà laissé un avis pour ce séjour.' });
-  await db.reviews.create({ listing_id: lid, author_id: req.user.id, user_id: req.user.id, rating: Number(rating), comment: comment || '' });
+  await db.reviews.create({ listing_id: lid, author_id: req.user.id, user_id: req.user.id, rating: numRating, comment: (comment || '').trim() });
   // Recalcul automatique de la note moyenne via SQL
   await db.listings.updateRating(lid);
   res.status(201).json({ ok: true });

@@ -73,12 +73,27 @@ router.get('/me', require('../middleware/auth'), async (req, res) => {
 // PUT /api/auth/profile
 router.put('/profile', require('../middleware/auth'), async (req, res) => {
   const { name, phone, bio, avatar, languages } = req.body;
+  // Validation des champs modifiables
+  if (name !== undefined) {
+    const n = String(name).trim();
+    if (n.length < 2 || n.length > 100)
+      return res.status(400).json({ error: 'Le nom doit contenir entre 2 et 100 caractères.' });
+  }
+  if (phone !== undefined && phone !== null && phone !== '') {
+    const p = String(phone).trim();
+    if (p && !/^\+?[\d\s\-().]{6,20}$/.test(p))
+      return res.status(400).json({ error: 'Numéro de téléphone invalide.' });
+  }
+  if (bio !== undefined && String(bio).length > 500)
+    return res.status(400).json({ error: 'La biographie ne peut pas dépasser 500 caractères.' });
+  if (avatar !== undefined && String(avatar).length > 500)
+    return res.status(400).json({ error: 'L\'URL de l\'avatar est trop longue.' });
   const changes = {};
-  if (name      !== undefined) changes.name      = name.trim();
-  if (phone     !== undefined) changes.phone     = phone.trim() || null;
-  if (bio       !== undefined) changes.bio       = bio.trim();
-  if (avatar    !== undefined) changes.avatar    = avatar.trim();
-  if (Array.isArray(languages)) changes.languages = languages;
+  if (name      !== undefined) changes.name      = String(name).trim();
+  if (phone     !== undefined) changes.phone     = String(phone).trim() || null;
+  if (bio       !== undefined) changes.bio       = String(bio).trim();
+  if (avatar    !== undefined) changes.avatar    = String(avatar).trim();
+  if (Array.isArray(languages)) changes.languages = languages.slice(0, 10);
   if (!Object.keys(changes).length)
     return res.status(400).json({ error: 'Aucun champ à modifier.' });
   await db.users.updateById(req.user.id, changes);
