@@ -29,7 +29,6 @@ function isoWeek(d) {
 }
 
 function addAlert(level, category, message) {
-  // Dédoublonner les alertes non dismissées
   if (state.alerts.find(a => !a.dismissed && a.category === category && a.message === message)) return;
   const a = { id: _alertId++, level, category, message, ts: new Date().toISOString(), dismissed: false };
   state.alerts.unshift(a);
@@ -48,7 +47,6 @@ function doBackup() {
     fs.copyFileSync(DATA_FILE, dest);
     state.lastBackup = new Date().toISOString();
 
-    // Garder seulement les KEEP_DAYS derniers fichiers
     const files = fs.readdirSync(BACKUPS_DIR)
       .filter(f => /^dzstay_\d{4}-\d{2}-\d{2}\.json$/.test(f))
       .sort();
@@ -62,11 +60,12 @@ function doBackup() {
 
 // ── Analyse de sécurité ──────────────────────────────────────
 async function checkSecurity() {
-  const db = require('./db');
+  const db   = require('./db');
+  const pool = db.pool;
   state.checks++;
 
   // 1. Prix suspects
-  const listings = await db.listings.find(l => l.available);
+  const listings = await db.listings.search({});
   listings.forEach(l => {
     if (l.price <= 0)     addAlert('warning', `annonce#${l.id}`, `Prix nul/négatif sur "${l.title}" : ${l.price} DZD`);
     if (l.price > 500000) addAlert('warning', `annonce#${l.id}`, `Prix anormalement élevé sur "${l.title}" : ${Number(l.price).toLocaleString('fr-DZ')} DZD`);
@@ -74,19 +73,25 @@ async function checkSecurity() {
 
   // 2. Comptes récents (< 24h) avec >= 3 annonces = spam potentiel
   const oneDayAgo = new Date(Date.now() - 86400000).toISOString();
-  const recentUsers = await db.users.find(u => !u.is_admin && String(u.created_at) > oneDayAgo);
-  for (const u of recentUsers) {
-    const n = await db.listings.count(l => l.host_id === u.id);
-    if (n >= 3) addAlert('warning', `user#${u.id}`, `Nouveau compte "${u.name}" (${u.email}) a créé ${n} annonces en moins de 24h`);
-  }
+  const recentUsers = await pool.query(
+    `SELECT u.id, u.name, u.email,
+            (SELECT COUNT(*) FROM listings WHERE host_id = u.id) AS listing_count
+     FROM users u
+     WHERE NOT u.is_admin AND u.created_at > $1
+       AND (SELECT COUNT(*) FROM listings WHERE host_id = u.id) >= 3`,
+    [oneDayAgo]
+  );
+  recentUsers.rows.forEach(u => {
+    addAlert('warning', `user#${u.id}`, `Nouveau compte "${u.name}" (${u.email}) a créé ${u.listing_count} annonces en moins de 24h`);
+  });
 
   // 3. Annonces orphelines (hôte supprimé)
-  const allUsers   = await db.users.find();
-  const allListings = await db.listings.find();
-  const userIds = new Set(allUsers.map(u => u.id));
-  allListings.forEach(l => {
-    if (!userIds.has(l.host_id))
-      addAlert('error', `annonce#${l.id}`, `Annonce orpheline "${l.title}" — hôte #${l.host_id} introuvable`);
+  const orphaned = await pool.query(
+    `SELECT l.id, l.title, l.host_id FROM listings l
+     WHERE NOT EXISTS (SELECT 1 FROM users u WHERE u.id = l.host_id)`
+  );
+  orphaned.rows.forEach(l => {
+    addAlert('error', `annonce#${l.id}`, `Annonce orpheline "${l.title}" — hôte #${l.host_id} introuvable`);
   });
 
   state.lastCheck = new Date().toISOString();
@@ -94,19 +99,29 @@ async function checkSecurity() {
 
 // ── Rapport hebdomadaire ─────────────────────────────────────
 async function sendWeeklyReport() {
-  const db     = require('./db');
+  const db   = require('./db');
+  const pool = db.pool;
   const mailer = require('./mailer');
-  const admin  = await db.users.findOne(u => u.is_admin);
+
+  // Trouver le premier admin
+  const adminRow = await pool.query(`SELECT id, email FROM users WHERE is_admin = true LIMIT 1`);
+  const admin = adminRow.rows[0];
   if (!admin?.email) return;
 
-  const weekAgo    = new Date(Date.now() - 7*86400000).toISOString();
-  const users      = await db.users.find();
-  const listings   = await db.listings.find();
-  const resas      = await db.reservations.find();
-  const payments   = await db.payments.find(p => p.status === 'success');
-  const revenue    = payments.reduce((s,p) => s+(Number(p.amount)||0), 0);
-  const newUsers   = users.filter(u => String(u.created_at) > weekAgo).length;
-  const newResas   = resas.filter(r => String(r.created_at) > weekAgo).length;
+  const weekAgo = new Date(Date.now() - 7 * 86400000).toISOString();
+  const [uStats, lStats, rStats, pStats] = await Promise.all([
+    pool.query(`SELECT COUNT(*) total, SUM(CASE WHEN created_at > $1 THEN 1 ELSE 0 END) new_this_week FROM users`, [weekAgo]),
+    pool.query(`SELECT COUNT(*) FILTER (WHERE available) active FROM listings`),
+    pool.query(`SELECT COUNT(*) FILTER (WHERE created_at > $1) new_this_week FROM reservations`, [weekAgo]),
+    pool.query(`SELECT COALESCE(SUM(amount), 0) revenue FROM payments WHERE status = 'success'`),
+  ]);
+
+  const users    = uStats.rows[0];
+  const listings = lStats.rows[0];
+  const resas    = rStats.rows[0];
+  const pay      = pStats.rows[0];
+  const revenue  = parseFloat(pay.revenue);
+
   const openAlerts = state.alerts.filter(a => !a.dismissed && a.level !== 'info');
   const alertRows  = openAlerts.slice(0, 5).map(a =>
     `<tr><td style="padding:6px 10px">${a.level==='error'?'🔴':'🟡'}</td><td style="padding:6px 10px">${a.category}</td><td style="padding:6px 10px">${a.message}</td></tr>`
@@ -124,10 +139,10 @@ async function sendWeeklyReport() {
   <div style="padding:28px 32px">
     <h2 style="color:#222;margin-top:0">Résumé de la semaine</h2>
     <table style="width:100%;border-collapse:collapse;border:1px solid #e5e7eb;border-radius:8px;overflow:hidden;margin-bottom:24px">
-      <tr style="background:#f9f9f9"><td style="padding:10px 14px;font-weight:700">👥 Utilisateurs total</td><td style="padding:10px 14px;text-align:right">${users.length}</td></tr>
-      <tr><td style="padding:10px 14px;font-weight:700">🆕 Nouveaux cette semaine</td><td style="padding:10px 14px;text-align:right;color:#047857">+${newUsers}</td></tr>
-      <tr style="background:#f9f9f9"><td style="padding:10px 14px;font-weight:700">🏠 Annonces actives</td><td style="padding:10px 14px;text-align:right">${listings.filter(l=>l.available).length}</td></tr>
-      <tr><td style="padding:10px 14px;font-weight:700">📅 Nouvelles réservations</td><td style="padding:10px 14px;text-align:right;color:#047857">+${newResas}</td></tr>
+      <tr style="background:#f9f9f9"><td style="padding:10px 14px;font-weight:700">👥 Utilisateurs total</td><td style="padding:10px 14px;text-align:right">${users.total}</td></tr>
+      <tr><td style="padding:10px 14px;font-weight:700">🆕 Nouveaux cette semaine</td><td style="padding:10px 14px;text-align:right;color:#047857">+${users.new_this_week}</td></tr>
+      <tr style="background:#f9f9f9"><td style="padding:10px 14px;font-weight:700">🏠 Annonces actives</td><td style="padding:10px 14px;text-align:right">${listings.active}</td></tr>
+      <tr><td style="padding:10px 14px;font-weight:700">📅 Nouvelles réservations</td><td style="padding:10px 14px;text-align:right;color:#047857">+${resas.new_this_week}</td></tr>
       <tr style="background:#f9f9f9"><td style="padding:10px 14px;font-weight:700">💰 Chiffre d'affaires total</td><td style="padding:10px 14px;text-align:right">${revenue.toLocaleString('fr-DZ')} DZD</td></tr>
       <tr><td style="padding:10px 14px;font-weight:700">🚨 Alertes actives</td><td style="padding:10px 14px;text-align:right;color:${openAlerts.length>0?'#dc2626':'#047857'}">${openAlerts.length}</td></tr>
     </table>
