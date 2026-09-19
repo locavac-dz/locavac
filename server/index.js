@@ -1,6 +1,10 @@
 require('dotenv').config({ path: require('path').join(__dirname, '..', '.env') });
 require('express-async-errors');
 
+// Validation des variables critiques au démarrage
+if (!process.env.JWT_SECRET) throw new Error('[Locavac] JWT_SECRET manquant dans .env — démarrage refusé.');
+if (!process.env.JWT_EXPIRES_IN) throw new Error('[Locavac] JWT_EXPIRES_IN manquant dans .env — les tokens n\'expireraient jamais.');
+
 const express     = require('express');
 const http        = require('http');
 const cors        = require('cors');
@@ -28,17 +32,33 @@ app.use(cors({
 }));
 
 // ── Rate limiting ────────────────────────────────────────────────
-const authLimiter = rateLimit({
+const loginLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 20,
+  max: 5, // 5 tentatives de connexion max par IP
   standardHeaders: true,
   legacyHeaders: false,
-  message: { error: 'Trop de tentatives. Réessayez dans 15 minutes.' },
+  message: { error: 'Trop de tentatives de connexion. Réessayez dans 15 minutes.' },
   skip: () => process.env.NODE_ENV === 'test',
 });
-// Appliqué sur login, register et upload
-app.use('/api/auth/login',    authLimiter);
-app.use('/api/auth/register', authLimiter);
+const registerLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000, // 1 heure
+  max: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Trop d\'inscriptions depuis cette IP. Réessayez dans 1 heure.' },
+  skip: () => process.env.NODE_ENV === 'test',
+});
+const forgotPasswordLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000, // 1 heure
+  max: 3, // 3 demandes de reset max par IP et par heure
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Trop de demandes de réinitialisation. Réessayez dans 1 heure.' },
+  skip: () => process.env.NODE_ENV === 'test',
+});
+app.use('/api/auth/login',            loginLimiter);
+app.use('/api/auth/register',         registerLimiter);
+app.use('/api/auth/forgot-password',  forgotPasswordLimiter);
 
 const uploadLimiter = rateLimit({
   windowMs: 60 * 60 * 1000, // 1 heure

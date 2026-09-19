@@ -135,6 +135,12 @@ router.patch('/:id/status', auth, async (req, res) => {
   if (!isHost && !isGuest) return res.status(403).json({ error: 'Accès refusé.' });
   if (isGuest && status === 'confirmed') return res.status(403).json({ error: "Seul l'hôte peut confirmer." });
 
+  // Vérifier qu'un paiement valide existe avant confirmation
+  if (status === 'confirmed') {
+    const paid = await db.payments.findOne(p => p.reservation_id === resa.id && p.status === 'success');
+    if (!paid) return res.status(402).json({ error: 'Impossible de confirmer : aucun paiement valide enregistré pour cette réservation.' });
+  }
+
   let refund = null;
   if (status === 'cancelled' && resa.status !== 'cancelled') {
     const policy = listing?.cancellation_policy || 'flexible';

@@ -8,12 +8,28 @@ const auth    = require('../middleware/auth');
 const UPLOAD_DIR = path.join(__dirname, '..', '..', 'public', 'uploads');
 if (!fs.existsSync(UPLOAD_DIR)) fs.mkdirSync(UPLOAD_DIR, { recursive: true });
 
-// ── Stockage disque ──────────────────────────────────────
+// ── Vérification magic bytes côté serveur (anti MIME-spoofing) ──
+function checkMagicBytes(filePath, allowPdf = false) {
+  const buf = Buffer.alloc(12);
+  const fd  = fs.openSync(filePath, 'r');
+  fs.readSync(fd, buf, 0, 12, 0);
+  fs.closeSync(fd);
+  if (buf[0] === 0xFF && buf[1] === 0xD8 && buf[2] === 0xFF) return true; // JPEG
+  if (buf[0] === 0x89 && buf[1] === 0x50 && buf[2] === 0x4E && buf[3] === 0x47) return true; // PNG
+  if (buf[0] === 0x52 && buf[1] === 0x49 && buf[2] === 0x46 && buf[3] === 0x46 &&
+      buf[8] === 0x57 && buf[9] === 0x45 && buf[10] === 0x42 && buf[11] === 0x50) return true; // WebP
+  if (allowPdf && buf[0] === 0x25 && buf[1] === 0x50 && buf[2] === 0x44 && buf[3] === 0x46) return true; // PDF
+  return false;
+}
+
+// ── Stockage disque — inclut l'id utilisateur dans le nom de fichier ──
 const storage = multer.diskStorage({
   destination: (req, file, cb) => cb(null, UPLOAD_DIR),
   filename:    (req, file, cb) => {
-    const ext  = path.extname(file.originalname).toLowerCase().replace(/[^.a-z]/g, '') || '.jpg';
-    const name = Date.now() + '_' + crypto.randomBytes(8).toString('hex') + ext;
+    const ext    = path.extname(file.originalname).toLowerCase().replace(/[^.a-z]/g, '') || '.jpg';
+    const userId = req.user ? String(req.user.id) : '0';
+    // Format : {userId}_{timestamp}_{hex}.{ext}  — permet la vérification de propriété au DELETE
+    const name   = userId + '_' + Date.now() + '_' + crypto.randomBytes(8).toString('hex') + ext;
     cb(null, name);
   },
 });
@@ -35,6 +51,11 @@ router.post('/', auth, (req, res) => {
   upload.single('photo')(req, res, err => {
     if (err) return res.status(400).json({ error: err.message || 'Erreur upload.' });
     if (!req.file) return res.status(400).json({ error: 'Aucun fichier reçu.' });
+    // Vérifier les magic bytes réels du fichier (anti MIME-spoofing)
+    if (!checkMagicBytes(req.file.path)) {
+      fs.unlinkSync(req.file.path);
+      return res.status(400).json({ error: 'Format de fichier non reconnu. Utilisez JPG, PNG ou WebP.' });
+    }
     res.json({
       url:      '/uploads/' + req.file.filename,
       filename: req.file.filename,
@@ -48,6 +69,13 @@ router.post('/multiple', auth, (req, res) => {
   upload.array('photos', 10)(req, res, err => {
     if (err) return res.status(400).json({ error: err.message || 'Erreur upload.' });
     if (!req.files?.length) return res.status(400).json({ error: 'Aucun fichier reçu.' });
+    // Vérifier les magic bytes de chaque fichier
+    for (const f of req.files) {
+      if (!checkMagicBytes(f.path)) {
+        req.files.forEach(x => { try { fs.unlinkSync(x.path); } catch {} });
+        return res.status(400).json({ error: 'Format de fichier non reconnu. Utilisez JPG, PNG ou WebP.' });
+      }
+    }
     res.json({
       urls: req.files.map(f => ({
         url:      '/uploads/' + f.filename,
@@ -58,7 +86,7 @@ router.post('/multiple', auth, (req, res) => {
   });
 });
 
-// ── POST /api/upload/identity  (CNI algérienne — vérification automatique) ──
+// ── POST /api/upload/identity  (CNI algérienne — soumission pour revue admin) ──
 const uploadId = multer({
   storage,
   limits:     { fileSize: 8 * 1024 * 1024, files: 1 },
@@ -73,22 +101,33 @@ router.post('/identity', auth, (req, res) => {
   uploadId.single('document')(req, res, async err => {
     if (err) return res.status(400).json({ error: err.message || 'Erreur upload.' });
     if (!req.file) return res.status(400).json({ error: 'Aucun fichier reçu.' });
+    // Vérifier les magic bytes
+    if (!checkMagicBytes(req.file.path, true)) {
+      fs.unlinkSync(req.file.path);
+      return res.status(400).json({ error: 'Format de fichier non reconnu (JPG, PNG ou PDF attendu).' });
+    }
     const db  = require('../db');
     const url = '/uploads/' + req.file.filename;
-    // Vérification automatique à réception de la CNI algérienne
-    await db.users.update(u => u.id === req.user.id, { id_document: url, id_verified: true });
-    res.json({ url, message: 'CNI vérifiée. Votre identité est maintenant confirmée.' });
+    // Soumettre le document pour revue manuelle — id_verified reste false jusqu'à validation admin
+    await db.users.update(u => u.id === req.user.id, { id_document: url, id_verified: false });
+    res.json({ url, message: 'Document soumis. Votre identité sera vérifiée par notre équipe sous 24–48h.' });
   });
 });
 
 // ── DELETE /api/upload  (supprimer une photo) ───────────
 router.delete('/', auth, (req, res) => {
   const { filename } = req.body;
-  // Valide le format généré par le serveur : timestamp_hexhex.ext
-  if (!filename || !/^[\d]+_[0-9a-f]{16}\.(jpg|jpeg|png|webp|pdf)$/i.test(filename))
+  // Format attendu : {userId}_{timestamp}_{hex}.{ext}
+  if (!filename || !/^\d+_\d+_[0-9a-f]{16}\.(jpg|jpeg|png|webp|pdf)$/i.test(filename))
     return res.status(400).json({ error: 'Nom de fichier invalide.' });
+
+  // Vérification de propriété : le fichier appartient à l'utilisateur courant (sauf admin)
+  const ownerId = filename.split('_')[0];
+  if (String(req.user.id) !== ownerId && !req.user.is_admin)
+    return res.status(403).json({ error: 'Vous ne pouvez supprimer que vos propres fichiers.' });
+
   const fp = path.resolve(UPLOAD_DIR, filename);
-  // Vérification anti path-traversal : le fichier doit être dans UPLOAD_DIR
+  // Anti path-traversal
   if (!fp.startsWith(path.resolve(UPLOAD_DIR)))
     return res.status(400).json({ error: 'Accès refusé.' });
   if (!fs.existsSync(fp)) return res.status(404).json({ error: 'Fichier introuvable.' });

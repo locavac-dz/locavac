@@ -1,6 +1,7 @@
-const router = require('express').Router();
-const db     = require('../db');
-const auth   = require('../middleware/auth');
+const router     = require('express').Router();
+const db         = require('../db');
+const { pool }   = require('../db');
+const auth       = require('../middleware/auth');
 
 router.get('/host', auth, async (req, res) => {
   const myListings = await db.listings.find(l => l.host_id === req.user.id);
@@ -108,29 +109,62 @@ router.get('/host/payouts', auth, async (req, res) => {
   res.json(list);
 });
 
-// POST /api/stats/host/payout — demande de virement
+// POST /api/stats/host/payout — demande de virement (transaction SQL pour éviter la double dépense)
 router.post('/host/payout', auth, async (req, res) => {
   const COMMISSION = 0.10;
-  const uid = req.user.id;
+  const uid    = req.user.id;
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    // Verrou exclusif par utilisateur : empêche deux requêtes simultanées de créer deux virements
+    await client.query('SELECT pg_advisory_xact_lock($1)', [uid]);
 
-  // Calcul du solde disponible
-  const myListings  = await db.listings.find(l => l.host_id === uid);
-  const myIds       = myListings.map(l => l.id);
-  const confirmed   = await db.reservations.find(r => myIds.includes(r.listing_id) && r.status === 'confirmed');
-  const totalNet    = confirmed.reduce((s, r) => s + Math.round(Number(r.total_price || 0) * (1 - COMMISSION)), 0);
-  const paidPayouts = await db.payouts.find(p => p.host_id === uid && (p.status === 'paid' || p.status === 'pending'));
-  const alreadyOut  = paidPayouts.reduce((s, p) => s + Number(p.amount), 0);
-  const available   = totalNet - alreadyOut;
+    const myListingsR = await client.query('SELECT id FROM listings WHERE host_id = $1', [uid]);
+    const myIds = myListingsR.rows.map(l => l.id);
+    if (!myIds.length) {
+      await client.query('ROLLBACK');
+      return res.status(400).json({ error: 'Aucune annonce enregistrée.' });
+    }
 
-  if (available < 1000)
-    return res.status(400).json({ error: `Solde insuffisant. Minimum 1 000 DZD requis (disponible : ${available.toLocaleString('fr-DZ')} DZD).` });
+    const confirmedR = await client.query(
+      `SELECT total_price FROM reservations WHERE listing_id = ANY($1) AND status = 'confirmed'`,
+      [myIds]
+    );
+    const totalNet = confirmedR.rows.reduce(
+      (s, r) => s + Math.round(Number(r.total_price || 0) * (1 - COMMISSION)), 0
+    );
 
-  const user = await db.users.findOne(u => u.id === uid);
-  if (!user?.rib && !user?.ccp)
-    return res.status(400).json({ error: 'Veuillez enregistrer vos coordonnées bancaires (RIB ou CCP) avant de demander un virement.' });
+    const payoutsR = await client.query(
+      `SELECT amount FROM payouts WHERE host_id = $1 AND status IN ('paid', 'pending')`,
+      [uid]
+    );
+    const alreadyOut = payoutsR.rows.reduce((s, p) => s + Number(p.amount), 0);
+    const available  = totalNet - alreadyOut;
 
-  const payout = await db.payouts.insert({ host_id: uid, amount: available, status: 'pending' });
-  res.status(201).json(payout);
+    if (available < 1000) {
+      await client.query('ROLLBACK');
+      return res.status(400).json({ error: `Solde insuffisant. Minimum 1 000 DZD requis (disponible : ${available.toLocaleString('fr-DZ')} DZD).` });
+    }
+
+    const userR = await client.query('SELECT rib, ccp FROM users WHERE id = $1', [uid]);
+    const user  = userR.rows[0];
+    if (!user?.rib && !user?.ccp) {
+      await client.query('ROLLBACK');
+      return res.status(400).json({ error: 'Veuillez enregistrer vos coordonnées bancaires (RIB ou CCP) avant de demander un virement.' });
+    }
+
+    const r = await client.query(
+      `INSERT INTO payouts (host_id, amount, status) VALUES ($1, $2, 'pending') RETURNING *`,
+      [uid, available]
+    );
+    await client.query('COMMIT');
+    res.status(201).json(r.rows[0]);
+  } catch (e) {
+    await client.query('ROLLBACK');
+    throw e;
+  } finally {
+    client.release();
+  }
 });
 
 // GET /api/admin/payouts — liste admin

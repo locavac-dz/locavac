@@ -4655,7 +4655,7 @@ async function openProfile() {
 function renderProfileAvatar(user) {
   const el = document.getElementById('prof-avatar-display');
   if (user.avatar) {
-    el.innerHTML = `<img src="${user.avatar}" alt="" onerror="this.parentNode.textContent='${user.name.charAt(0).toUpperCase()}'"/>`;
+    el.innerHTML = `<img src="${escHtml(user.avatar)}" alt="" onerror="this.parentNode.textContent='${escHtml(user.name.charAt(0).toUpperCase())}'"/>`;
   } else {
     el.textContent = user.name ? user.name.charAt(0).toUpperCase() : '👤';
   }
@@ -4736,7 +4736,7 @@ function connectWs() {
         if (isOpen && threadEl && activeConvListing === m.listing_id && activeConvOther === m.from_id) {
           const div = document.createElement('div');
           div.className = 'msg-bubble theirs';
-          div.innerHTML = `${m.body}<div class="msg-time">${new Date(m.created_at||Date.now()).toLocaleTimeString('fr-DZ',{hour:'2-digit',minute:'2-digit'})}</div>`;
+          div.innerHTML = `${escHtml(m.body)}<div class="msg-time">${new Date(m.created_at||Date.now()).toLocaleTimeString('fr-DZ',{hour:'2-digit',minute:'2-digit'})}</div>`;
           threadEl.appendChild(div);
           threadEl.scrollTop = threadEl.scrollHeight;
           apiFetch(`/messages/${m.listing_id}/${m.from_id}`).catch(()=>{});
@@ -5162,7 +5162,7 @@ async function openThread(lid, oid, oname) {
           sep = `<div class="msg-date-sep">${label}</div>`;
           lastDay = dayKey;
         }
-        return sep + `<div class="msg-bubble ${mine?'mine':'theirs'}">${m.body}<div class="msg-time">${m.created_at ? m.created_at.slice(11,16) : ''}</div></div>`;
+        return sep + `<div class="msg-bubble ${mine?'mine':'theirs'}">${escHtml(m.body)}<div class="msg-time">${m.created_at ? m.created_at.slice(11,16) : ''}</div></div>`;
       }).join('');
       box.scrollTop = box.scrollHeight;
     }
@@ -5678,6 +5678,11 @@ async function submitEspeces() {
     showPayStep('pay-step-especes');
     btn.disabled = false; btn.textContent = '✅ Confirmer ma réservation';
   }
+}
+
+// ── UTILITAIRES ───────────────────────────────────────────
+function escHtml(s) {
+  return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
 }
 
 // ── UTILITAIRES DATES ─────────────────────────────────────

@@ -123,6 +123,10 @@ router.post('/:id/process', auth, async (req, res) => {
 
   // ── BaridiMob ────────────────────────────────────────────
   if (payment.method === 'baridimob') {
+    // Garde production : BaridiMob non encore certifié Algérie Poste
+    if (process.env.NODE_ENV === 'production' && !process.env.BARIDIMOB_ENABLED) {
+      return res.status(503).json({ error: 'Le paiement BaridiMob n\'est pas encore disponible. Veuillez utiliser CIB, Edahabia ou virement.' });
+    }
     const { phone, otp } = req.body;
     if (!phone) return res.status(400).json({ error: 'Numéro de téléphone requis.' });
     const cleanPhone = phone.replace(/[\s-]/g, '');

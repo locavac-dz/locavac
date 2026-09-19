@@ -6,6 +6,9 @@ const db     = require('../db');
 const mailer = require('../mailer');
 const { pool } = require('../db');
 
+// Hash bidon utilisé pour uniformiser le temps de réponse du login (anti timing oracle)
+const DUMMY_HASH = '$2a$10$abcdefghijklmnopqrstuvuDvGoRRZkq0kN5/HfHdBySSBhWxGe5m';
+
 function sign(user) {
   return jwt.sign(
     { id: user.id, name: user.name, email: user.email, is_host: user.is_host, is_admin: user.is_admin || false },
@@ -51,7 +54,9 @@ router.post('/login', async (req, res) => {
   if (!email || !password)
     return res.status(400).json({ error: 'Email et mot de passe requis.' });
   const user = await db.users.findOne(u => u.email === email);
-  if (!user || !await bcrypt.compare(password, user.password))
+  // Toujours exécuter bcrypt même si l'utilisateur est inconnu (anti timing oracle / énumération d'emails)
+  const match = await bcrypt.compare(password, user?.password || DUMMY_HASH);
+  if (!user || !match)
     return res.status(401).json({ error: 'Email ou mot de passe incorrect.' });
   if (user.banned)
     return res.status(403).json({ error: 'Ce compte a été suspendu. Contactez le support.' });
@@ -86,10 +91,12 @@ router.post('/forgot-password', async (req, res) => {
   const { email } = req.body;
   if (!email) return res.status(400).json({ error: 'Email requis.' });
   const user = await db.users.findOne(u => u.email === email.toLowerCase().trim());
-  // Always respond with success to avoid email enumeration
+  // Toujours répondre avec succès pour éviter l'énumération d'emails
   if (!user) return res.json({ ok: true });
+  // Invalider les anciens tokens non utilisés avant d'en créer un nouveau
+  await pool.query('UPDATE password_reset_tokens SET used = true WHERE user_id = $1 AND used = false', [user.id]);
   const token = crypto.randomBytes(32).toString('hex');
-  const expires = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
+  const expires = new Date(Date.now() + 60 * 60 * 1000); // 1 heure
   await pool.query(
     'INSERT INTO password_reset_tokens (user_id, token, expires_at) VALUES ($1, $2, $3)',
     [user.id, token, expires]
@@ -128,11 +135,15 @@ router.get('/verify-email', async (req, res) => {
 // DELETE /api/auth/me — suppression de compte (RGPD)
 router.delete('/me', require('../middleware/auth'), async (req, res) => {
   const uid = req.user.id;
+  // Effacement RGPD : supprimer les données personnelles, conserver l'historique financier anonymisé
   await pool.query('DELETE FROM messages WHERE from_id = $1 OR to_id = $1', [uid]);
-  await pool.query(`DELETE FROM reviews WHERE user_id = $1 OR listing_id IN (SELECT id FROM listings WHERE host_id = $1)`, [uid]);
-  await pool.query(`DELETE FROM reservations WHERE guest_id = $1 OR listing_id IN (SELECT id FROM listings WHERE host_id = $1)`, [uid, uid]);
-  await pool.query('DELETE FROM listings WHERE host_id = $1', [uid]);
-  await pool.query('DELETE FROM users WHERE id = $1', [uid]);
+  await pool.query(`DELETE FROM reviews WHERE author_id = $1 OR user_id = $1`, [uid]);
+  // Anonymiser l'utilisateur et le bannir pour invalider ses JWT actifs
+  await pool.query(
+    `UPDATE users SET name='Utilisateur supprimé', email=$2, password='', phone=NULL, bio='', avatar='', banned=true WHERE id=$1`,
+    [uid, `deleted_${uid}_${Date.now()}@deleted.invalid`]
+  );
+  await pool.query('UPDATE listings SET available=false WHERE host_id=$1', [uid]);
   res.json({ ok: true });
 });
 
