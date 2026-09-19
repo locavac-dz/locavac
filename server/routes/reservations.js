@@ -2,6 +2,7 @@ const router = require('express').Router();
 const db     = require('../db');
 const auth   = require('../middleware/auth');
 const mailer = require('../mailer');
+const ws     = require('../ws');
 
 function nights(checkIn, checkOut) {
   return Math.round((new Date(checkOut) - new Date(checkIn)) / 86400000);
@@ -68,11 +69,21 @@ router.post('/', auth, async (req, res) => {
     listingTitle: listing.title, checkIn: check_in, checkOut: check_out,
     total, nights: n,
   });
-  if (host) mailer.mailNewReservationToHost({
-    hostName: host.name, hostEmail: host.email, guestName: guest.name,
-    listingTitle: listing.title, checkIn: check_in, checkOut: check_out,
-    total, nights: n,
-  });
+  if (host) {
+    mailer.mailNewReservationToHost({
+      hostName: host.name, hostEmail: host.email, guestName: guest.name,
+      listingTitle: listing.title, checkIn: check_in, checkOut: check_out,
+      total, nights: n,
+    });
+    // Notifier l'hôte en temps réel via WebSocket
+    ws.send(listing.host_id, {
+      type: 'new_reservation',
+      guest_name: guest.name,
+      listing_title: listing.title,
+      check_in, check_out,
+      nights: n,
+    });
+  }
 
   res.status(201).json({ id: resa.id, total_price: total, nights: n, status: 'pending' });
 });

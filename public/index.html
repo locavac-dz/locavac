@@ -35,6 +35,8 @@
 <script type="application/ld+json">{"@context":"https://schema.org","@type":"Organization","name":"Locavac","url":"https://locavac.dz","logo":"https://locavac.dz/icon.svg","contactPoint":{"@type":"ContactPoint","contactType":"customer service","email":"contact@locavac.dz","availableLanguage":["French","Arabic"]}}</script>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Cairo:wght@300;400;500;600;700&family=Sora:wght@300;700;800&display=swap" rel="stylesheet"/>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css"/>
+<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css"/>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{
@@ -780,6 +782,8 @@ footer{background:var(--g100);border-top:1px solid var(--g200);padding:48px 24px
 .upload-zone-text strong{color:var(--red)}
 .upload-zone-hint{font-size:11px;color:var(--g400);margin-top:4px}
 .photo-preview-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(90px,1fr));gap:8px;margin-top:12px}
+.photo-preview-item[draggable]{cursor:grab}
+.photo-preview-item.drag-over{opacity:.4;outline:2px dashed var(--red);border-radius:8px}
 .photo-preview-item{position:relative;aspect-ratio:1;border-radius:8px;overflow:hidden;background:var(--g100)}
 .photo-preview-item img{width:100%;height:100%;object-fit:cover;display:block}
 .photo-preview-item .rm-photo{position:absolute;top:3px;right:3px;background:rgba(0,0,0,.65);border:none;color:#fff;width:20px;height:20px;border-radius:50%;cursor:pointer;font-size:12px;line-height:20px;text-align:center;padding:0}
@@ -1759,6 +1763,7 @@ footer{background:var(--g100);border-top:1px solid var(--g200);padding:48px 24px
           </div>
           <div class="upload-progress-bar" id="upload-progress-bar"><div class="upload-progress-fill" id="upload-progress-fill"></div></div>
           <div class="upload-count" id="upload-count"></div>
+          <div id="photo-drag-hint" style="font-size:11px;color:var(--g400);text-align:center;margin-top:4px;display:none">↕ Glissez les photos pour changer l'ordre · 1ère photo = couverture</div>
           <div class="photo-preview-grid" id="photo-preview-grid"></div>
         </div>
         <div class="ferr" id="h-err"></div>
@@ -2040,6 +2045,7 @@ footer{background:var(--g100);border-top:1px solid var(--g200);padding:48px 24px
 
 <!-- ═══ SCRIPTS ═══ -->
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
 <script>
 'use strict';
 const API = '/api';
@@ -2385,13 +2391,17 @@ function resetUploadZone() {
 function updateUploadCount() {
   const n = uploadedPhotoUrls.length;
   document.getElementById('upload-count').textContent = n ? n + ' photo(s) prête(s)' : '';
+  const hint = document.getElementById('photo-drag-hint');
+  if (hint) hint.style.display = n > 1 ? 'block' : 'none';
 }
 
+let _dragSrc = null;
 function addPhotoPreview(url, index) {
   const grid = document.getElementById('photo-preview-grid');
   const item = document.createElement('div');
   item.className = 'photo-preview-item';
   item.dataset.url = url;
+  item.draggable = true;
   item.innerHTML = `
     <img src="${url}" alt="photo ${index+1}" onerror="this.style.display='none'"/>
     <button class="rm-photo" title="Supprimer">✕</button>`;
@@ -2399,6 +2409,24 @@ function addPhotoPreview(url, index) {
     uploadedPhotoUrls = uploadedPhotoUrls.filter(u => u !== url);
     item.remove();
     updateUploadCount();
+  });
+  // Drag & drop pour réordonner
+  item.addEventListener('dragstart', () => { _dragSrc = item; item.style.opacity = '.4'; });
+  item.addEventListener('dragend',   () => { item.style.opacity = ''; grid.querySelectorAll('.photo-preview-item').forEach(i => i.classList.remove('drag-over')); });
+  item.addEventListener('dragover',  e => { e.preventDefault(); if (_dragSrc !== item) item.classList.add('drag-over'); });
+  item.addEventListener('dragleave', () => item.classList.remove('drag-over'));
+  item.addEventListener('drop', e => {
+    e.preventDefault();
+    if (_dragSrc && _dragSrc !== item) {
+      const items = [...grid.querySelectorAll('.photo-preview-item')];
+      const srcIdx = items.indexOf(_dragSrc);
+      const tgtIdx = items.indexOf(item);
+      if (srcIdx < tgtIdx) grid.insertBefore(_dragSrc, item.nextSibling);
+      else grid.insertBefore(_dragSrc, item);
+      // Synchroniser uploadedPhotoUrls avec l'ordre du DOM
+      uploadedPhotoUrls = [...grid.querySelectorAll('.photo-preview-item')].map(i => i.dataset.url);
+    }
+    item.classList.remove('drag-over');
   });
   grid.appendChild(item);
 }
@@ -2815,6 +2843,9 @@ function toggleListingsMapView() {
   }
 }
 
+// ── CLUSTERING MARQUEURS ──────────────────────────────────
+let _mainCluster = null;
+
 function mapPopupHtml(l) {
   const img = (Array.isArray(l.photos) && l.photos[0]) || l.image || '';
   return `<div style="width:160px">
@@ -2826,16 +2857,20 @@ function mapPopupHtml(l) {
     </div>
   </div>`;
 }
+let _listingsCluster = null;
 function renderListingsMapMarkers() {
   if (!listingsMapObj) return;
-  listingsMapObj.eachLayer(l => { if (l instanceof L.Marker) listingsMapObj.removeLayer(l); });
+  if (_listingsCluster) { listingsMapObj.removeLayer(_listingsCluster); }
+  _listingsCluster = L.markerClusterGroup({ maxClusterRadius: 60, disableClusteringAtZoom: 14 });
   const bounds = [];
   allFilteredListings.forEach(l => {
     if (!l.lat || !l.lng) return;
-    const marker = L.marker([l.lat, l.lng]).addTo(listingsMapObj);
+    const marker = L.marker([l.lat, l.lng]);
     marker.bindPopup(mapPopupHtml(l), { maxWidth: 180 });
+    _listingsCluster.addLayer(marker);
     bounds.push([l.lat, l.lng]);
   });
+  listingsMapObj.addLayer(_listingsCluster);
   if (bounds.length) listingsMapObj.fitBounds(bounds, { padding: [40, 40], maxZoom: 10 });
 }
 
@@ -4567,6 +4602,11 @@ function connectWs() {
         if (isOpen && activeConvOther === data.from && activeConvListing === data.listing_id) {
           showTypingIndicator();
         }
+      } else if (data.type === 'new_reservation') {
+        const msg = `🏠 Nouvelle réservation — ${data.guest_name} · ${data.listing_title} · ${data.check_in} → ${data.check_out}`;
+        toast(msg, 'success', { label: 'Voir', fn: () => { openDashboard(); showHdTab('reservations'); } });
+        showBrowserNotif('Locavac — Nouvelle réservation', `${data.guest_name} souhaite réserver ${data.listing_title}`);
+        checkPendingResas();
       }
     } catch {}
   };
@@ -5045,13 +5085,28 @@ async function deleteListing(id) {
   if (!confirm('Supprimer cette annonce ?')) return;
   try { await apiFetch('/listings/'+id, { method:'DELETE' }); toast('Annonce supprimée.'); loadMyListings(); loadListings(currentCat); } catch(e) { toast(e.message); }
 }
+function exportResasCSV(data) {
+  const headers = ['ID','Logement','Voyageur','Email','Arrivée','Départ','Total DZD','Statut'];
+  const rows = data.map(r => [
+    r.id, `"${(r.title||'').replace(/"/g,'""')}"`, `"${(r.guest_name||'').replace(/"/g,'""')}"`,
+    `"${(r.guest_email||'').replace(/"/g,'""')}"`, r.check_in, r.check_out,
+    Number(r.total_price), r.status,
+  ]);
+  const csv = [headers, ...rows].map(row => row.join(',')).join('\n');
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8' }));
+  a.download = `locavac-reservations-${new Date().toISOString().slice(0,10)}.csv`;
+  a.click();
+}
 async function loadMyHostResas() {
   const el = document.getElementById('hdp-reservations');
   el.innerHTML = '<p style="color:var(--g400);font-size:14px">Chargement…</p>';
   try {
     const data = await apiFetch('/reservations/hosting');
     if (!data.length) { el.innerHTML='<p style="color:var(--g400);font-size:14px;padding:8px 0">Aucune réservation reçue.</p>'; return; }
-    el.innerHTML = data.map(r => `
+    const exportBtn = `<div style="display:flex;justify-content:flex-end;margin-bottom:12px"><button class="btn-sm" onclick="exportResasCSV(window._hostResasData)">📥 Exporter CSV</button></div>`;
+    window._hostResasData = data;
+    el.innerHTML = exportBtn + data.map(r => `
       <div class="resa-row">
         <div class="resa-row-info">
           <div style="font-weight:600;font-size:14px;margin-bottom:3px">${r.title||''}</div>
@@ -5152,9 +5207,11 @@ function initMap() {
     attribution:'© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
     maxZoom: 18,
   }).addTo(map);
+  _mainCluster = L.markerClusterGroup({ maxClusterRadius: 60, disableClusteringAtZoom: 14 });
+  map.addLayer(_mainCluster);
 }
 function updateMapMarkers(listings) {
-  markers.forEach(m => m.remove());
+  if (_mainCluster) _mainCluster.clearLayers();
   markers = [];
   if (!map) return;
   const validListings = listings.filter(l => l.lat && l.lng);
@@ -5164,7 +5221,7 @@ function updateMapMarkers(listings) {
       html: `<div style="background:#E8261A;color:#fff;font-size:12px;font-weight:700;padding:5px 10px;border-radius:20px;white-space:nowrap;box-shadow:0 2px 8px rgba(0,0,0,.3);cursor:pointer">${Number(l.price).toLocaleString('fr-DZ')} DZD</div>`,
       iconAnchor: [40, 15],
     });
-    const marker = L.marker([l.lat, l.lng], { icon }).addTo(map);
+    const marker = L.marker([l.lat, l.lng], { icon });
     marker.bindPopup(`
       <div class="map-popup" onclick="openListing(${l.id})">
         <img src="${(l.photos&&l.photos[0])||l.image||''}" alt="${l.title}" onerror="this.style.display='none'"/>
@@ -5174,11 +5231,12 @@ function updateMapMarkers(listings) {
           <div class="map-popup-rating">⭐ ${l.rating||'—'} · ${l.location}</div>
         </div>
       </div>`, { maxWidth:220, minWidth:220 });
+    if (_mainCluster) _mainCluster.addLayer(marker);
+    else marker.addTo(map);
     markers.push(marker);
   });
-  if (validListings.length > 1) {
-    const group = L.featureGroup(markers);
-    map.fitBounds(group.getBounds().pad(0.2));
+  if (validListings.length > 1 && _mainCluster) {
+    map.fitBounds(_mainCluster.getBounds().pad(0.2));
   }
 }
 
