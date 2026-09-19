@@ -294,6 +294,24 @@ header{position:sticky;top:0;z-index:200;background:#fff;border-bottom:1px solid
 .share-btn:hover{background:var(--g100)}
 .share-btn.whatsapp{border-color:#25D366;color:#25D366}
 .share-btn.whatsapp:hover{background:#f0fdf4}
+/* Carousel photo sur les cartes */
+.card-img-dots{position:absolute;bottom:10px;left:50%;transform:translateX(-50%);display:flex;gap:5px;opacity:0;transition:opacity .2s;z-index:2;pointer-events:auto}
+.card-img:hover .card-img-dots{opacity:1}
+.card-img-dot{width:6px;height:6px;border-radius:50%;background:rgba(255,255,255,.5);cursor:pointer;transition:background .15s,transform .15s;border:none;padding:0;flex-shrink:0}
+.card-img-dot.active{background:#fff;transform:scale(1.25)}
+.card-nav{position:absolute;top:50%;transform:translateY(-50%);width:26px;height:26px;border-radius:50%;background:rgba(255,255,255,.88);border:none;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:12px;opacity:0;transition:opacity .15s;z-index:2;box-shadow:0 1px 4px rgba(0,0,0,.2);color:var(--g800)}
+.card-img:hover .card-nav{opacity:1}
+.card-nav.prev{left:8px}
+.card-nav.next{right:8px}
+/* Chips filtres actifs */
+.active-filters{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px}
+.af-chip{display:inline-flex;align-items:center;gap:5px;background:var(--g900);color:#fff;font-size:12px;font-weight:600;padding:4px 10px;border-radius:20px}
+.af-chip button{background:none;border:none;color:rgba(255,255,255,.7);cursor:pointer;font-size:14px;padding:0;line-height:1;margin-left:2px}
+.af-chip button:hover{color:#fff}
+/* Alerte de recherche */
+.search-alert-banner{display:none;align-items:center;gap:10px;background:#fffbeb;border:1.5px solid #fcd34d;border-radius:12px;padding:10px 14px;margin-bottom:12px;font-size:13px}
+.search-alert-banner.show{display:flex}
+.sab-close{margin-left:auto;background:none;border:none;font-size:16px;cursor:pointer;color:var(--g500)}
 
 /* ── CAROUSEL Les Incontournables ── */
 .etab-carousel{display:flex;overflow-x:auto;gap:20px;padding-bottom:12px;scroll-snap-type:x mandatory;scrollbar-width:none;-ms-overflow-style:none;margin-bottom:48px}
@@ -743,11 +761,16 @@ footer{background:var(--g100);border-top:1px solid var(--g200);padding:48px 24px
 .upload-count{font-size:12px;color:var(--g600);margin-top:6px;text-align:center}
 
 /* ── TOAST ── */
-.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(80px);background:var(--g800);color:#fff;padding:13px 22px;border-radius:12px;font-size:14px;font-weight:500;z-index:9999;transition:transform .3s;white-space:nowrap;pointer-events:none}
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(80px);background:var(--g800);color:#fff;padding:12px 20px;border-radius:12px;font-size:14px;font-weight:500;z-index:9999;transition:transform .3s;pointer-events:none;display:flex;align-items:center;gap:10px;max-width:90vw}
+.toast.show{transform:translateX(-50%) translateY(0);pointer-events:auto}
+.toast.toast-success{background:#15803d}
+.toast.toast-error{background:#b91c1c}
+.toast.toast-info{background:#1d4ed8}
+.toast-action{background:rgba(255,255,255,.2);border:none;border-radius:6px;padding:3px 10px;color:#fff;cursor:pointer;font-size:13px;font-weight:700;font-family:inherit;white-space:nowrap}
+.toast-action:hover{background:rgba(255,255,255,.35)}
 .offline-bar{display:none;position:fixed;top:0;left:0;right:0;background:#b45309;color:#fff;text-align:center;font-size:13px;font-weight:600;padding:8px;z-index:10000}
 .btn-install{display:none;align-items:center;gap:6px;background:var(--red);color:#fff;border:none;border-radius:20px;padding:6px 14px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;transition:opacity .2s}
 .btn-install:hover{opacity:.85}
-.toast.show{transform:translateX(-50%) translateY(0)}
 
 /* ── RESPONSIVE ── */
 @media(max-width:768px){
@@ -1028,6 +1051,7 @@ footer{background:var(--g100);border-top:1px solid var(--g200);padding:48px 24px
     <input type="date" id="f-out"/>
     <button class="btn-clear-dates" id="btn-clear-dates">✕ Effacer les dates</button>
     <span id="date-avail-count" style="font-size:13px;font-weight:600;color:var(--g600);margin-left:auto"></span>
+    <button id="btn-save-alert" title="Être alerté des nouvelles annonces" style="background:none;border:1.5px solid var(--g300);border-radius:20px;padding:5px 12px;font-size:12px;font-weight:600;cursor:pointer;color:var(--g700);white-space:nowrap;transition:all .2s" onmouseenter="this.style.borderColor='var(--red)'" onmouseleave="this.style.borderColor='var(--g300)'">🔔 Être alerté</button>
   </div>
   <div class="quick-filter-bar" id="quick-filter-bar">
     <div class="qf-group">
@@ -1089,6 +1113,12 @@ footer{background:var(--g100);border-top:1px solid var(--g200);padding:48px 24px
     <button class="btn-clear-amenities" id="btn-clear-amenities" style="display:none">✕ Équipements</button>
   </div>
   <p class="date-summary" id="date-summary"></p>
+  <div class="search-alert-banner" id="search-alert-banner">
+    <span>🔔</span><span id="sab-msg"></span>
+    <button onclick="applySearchAlert()" style="background:var(--red);color:#fff;border:none;border-radius:8px;padding:4px 12px;font-size:12px;font-weight:700;cursor:pointer">Voir</button>
+    <button class="sab-close" onclick="dismissSearchAlertBanner()">✕</button>
+  </div>
+  <div class="active-filters" id="active-filters"></div>
 
   <!-- SECTION LES INCONTOURNABLES -->
   <!-- RECENTLY VIEWED -->
@@ -2390,12 +2420,22 @@ function initUploadZone() {
 
 // ── TOAST ─────────────────────────────────────────────────
 let toastTid;
-function toast(msg) {
+function toast(msg, type = '', action = null) {
   const el = document.getElementById('toast');
-  el.textContent = msg;
-  el.classList.add('show');
+  el.innerHTML = '';
+  const span = document.createElement('span');
+  span.textContent = msg;
+  el.appendChild(span);
+  if (action) {
+    const btn = document.createElement('button');
+    btn.className = 'toast-action';
+    btn.textContent = action.label;
+    btn.addEventListener('click', () => { el.classList.remove('show'); action.fn(); });
+    el.appendChild(btn);
+  }
+  el.className = 'toast show' + (type ? ' toast-' + type : '');
   clearTimeout(toastTid);
-  toastTid = setTimeout(() => el.classList.remove('show'), 3200);
+  toastTid = setTimeout(() => el.classList.remove('show'), type === 'error' ? 5000 : 3200);
 }
 
 // ── OVERLAYS ──────────────────────────────────────────────
@@ -3074,6 +3114,94 @@ function refuseCookies() {
 }
 
 // ── PRICE SELECT ──────────────────────────────────────────
+function renderActiveFilters() {
+  const wrap = document.getElementById('active-filters');
+  if (!wrap) return;
+  const chips = [];
+  const fWilaya = document.getElementById('f-wilaya')?.value;
+  const fPrice  = document.getElementById('f-price')?.value;
+  const fGuests = document.getElementById('f-guests')?.value;
+  const fBeds   = document.getElementById('f-beds')?.value;
+  const fIn     = document.getElementById('f-in')?.value;
+  const fOut    = document.getElementById('f-out')?.value;
+  const PRICE_LABELS = {'0-5000':'< 5 000 DZD','5000-10000':'5–10k DZD','10000-20000':'10–20k DZD','20000-35000':'20–35k DZD','35000-50000':'35–50k DZD','50000-999999':'> 50k DZD'};
+  if (fWilaya) chips.push({ label: fWilaya, clear: () => { document.getElementById('f-wilaya').value = ''; loadListings(currentCat); } });
+  if (fPrice)  chips.push({ label: PRICE_LABELS[fPrice] || fPrice, clear: () => { document.getElementById('f-price').value = ''; loadListings(currentCat); } });
+  if (fGuests) chips.push({ label: fGuests + ' voyageur' + (fGuests > 1 ? 's' : ''), clear: () => { document.getElementById('f-guests').value = ''; loadListings(currentCat); } });
+  if (fBeds)   chips.push({ label: fBeds + ' chambre' + (fBeds > 1 ? 's' : ''), clear: () => { document.getElementById('f-beds').value = ''; loadListings(currentCat); } });
+  if (fIn && fOut) chips.push({ label: fmtDate(fIn) + ' → ' + fmtDate(fOut), clear: () => { document.getElementById('f-in').value = ''; document.getElementById('f-out').value = ''; loadListings(currentCat); } });
+  if (!chips.length) { wrap.innerHTML = ''; return; }
+  wrap.innerHTML = chips.map((c, i) =>
+    `<span class="af-chip">${c.label}<button data-ci="${i}">✕</button></span>`
+  ).join('');
+  wrap.querySelectorAll('.af-chip button').forEach(btn => {
+    btn.addEventListener('click', e => { e.stopPropagation(); chips[Number(btn.dataset.ci)].clear(); });
+  });
+}
+
+// ── ALERTES DE RECHERCHE ──────────────────────────────────
+const ALERT_KEY = 'locavac_search_alert';
+function saveSearchAlert() {
+  const fWilaya = document.getElementById('f-wilaya')?.value;
+  const fPrice  = document.getElementById('f-price')?.value;
+  const fGuests = document.getElementById('f-guests')?.value;
+  const fIn     = document.getElementById('f-in')?.value;
+  const fOut    = document.getElementById('f-out')?.value;
+  if (!fWilaya && !fPrice && !fGuests && !fIn) {
+    toast('Ajoutez au moins un filtre pour créer une alerte.', 'error');
+    return;
+  }
+  const alert = { wilaya: fWilaya, price: fPrice, guests: fGuests, checkIn: fIn, checkOut: fOut, count: allListings.length, savedAt: Date.now() };
+  try { localStorage.setItem(ALERT_KEY, JSON.stringify(alert)); } catch(e) {}
+  toast('🔔 Alerte enregistrée — vous serez notifié des nouvelles annonces !', 'success');
+  document.getElementById('btn-save-alert').textContent = '🔔 Alerte active';
+  document.getElementById('btn-save-alert').style.borderColor = 'var(--red)';
+  document.getElementById('btn-save-alert').style.color = 'var(--red)';
+}
+async function checkSearchAlerts() {
+  let saved;
+  try { saved = JSON.parse(localStorage.getItem(ALERT_KEY) || 'null'); } catch(e) {}
+  if (!saved) return;
+  // Actualiser le bouton
+  const alertBtn = document.getElementById('btn-save-alert');
+  if (alertBtn) { alertBtn.textContent = '🔔 Alerte active'; alertBtn.style.color = 'var(--red)'; alertBtn.style.borderColor = 'var(--red)'; }
+  // Restaurer les filtres sauvegardés pour la vérification
+  const params = new URLSearchParams();
+  if (saved.wilaya) params.set('wilaya', saved.wilaya);
+  if (saved.checkIn) params.set('check_in', saved.checkIn);
+  if (saved.checkOut) params.set('check_out', saved.checkOut);
+  if (saved.price) { const [mn,mx]=saved.price.split('-'); if(mn) params.set('min_price',mn); if(mx) params.set('max_price',mx); }
+  if (saved.guests) params.set('guests', saved.guests);
+  try {
+    const fresh = await apiFetch('/listings?' + params.toString());
+    const diff = fresh.length - (saved.count || 0);
+    if (diff > 0) {
+      const banner = document.getElementById('search-alert-banner');
+      document.getElementById('sab-msg').textContent = `${diff} nouveau${diff > 1 ? 'x' : ''} logement${diff > 1 ? 's' : ''} correspond${diff > 1 ? 'ent' : ''} à votre alerte !`;
+      banner.classList.add('show');
+    }
+  } catch(e) {}
+}
+function applySearchAlert() {
+  let saved;
+  try { saved = JSON.parse(localStorage.getItem(ALERT_KEY) || 'null'); } catch(e) {}
+  if (!saved) return;
+  if (saved.wilaya) { const s=document.getElementById('f-wilaya'); if(s) s.value=saved.wilaya; }
+  if (saved.price)  { const s=document.getElementById('f-price');  if(s) s.value=saved.price; }
+  if (saved.guests) { const s=document.getElementById('f-guests'); if(s) s.value=saved.guests; }
+  if (saved.checkIn)  { const s=document.getElementById('f-in');  if(s) s.value=saved.checkIn; }
+  if (saved.checkOut) { const s=document.getElementById('f-out'); if(s) s.value=saved.checkOut; }
+  dismissSearchAlertBanner();
+  loadListings(currentCat);
+}
+function dismissSearchAlertBanner() {
+  document.getElementById('search-alert-banner').classList.remove('show');
+  // Mettre à jour le compteur sauvegardé avec le total actuel
+  let saved;
+  try { saved = JSON.parse(localStorage.getItem(ALERT_KEY) || 'null'); } catch(e) {}
+  if (saved) { saved.count = allListings.length; try { localStorage.setItem(ALERT_KEY, JSON.stringify(saved)); } catch(e) {} }
+}
+
 function initPriceSlider() {
   const sel = document.getElementById('f-price');
   if (!sel) return;
@@ -3134,15 +3262,23 @@ function renderListingsPage() {
   grid.innerHTML = visible.map(l => {
     const nightLabel = nights > 1 ? t('card.nights_pl') : t('card.nights');
     const totalPrice = nights > 0 ? `<div class="avail-badge">${t('card.avail')} · ${nights} ${nightLabel} · ${Number(l.price * nights).toLocaleString('fr-DZ')} DZD</div>` : '';
+    const cardPhotos = (Array.isArray(l.photos) && l.photos.length ? l.photos : [l.image]).filter(Boolean).slice(0, 5);
+    const photosJson = JSON.stringify(cardPhotos).replace(/'/g,"&#39;").replace(/"/g,'&quot;');
+    const dotsHtml = cardPhotos.length > 1
+      ? `<div class="card-img-dots">${cardPhotos.map((_,i)=>`<button class="card-img-dot${i===0?' active':''}" data-i="${i}"></button>`).join('')}</div>
+         <button class="card-nav prev" data-dir="-1">‹</button>
+         <button class="card-nav next" data-dir="1">›</button>`
+      : '';
     return `
     <div class="card" data-id="${l.id}">
-      <div class="card-img">
-        <img src="${(l.photos && l.photos[0]) || l.image || ''}" alt="${l.title}" loading="lazy" onerror="this.src='https://images.unsplash.com/photo-1564013799919-ab600027ffc6?w=600&q=80'"/>
+      <div class="card-img" data-photos="${photosJson}" data-cidx="0">
+        <img src="${cardPhotos[0] || ''}" alt="${l.title}" loading="lazy" onerror="this.src='https://images.unsplash.com/photo-1564013799919-ab600027ffc6?w=600&q=80'"/>
         ${l.rating >= 4.9 ? '<div class="badge">Coup de cœur</div>' : ''}
         ${(Date.now() - new Date(l.created_at || 0)) < 7*86400000 ? '<div class="badge-new">Nouveau</div>' : ''}
         <button class="wish ${liked.has(l.id)?'liked':''}" data-wid="${l.id}">${liked.has(l.id)?'❤':'♡'}</button>
         <button class="save-btn" data-sid="${l.id}" title="Sauvegarder dans une liste">🔖</button>
         <button class="card-cmp-btn ${compareSet.has(l.id)?'active':''}" data-cid="${l.id}">⊞ Comparer</button>
+        ${dotsHtml}
       </div>
       <div class="card-body">
         <div class="card-hd"><div class="card-title">${l.title}</div><div class="card-rating">⭐ ${l.rating||'—'} <span>(${l.reviews||0})</span></div></div>
@@ -3171,8 +3307,33 @@ function renderListingsPage() {
 
   grid.querySelectorAll('.card').forEach(c => {
     c.addEventListener('click', e => {
-      if (!e.target.closest('.wish') && !e.target.closest('.save-btn') && !e.target.closest('.card-cmp-btn'))
+      if (!e.target.closest('.wish') && !e.target.closest('.save-btn') && !e.target.closest('.card-cmp-btn') && !e.target.closest('.card-nav') && !e.target.closest('.card-img-dot'))
         openListing(Number(c.dataset.id));
+    });
+  });
+  // Carousel photo
+  grid.querySelectorAll('.card-nav').forEach(btn => {
+    btn.addEventListener('click', e => {
+      e.stopPropagation();
+      const wrap = btn.closest('.card-img');
+      const photos = JSON.parse(wrap.dataset.photos.replace(/&quot;/g,'"') || '[]');
+      if (photos.length < 2) return;
+      let idx = (Number(wrap.dataset.cidx) + Number(btn.dataset.dir) + photos.length) % photos.length;
+      wrap.dataset.cidx = idx;
+      wrap.querySelector('img').src = photos[idx];
+      wrap.querySelectorAll('.card-img-dot').forEach((d, i) => d.classList.toggle('active', i === idx));
+    });
+  });
+  grid.querySelectorAll('.card-img-dot').forEach(dot => {
+    dot.addEventListener('click', e => {
+      e.stopPropagation();
+      const wrap = dot.closest('.card-img');
+      const photos = JSON.parse(wrap.dataset.photos.replace(/&quot;/g,'"') || '[]');
+      const idx = Number(dot.dataset.i);
+      if (!photos[idx]) return;
+      wrap.dataset.cidx = idx;
+      wrap.querySelector('img').src = photos[idx];
+      wrap.querySelectorAll('.card-img-dot').forEach((d, i) => d.classList.toggle('active', i === idx));
     });
   });
   grid.querySelectorAll('.wish').forEach(btn => {
@@ -3238,6 +3399,7 @@ async function loadListings(cat) {
   renderGrid(allListings, checkIn, checkOut);
   updateMapMarkers(allListings);
   updateDateSummary(checkIn, checkOut, allListings.length);
+  renderActiveFilters();
 }
 
 function renderGrid(data, checkIn = '', checkOut = '') {
@@ -3532,8 +3694,8 @@ async function cancelResa(id, totalPrice, checkIn, policy) {
   if (!confirm(`Annuler cette réservation ?\n\nPolitique d'annulation : ${refundLabel}\nTotal payé : ${Number(totalPrice).toLocaleString('fr-DZ')} DZD`)) return;
   try {
     await apiFetch(`/reservations/${id}/status`, { method:'PATCH', body: JSON.stringify({ status:'cancelled' }) });
-    toast(`Réservation annulée — ${refundLabel}`);
-    openResas();
+    toast(`Réservation annulée — ${refundLabel}`, 'success', { label: 'Mes réservations', fn: openResas });
+    closeOverlay('ov-resas');
   } catch(e) { toast(e.message || 'Erreur lors de l\'annulation'); }
 }
 
@@ -5734,12 +5896,18 @@ document.addEventListener('DOMContentLoaded', function() {
   document.getElementById('x-etab').addEventListener('click', () => closeOverlay('ov-etab'));
   document.getElementById('x-pub-form').addEventListener('click', () => closeOverlay('ov-pub-form'));
 
+  // Alerte de recherche
+  document.getElementById('btn-save-alert')?.addEventListener('click', saveSearchAlert);
+  document.getElementById('sab-apply')?.addEventListener('click', applySearchAlert);
+  document.getElementById('sab-close')?.addEventListener('click', dismissSearchAlertBanner);
+
   // Init
   refreshAuthUI();
   loadListings('all');
   loadHomeEtab();
   loadDestCounts();
   loadStatsBand();
+  checkSearchAlerts();
   initAutocomplete();
   initHoverCard();
   initDarkMode();
