@@ -96,7 +96,7 @@ const listings = {
     if (minPrice)  { conds.push(`price >= $${i++}`);            params.push(Number(minPrice)); }
     if (maxPrice)  { conds.push(`price <= $${i++}`);            params.push(Number(maxPrice)); }
     if (minBeds)   { conds.push(`beds >= $${i++}`);             params.push(Number(minBeds)); }
-    if (q)         { conds.push(`(lower(title) LIKE $${i} OR lower(location) LIKE $${i} OR lower(coalesce(description,'')) LIKE $${i})`); params.push(`%${q.toLowerCase()}%`); i++; }
+    if (q)         { const qt = q.trim().toLowerCase(); conds.push(`(lower(title) LIKE $${i} OR lower(location) LIKE $${i} OR lower(coalesce(description,'')) LIKE $${i})`); params.push(`%${qt}%`); i++; }
     if (unavailableIds.length) { conds.push(`id != ALL($${i++})`); params.push(unavailableIds); }
     return _q(`SELECT * FROM listings WHERE ${conds.join(' AND ')} ORDER BY rating DESC LIMIT 200`, params);
   },

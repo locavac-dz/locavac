@@ -189,6 +189,18 @@ router.patch('/:id/status', auth, async (req, res) => {
 
   await db.reservations.updateById(resa.id, { status });
 
+  // Mettre à jour le paiement lors d'une annulation avec remboursement
+  if (refund && resa.payment_id) {
+    const payStatus = refund.pct === 100 ? 'refunded' : refund.pct > 0 ? 'partial_refund' : 'no_refund';
+    if (payStatus !== 'no_refund') {
+      await db.payments.updateById(resa.payment_id, {
+        status: payStatus,
+        refund_amount: refund.amount,
+        refund_pct:    refund.pct,
+      });
+    }
+  }
+
   const guest = await db.users.findById(resa.guest_id);
   const host  = listing ? await db.users.findById(listing.host_id) : null;
   if (status === 'confirmed' && guest) {

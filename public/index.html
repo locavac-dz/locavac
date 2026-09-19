@@ -2457,7 +2457,13 @@ let uploadedPhotoUrls= [];   // URLs des photos uploadées pour la nouvelle anno
 async function apiFetch(path, opts = {}) {
   const headers = { 'Content-Type': 'application/json' };
   if (token) headers['Authorization'] = 'Bearer ' + token;
-  const res  = await fetch(API + path, { ...opts, headers });
+  let res;
+  try {
+    res = await fetch(API + path, { ...opts, headers });
+  } catch(e) {
+    // TypeError = réseau coupé, DNS échoué, CORS bloqué, etc.
+    throw new Error('Vous êtes hors ligne ou le serveur est inaccessible.');
+  }
   const data = await res.json();
   if (!res.ok) {
     // Token expiré ou révoqué : déconnexion automatique
@@ -4652,6 +4658,25 @@ async function triggerBackup() {
 }
 
 // ── PROFIL UTILISATEUR ────────────────────────────────────
+function renderProfileCompletion(user) {
+  const steps = [
+    { key:'name',        label:'Nom',          done: !!(user.name && user.name.trim()) },
+    { key:'phone',       label:'Téléphone',    done: !!(user.phone && user.phone.trim()) },
+    { key:'bio',         label:'Bio',          done: !!(user.bio && user.bio.trim()) },
+    { key:'avatar',      label:'Photo',        done: !!(user.avatar && user.avatar.trim()) },
+    { key:'id_verified', label:'CNI vérifiée', done: !!user.id_verified },
+  ];
+  const doneCount = steps.filter(s => s.done).length;
+  const pct = Math.round((doneCount / steps.length) * 100);
+  const compEl = document.getElementById('prof-completion');
+  if (!compEl) return;
+  compEl.style.display = 'block';
+  document.getElementById('prof-completion-pct').textContent = pct + ' %';
+  document.getElementById('prof-completion-bar').style.width = pct + '%';
+  document.getElementById('prof-completion-items').innerHTML =
+    steps.map(s => `<span class="pci${s.done?' done':''}">${s.done?'✓':''} ${s.label}</span>`).join('');
+}
+
 async function openProfile() {
   document.getElementById('user-menu').classList.remove('open');
   if (!currentUser) { openAuth('login'); return; }
@@ -4686,22 +4711,7 @@ async function openProfile() {
     cb.checked = userLangs.includes(cb.value);
     cb.closest('.amenity-check-item').classList.toggle('checked', cb.checked);
   });
-  // Barre de complétion du profil
-  const steps = [
-    { key:'name',        label:'Nom',          done: !!(user.name && user.name.trim()) },
-    { key:'phone',       label:'Téléphone',    done: !!(user.phone && user.phone.trim()) },
-    { key:'bio',         label:'Bio',          done: !!(user.bio && user.bio.trim()) },
-    { key:'avatar',      label:'Photo',        done: !!(user.avatar && user.avatar.trim()) },
-    { key:'id_verified', label:'CNI vérifiée', done: !!user.id_verified },
-  ];
-  const doneCount = steps.filter(s => s.done).length;
-  const pct = Math.round((doneCount / steps.length) * 100);
-  const compEl = document.getElementById('prof-completion');
-  compEl.style.display = 'block';
-  document.getElementById('prof-completion-pct').textContent = pct + ' %';
-  document.getElementById('prof-completion-bar').style.width = pct + '%';
-  document.getElementById('prof-completion-items').innerHTML =
-    steps.map(s => `<span class="pci${s.done?' done':''}">${s.done?'✓':''} ${s.label}</span>`).join('');
+  renderProfileCompletion(user);
 
   // Badge vérification identité
   const badge = document.getElementById('prof-id-badge');
@@ -4740,6 +4750,7 @@ async function saveProfile() {
     document.getElementById('avatar').textContent = updated.name.charAt(0).toUpperCase();
     renderProfileAvatar(updated);
     document.getElementById('prof-display-name').textContent = updated.name;
+    renderProfileCompletion(currentUser);
     toast('Profil mis à jour ✅');
     closeOverlay('ov-profile');
   } catch(e) { errEl.textContent = e.message; errEl.classList.add('show'); }
