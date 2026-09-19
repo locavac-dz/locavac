@@ -11,11 +11,26 @@ const cors        = require('cors');
 const path        = require('path');
 const rateLimit   = require('express-rate-limit');
 const compression = require('compression');
+const helmet      = require('helmet');
 const db          = require('./db');
 const wsModule    = require('./ws');
 
 const app = express();
 app.use(compression());
+app.use(helmet({
+  // CSP assouplie pour le SPA vanilla (inline scripts et styles autorisés)
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc:     ["'self'"],
+      scriptSrc:      ["'self'", "'unsafe-inline'"],
+      styleSrc:       ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com'],
+      fontSrc:        ["'self'", 'https://fonts.gstatic.com'],
+      imgSrc:         ["'self'", 'data:', 'https:', 'blob:'],
+      connectSrc:     ["'self'", 'wss:', 'ws:'],
+    },
+  },
+  crossOriginEmbedderPolicy: false, // evite les conflits avec les images Unsplash
+}));
 
 // ── CORS ────────────────────────────────────────────────────────
 const ALLOWED_ORIGINS = (process.env.CORS_ORIGINS || 'http://localhost:3000')

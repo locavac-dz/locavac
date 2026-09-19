@@ -24,21 +24,35 @@ router.get('/stats', async (req, res) => {
   });
 });
 
-// GET /api/admin/users
+// GET /api/admin/users — compteurs agrégés en une seule requête SQL (anti N+1)
 router.get('/users', async (req, res) => {
   const { q, role } = req.query;
-  const users = await db.users.search({ q, role });
+  const conds  = [];
+  const params = [];
+  let i = 1;
+  if (q)             { conds.push(`(lower(u.name) LIKE $${i} OR lower(u.email) LIKE $${i})`); params.push(`%${q.toLowerCase()}%`); i++; }
+  if (role === 'host')   conds.push('u.is_host = true');
+  if (role === 'admin')  conds.push('u.is_admin = true');
+  if (role === 'banned') conds.push('u.banned = true');
+  const where = conds.length ? `WHERE ${conds.join(' AND ')}` : '';
 
-  const result = await Promise.all(users.map(async u => ({
+  const rows = (await pool.query(`
+    SELECT u.*,
+      (SELECT COUNT(*) FROM listings   WHERE host_id  = u.id) AS listings_count,
+      (SELECT COUNT(*) FROM reservations WHERE guest_id = u.id) AS reservations_count
+    FROM users u ${where}
+    ORDER BY u.id ASC
+  `, params)).rows;
+
+  res.json(rows.map(u => ({
     id: u.id, name: u.name, email: u.email, phone: u.phone,
     is_host: u.is_host, is_admin: u.is_admin || false,
     verified: u.verified || false, banned: u.banned || false,
     id_document: u.id_document || null, id_verified: u.id_verified || false,
     created_at: u.created_at,
-    listings_count:     await db.users.countListings(u.id),
-    reservations_count: await db.users.countReservations(u.id),
+    listings_count:     parseInt(u.listings_count),
+    reservations_count: parseInt(u.reservations_count),
   })));
-  res.json(result.sort((a,b) => a.id - b.id));
 });
 
 // PATCH /api/admin/users/:id
@@ -71,23 +85,36 @@ router.delete('/users/:id', async (req, res) => {
   res.json({ ok: true });
 });
 
-// GET /api/admin/listings
+// GET /api/admin/listings — JOIN hôte + comptage réservations en une seule requête SQL (anti N+1)
 router.get('/listings', async (req, res) => {
   const { q, status } = req.query;
-  const listings = await db.listings.adminSearch({ q, status });
+  const conds  = [];
+  const params = [];
+  let i = 1;
+  if (q)               { conds.push(`(lower(l.title) LIKE $${i} OR lower(l.location) LIKE $${i})`); params.push(`%${q.toLowerCase()}%`); i++; }
+  if (status === 'active')   conds.push('l.available = true');
+  if (status === 'inactive') conds.push('l.available = false');
+  const where = conds.length ? `WHERE ${conds.join(' AND ')}` : '';
 
-  const result = await Promise.all(listings.map(async l => {
-    const host = await db.users.findById(l.host_id);
-    return {
-      id: l.id, title: l.title, location: l.location, wilaya: l.wilaya,
-      category: l.category, price: l.price, available: l.available,
-      rating: l.rating, reviews: l.reviews, created_at: l.created_at,
-      image: (l.photos && l.photos[0]) || l.image || '',
-      host_name: host?.name || 'Inconnu', host_email: host?.email,
-      reservations_count: await db.listings.countByListing(l.id),
-    };
-  }));
-  res.json(result.sort((a,b) => b.id - a.id));
+  const rows = (await pool.query(`
+    SELECT l.*,
+      u.name  AS host_name,
+      u.email AS host_email,
+      (SELECT COUNT(*) FROM reservations WHERE listing_id = l.id) AS reservations_count
+    FROM listings l
+    LEFT JOIN users u ON u.id = l.host_id
+    ${where}
+    ORDER BY l.id DESC
+  `, params)).rows;
+
+  res.json(rows.map(l => ({
+    id: l.id, title: l.title, location: l.location, wilaya: l.wilaya,
+    category: l.category, price: l.price, available: l.available,
+    rating: l.rating, reviews: l.reviews, created_at: l.created_at,
+    image: (l.photos && l.photos[0]) || l.image || '',
+    host_name: l.host_name || 'Inconnu', host_email: l.host_email,
+    reservations_count: parseInt(l.reservations_count),
+  })));
 });
 
 // PATCH /api/admin/listings/:id
@@ -109,16 +136,23 @@ router.delete('/listings/:id', async (req, res) => {
   res.json({ ok: true });
 });
 
-// GET /api/admin/reservations
+// GET /api/admin/reservations — JOIN annonce + voyageur en une seule requête SQL (anti N+1)
 router.get('/reservations', async (req, res) => {
   const { status } = req.query;
-  const resas = await db.reservations.findAll(status || undefined);
-  const result = await Promise.all(resas.slice(0, 100).map(async r => {
-    const l = await db.listings.findById(r.listing_id);
-    const g = await db.users.findById(r.guest_id);
-    return { ...r, listing_title: l?.title, listing_location: l?.location, guest_name: g?.name, guest_email: g?.email };
-  }));
-  res.json(result.sort((a,b) => b.id - a.id));
+  const rows = (await pool.query(`
+    SELECT r.*,
+      l.title    AS listing_title,
+      l.location AS listing_location,
+      g.name     AS guest_name,
+      g.email    AS guest_email
+    FROM reservations r
+    LEFT JOIN listings l ON l.id = r.listing_id
+    LEFT JOIN users    g ON g.id = r.guest_id
+    WHERE ($1::text IS NULL OR r.status = $1)
+    ORDER BY r.id DESC
+    LIMIT 100
+  `, [status || null])).rows;
+  res.json(rows);
 });
 
 // GET /api/admin/signalements — requête SQL directe (inchangée)
