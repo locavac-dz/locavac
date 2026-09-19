@@ -27,6 +27,9 @@ router.get('/stats', async (req, res) => {
 // GET /api/admin/users — compteurs agrégés en une seule requête SQL (anti N+1)
 router.get('/users', async (req, res) => {
   const { q, role } = req.query;
+  const page   = Math.max(1, parseInt(req.query.page) || 1);
+  const LIMIT  = 100;
+  const offset = (page - 1) * LIMIT;
   const conds  = [];
   const params = [];
   let i = 1;
@@ -42,6 +45,7 @@ router.get('/users', async (req, res) => {
       (SELECT COUNT(*) FROM reservations WHERE guest_id = u.id) AS reservations_count
     FROM users u ${where}
     ORDER BY u.id ASC
+    LIMIT ${LIMIT} OFFSET ${offset}
   `, params)).rows;
 
   res.json(rows.map(u => ({
@@ -102,6 +106,9 @@ router.delete('/users/:id', async (req, res) => {
 // GET /api/admin/listings — JOIN hôte + comptage réservations en une seule requête SQL (anti N+1)
 router.get('/listings', async (req, res) => {
   const { q, status } = req.query;
+  const page   = Math.max(1, parseInt(req.query.page) || 1);
+  const LIMIT  = 100;
+  const offset = (page - 1) * LIMIT;
   const conds  = [];
   const params = [];
   let i = 1;
@@ -119,6 +126,7 @@ router.get('/listings', async (req, res) => {
     LEFT JOIN users u ON u.id = l.host_id
     ${where}
     ORDER BY l.id DESC
+    LIMIT ${LIMIT} OFFSET ${offset}
   `, params)).rows;
 
   res.json(rows.map(l => ({

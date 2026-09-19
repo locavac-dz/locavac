@@ -9,6 +9,7 @@ const express     = require('express');
 const http        = require('http');
 const cors        = require('cors');
 const path        = require('path');
+const jwt         = require('jsonwebtoken');
 const rateLimit   = require('express-rate-limit');
 const compression = require('compression');
 const helmet      = require('helmet');
@@ -133,6 +134,31 @@ app.post('/api/listings',    listingLimiter);
 app.use('/api/admin',        adminLimiter);
 
 app.use(express.json({ limit: '2mb' }));
+
+// Journal HTTP (désactivé en test pour ne pas polluer la sortie Jest)
+if (process.env.NODE_ENV !== 'test') {
+  app.use((req, _res, next) => {
+    console.log(`[${new Date().toISOString()}] ${req.method} ${req.url}`);
+    next();
+  });
+}
+
+// Protection des documents CNI (PDF) — accès réservé au propriétaire et aux admins
+// Les fichiers sont nommés {userId}_{timestamp}_{hex}.pdf par le module upload
+app.use('/uploads', (req, res, next) => {
+  if (!req.path.toLowerCase().endsWith('.pdf')) return next();
+  const raw   = (req.headers['authorization'] || '').replace(/^Bearer\s+/, '');
+  const token = raw || req.query.token || null;
+  if (!token) return res.status(401).json({ error: 'Authentification requise pour accéder à ce document.' });
+  let payload;
+  try { payload = jwt.verify(token, process.env.JWT_SECRET); }
+  catch { return res.status(401).json({ error: 'Token invalide.' }); }
+  const ownerId = path.basename(req.path).split('_')[0];
+  if (!payload.is_admin && String(payload.id) !== ownerId)
+    return res.status(403).json({ error: 'Accès refusé.' });
+  next();
+});
+
 // Service Worker : no-cache obligatoire pour que le navigateur détecte les mises à jour
 app.get('/sw.js', (_, res) => {
   res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');

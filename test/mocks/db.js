@@ -19,6 +19,12 @@ const LISTING_1 = {
   cancellation_policy: 'flexible',
 };
 
+// Réservation de test (confirmée, check_out dans le passé pour autoriser les avis)
+const RESERVATION_1 = {
+  id: 300, listing_id: 1, guest_id: 2, check_in: '2026-06-01', check_out: '2026-06-05',
+  guests_count: 1, total_price: 20000, status: 'confirmed', payment_id: null,
+};
+
 // pool.query est utilisé directement par le middleware auth
 // Il faut simuler SELECT id, banned FROM users WHERE id = $1
 const pool = {
@@ -53,28 +59,34 @@ module.exports = {
   },
 
   listings: {
-    findById:    jest.fn(id => Promise.resolve(id === 1 ? LISTING_1 : null)),
-    findByIds:   jest.fn(ids => Promise.resolve(ids.map(id => id === 1 ? LISTING_1 : null).filter(Boolean))),
-    findByHost:  jest.fn().mockResolvedValue([LISTING_1]),
-    search:      jest.fn().mockResolvedValue([LISTING_1]),
-    create:      jest.fn(data => Promise.resolve({ id: 200, ...data })),
-    updateById:  jest.fn().mockResolvedValue(),
-    deleteById:  jest.fn().mockResolvedValue(),
+    findById:       jest.fn(id => Promise.resolve(id === 1 ? LISTING_1 : null)),
+    findByIds:      jest.fn(ids => Promise.resolve(ids.map(id => id === 1 ? LISTING_1 : null).filter(Boolean))),
+    findByHost:     jest.fn().mockResolvedValue([LISTING_1]),
+    search:         jest.fn().mockResolvedValue([LISTING_1]),
+    create:         jest.fn(data => Promise.resolve({ id: 200, ...data })),
+    updateById:     jest.fn().mockResolvedValue(),
+    updateRating:   jest.fn().mockResolvedValue(),
+    deleteById:     jest.fn().mockResolvedValue(),
+    incrementViews: jest.fn().mockResolvedValue(),
     setAvailableByHost: jest.fn().mockResolvedValue(),
   },
 
   reservations: {
-    findById:       jest.fn().mockResolvedValue(null),
-    findByGuest:    jest.fn().mockResolvedValue([]),
-    findByListing:  jest.fn().mockResolvedValue([]),
-    findByListings: jest.fn().mockResolvedValue([]),
-    create:         jest.fn(data => Promise.resolve({ id: 300, ...data })),
-    updateById:     jest.fn().mockResolvedValue(),
+    findById:          jest.fn(id => Promise.resolve(id === 300 ? RESERVATION_1 : null)),
+    findByGuest:       jest.fn().mockResolvedValue([]),
+    findByListing:     jest.fn().mockResolvedValue([]),
+    findByListings:    jest.fn().mockResolvedValue([]),
+    findValidStay:     jest.fn().mockResolvedValue(RESERVATION_1),
+    findConflictingListingIds: jest.fn().mockResolvedValue([]),
+    create:            jest.fn(data => Promise.resolve({ id: 300, ...data })),
+    updateById:        jest.fn().mockResolvedValue(),
   },
 
   reviews: {
     findByListing:      jest.fn().mockResolvedValue([]),
     findByListings:     jest.fn().mockResolvedValue([]),
+    findWithAuthor:     jest.fn().mockResolvedValue([]),
+    findOne:            jest.fn().mockResolvedValue(null),
     reviewedListingIds: jest.fn().mockResolvedValue(new Set()),
     create:             jest.fn(data => Promise.resolve({ id: 400, ...data })),
   },

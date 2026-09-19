@@ -6500,7 +6500,7 @@ document.addEventListener('DOMContentLoaded', function() {
       idBtn.disabled = true; idBtn.textContent = 'Envoi…';
       try {
         const fd = new FormData(); fd.append('document', this.files[0]);
-        const data = await fetch('/api/upload/identity', { method:'POST', headers:{'Authorization':'Bearer '+localStorage.getItem('token')}, body: fd }).then(r=>r.json());
+        const data = await fetch('/api/upload/identity', { method:'POST', headers:{'Authorization':'Bearer '+localStorage.getItem('dz_token')}, body: fd }).then(r=>r.json());
         if (data.error) throw new Error(data.error);
         document.getElementById('prof-id-filename').textContent = '';
         document.getElementById('prof-id-badge').textContent = '✅ Vérifié';
