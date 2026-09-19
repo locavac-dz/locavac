@@ -1,37 +1,33 @@
-const router = require('express').Router();
-const db     = require('../db');
-const admin  = require('../middleware/admin');
+const router    = require('express').Router();
+const db        = require('../db');
+const { pool }  = require('../db');
+const admin     = require('../middleware/admin');
 
 router.use(admin);
 
-// GET /api/admin/stats
+// GET /api/admin/stats — agrégats SQL directs pour éviter de charger toutes les lignes
 router.get('/stats', async (req, res) => {
-  const users    = await db.users.find();
-  const listings = await db.listings.find();
-  const resas    = await db.reservations.find();
-  const payments = await db.payments.find(p => p.status === 'success');
-  const messages = await db.messages.find();
-  const totalRevenue = payments.reduce((s, p) => s + Number(p.amount || 0), 0);
-  const thisMonth    = new Date().toISOString().slice(0, 7);
-  const newUsers     = users.filter(u => String(u.created_at).startsWith(thisMonth)).length;
-
+  const [uStats, lStats, rStats, payAgg, msgCount] = await Promise.all([
+    pool.query(`SELECT COUNT(*) total, SUM(CASE WHEN is_host THEN 1 ELSE 0 END) hosts, SUM(CASE WHEN is_admin THEN 1 ELSE 0 END) admins, SUM(CASE WHEN date_trunc('month', created_at) = date_trunc('month', NOW()) THEN 1 ELSE 0 END) new_this_month FROM users`),
+    pool.query(`SELECT COUNT(*) total, SUM(CASE WHEN available THEN 1 ELSE 0 END) active FROM listings`),
+    pool.query(`SELECT COUNT(*) total, SUM(CASE WHEN status='confirmed' THEN 1 ELSE 0 END) confirmed, SUM(CASE WHEN status='pending' THEN 1 ELSE 0 END) pending, SUM(CASE WHEN status='cancelled' THEN 1 ELSE 0 END) cancelled FROM reservations`),
+    pool.query(`SELECT COUNT(*) transactions, COALESCE(SUM(amount),0) total_revenue FROM payments WHERE status='success'`),
+    pool.query(`SELECT COUNT(*) total FROM messages`),
+  ]);
+  const u = uStats.rows[0]; const l = lStats.rows[0]; const r = rStats.rows[0]; const p = payAgg.rows[0]; const m = msgCount.rows[0];
   res.json({
-    users:        { total: users.length, new_this_month: newUsers, hosts: users.filter(u => u.is_host).length, admins: users.filter(u => u.is_admin).length },
-    listings:     { total: listings.length, active: listings.filter(l => l.available).length, inactive: listings.filter(l => !l.available).length },
-    reservations: { total: resas.length, confirmed: resas.filter(r => r.status === 'confirmed').length, pending: resas.filter(r => r.status === 'pending').length, cancelled: resas.filter(r => r.status === 'cancelled').length },
-    revenue:      { total: totalRevenue, transactions: payments.length },
-    messages:     { total: messages.length },
+    users:        { total: parseInt(u.total), new_this_month: parseInt(u.new_this_month), hosts: parseInt(u.hosts), admins: parseInt(u.admins) },
+    listings:     { total: parseInt(l.total), active: parseInt(l.active), inactive: parseInt(l.total) - parseInt(l.active) },
+    reservations: { total: parseInt(r.total), confirmed: parseInt(r.confirmed), pending: parseInt(r.pending), cancelled: parseInt(r.cancelled) },
+    revenue:      { total: parseFloat(p.total_revenue), transactions: parseInt(p.transactions) },
+    messages:     { total: parseInt(m.total) },
   });
 });
 
 // GET /api/admin/users
 router.get('/users', async (req, res) => {
   const { q, role } = req.query;
-  let users = await db.users.find();
-  if (q)             { const s = q.toLowerCase(); users = users.filter(u => u.name.toLowerCase().includes(s) || u.email.toLowerCase().includes(s)); }
-  if (role === 'host')   users = users.filter(u => u.is_host);
-  if (role === 'admin')  users = users.filter(u => u.is_admin);
-  if (role === 'banned') users = users.filter(u => u.banned);
+  const users = await db.users.search({ q, role });
 
   const result = await Promise.all(users.map(async u => ({
     id: u.id, name: u.name, email: u.email, phone: u.phone,
@@ -39,8 +35,8 @@ router.get('/users', async (req, res) => {
     verified: u.verified || false, banned: u.banned || false,
     id_document: u.id_document || null, id_verified: u.id_verified || false,
     created_at: u.created_at,
-    listings_count:     await db.listings.count(l => l.host_id === u.id),
-    reservations_count: await db.reservations.count(r => r.guest_id === u.id),
+    listings_count:     await db.users.countListings(u.id),
+    reservations_count: await db.users.countReservations(u.id),
   })));
   res.json(result.sort((a,b) => a.id - b.id));
 });
@@ -49,7 +45,7 @@ router.get('/users', async (req, res) => {
 router.patch('/users/:id', async (req, res) => {
   const uid = Number(req.params.id);
   if (uid === req.user.id) return res.status(400).json({ error: 'Vous ne pouvez pas modifier votre propre compte admin.' });
-  const user = await db.users.findOne(u => u.id === uid);
+  const user = await db.users.findById(uid);
   if (!user) return res.status(404).json({ error: 'Utilisateur introuvable.' });
   const { banned, is_admin, verified, id_verified } = req.body;
   const changes = {};
@@ -58,7 +54,7 @@ router.patch('/users/:id', async (req, res) => {
   if (verified    !== undefined) changes.verified    = !!verified;
   if (id_verified !== undefined) changes.id_verified = !!id_verified;
   if (!Object.keys(changes).length) return res.status(400).json({ error: 'Aucun champ à modifier.' });
-  await db.users.update(u => u.id === uid, changes);
+  await db.users.updateById(uid, changes);
   res.json({ ok: true, ...changes });
 });
 
@@ -66,32 +62,29 @@ router.patch('/users/:id', async (req, res) => {
 router.delete('/users/:id', async (req, res) => {
   const uid = Number(req.params.id);
   if (uid === req.user.id) return res.status(400).json({ error: 'Impossible de supprimer votre propre compte.' });
-  const user = await db.users.findOne(u => u.id === uid);
+  const user = await db.users.findById(uid);
   if (!user) return res.status(404).json({ error: 'Utilisateur introuvable.' });
-  await db.listings.delete(l => l.host_id === uid);
-  await db.reservations.delete(r => r.guest_id === uid);
-  await db.messages.delete(m => m.from_id === uid || m.to_id === uid);
-  await db.users.delete(u => u.id === uid);
+  await db.listings.deleteByHost(uid);
+  await db.reservations.deleteByGuest(uid);
+  await db.messages.deleteByUser(uid);
+  await db.users.deleteById(uid);
   res.json({ ok: true });
 });
 
 // GET /api/admin/listings
 router.get('/listings', async (req, res) => {
   const { q, status } = req.query;
-  let listings = await db.listings.find();
-  if (q)                listings = listings.filter(l => l.title.toLowerCase().includes(q.toLowerCase()) || l.location.toLowerCase().includes(q.toLowerCase()));
-  if (status === 'active')   listings = listings.filter(l =>  l.available);
-  if (status === 'inactive') listings = listings.filter(l => !l.available);
+  const listings = await db.listings.adminSearch({ q, status });
 
   const result = await Promise.all(listings.map(async l => {
-    const host = await db.users.findOne(u => u.id === l.host_id);
+    const host = await db.users.findById(l.host_id);
     return {
       id: l.id, title: l.title, location: l.location, wilaya: l.wilaya,
       category: l.category, price: l.price, available: l.available,
       rating: l.rating, reviews: l.reviews, created_at: l.created_at,
       image: (l.photos && l.photos[0]) || l.image || '',
       host_name: host?.name || 'Inconnu', host_email: host?.email,
-      reservations_count: await db.reservations.count(r => r.listing_id === l.id),
+      reservations_count: await db.listings.countByListing(l.id),
     };
   }));
   res.json(result.sort((a,b) => b.id - a.id));
@@ -100,36 +93,35 @@ router.get('/listings', async (req, res) => {
 // PATCH /api/admin/listings/:id
 router.patch('/listings/:id', async (req, res) => {
   const lid = Number(req.params.id);
-  if (!await db.listings.findOne(l => l.id === lid)) return res.status(404).json({ error: 'Annonce introuvable.' });
+  if (!await db.listings.findById(lid)) return res.status(404).json({ error: 'Annonce introuvable.' });
   const { available } = req.body;
-  if (available !== undefined) await db.listings.update(l => l.id === lid, { available: !!available });
+  if (available !== undefined) await db.listings.updateById(lid, { available: !!available });
   res.json({ ok: true });
 });
 
 // DELETE /api/admin/listings/:id
 router.delete('/listings/:id', async (req, res) => {
   const lid = Number(req.params.id);
-  if (!await db.listings.findOne(l => l.id === lid)) return res.status(404).json({ error: 'Annonce introuvable.' });
-  await db.listings.delete(l => l.id === lid);
-  await db.reservations.delete(r => r.listing_id === lid);
-  await db.reviews.delete(r => r.listing_id === lid);
+  if (!await db.listings.findById(lid)) return res.status(404).json({ error: 'Annonce introuvable.' });
+  await db.listings.deleteById(lid);
+  await db.reservations.deleteByListing(lid);
+  await db.reviews.deleteByListing(lid);
   res.json({ ok: true });
 });
 
 // GET /api/admin/reservations
 router.get('/reservations', async (req, res) => {
   const { status } = req.query;
-  let resas = await db.reservations.find();
-  if (status) resas = resas.filter(r => r.status === status);
+  const resas = await db.reservations.findAll(status || undefined);
   const result = await Promise.all(resas.slice(0, 100).map(async r => {
-    const l = await db.listings.findOne(x => x.id === r.listing_id);
-    const g = await db.users.findOne(u => u.id === r.guest_id);
+    const l = await db.listings.findById(r.listing_id);
+    const g = await db.users.findById(r.guest_id);
     return { ...r, listing_title: l?.title, listing_location: l?.location, guest_name: g?.name, guest_email: g?.email };
   }));
   res.json(result.sort((a,b) => b.id - a.id));
 });
 
-// GET /api/admin/signalements
+// GET /api/admin/signalements — requête SQL directe (inchangée)
 router.get('/signalements', async (req, res) => {
   const { status } = req.query;
   const params = [];
@@ -166,12 +158,12 @@ router.delete('/signalements/:id', async (req, res) => {
 // POST /api/admin/reservations/:id/rembourser
 router.post('/reservations/:id/rembourser', async (req, res) => {
   const id   = Number(req.params.id);
-  const resa = await db.reservations.findOne(r => r.id === id);
+  const resa = await db.reservations.findById(id);
   if (!resa) return res.status(404).json({ error: 'Réservation introuvable.' });
   if (resa.status === 'cancelled') return res.status(400).json({ error: 'Déjà annulée.' });
-  await db.reservations.update(r => r.id === id, { status: 'cancelled' });
+  await db.reservations.updateById(id, { status: 'cancelled' });
   if (resa.payment_id) {
-    await db.payments.update(p => p.id === resa.payment_id, { status: 'refunded' });
+    await db.payments.updateById(resa.payment_id, { status: 'refunded' });
   }
   res.json({ ok: true });
 });

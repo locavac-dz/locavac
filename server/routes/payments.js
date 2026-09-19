@@ -1,13 +1,14 @@
-const router = require('express').Router();
-const crypto = require('crypto');
-const db     = require('../db');
-const auth   = require('../middleware/auth');
-const mailer = require('../mailer');
+const router  = require('express').Router();
+const crypto  = require('crypto');
+const db      = require('../db');
+const { pool } = require('../db');
+const auth    = require('../middleware/auth');
+const mailer  = require('../mailer');
 
 async function notifyPaymentConfirmed(payment, reservation) {
-  const guest   = await db.users.findOne(u => u.id === payment.user_id);
-  const listing = await db.listings.findOne(l => l.id === reservation.listing_id);
-  const host    = listing ? await db.users.findOne(u => u.id === listing.host_id) : null;
+  const guest   = await db.users.findById(payment.user_id);
+  const listing = await db.listings.findById(reservation.listing_id);
+  const host    = listing ? await db.users.findById(listing.host_id) : null;
   if (guest && listing) mailer.mailPaymentConfirmedToGuest({
     guestName: guest.name, guestEmail: guest.email, listingTitle: listing.title,
     checkIn: reservation.check_in, checkOut: reservation.check_out,
@@ -23,9 +24,9 @@ async function notifyPaymentConfirmed(payment, reservation) {
 }
 
 async function notifyVirementToHost(payment, reservation) {
-  const guest   = await db.users.findOne(u => u.id === payment.user_id);
-  const listing = await db.listings.findOne(l => l.id === reservation.listing_id);
-  const host    = listing ? await db.users.findOne(u => u.id === listing.host_id) : null;
+  const guest   = await db.users.findById(payment.user_id);
+  const listing = await db.listings.findById(reservation.listing_id);
+  const host    = listing ? await db.users.findById(listing.host_id) : null;
   if (host && listing) mailer.mailVirementToHost({
     hostName: host.name, hostEmail: host.email, guestName: guest?.name || 'Voyageur',
     listingTitle: listing.title, amount: payment.amount, reference: payment.reference,
@@ -74,18 +75,20 @@ router.post('/init', auth, async (req, res) => {
   if (!VALID_METHODS.includes(method))
     return res.status(400).json({ error: 'Méthode invalide. Valeurs : ' + VALID_METHODS.join(', ') + '.' });
 
-  const resa = await db.reservations.findOne(r => r.id === Number(reservation_id) && r.guest_id === req.user.id);
-  if (!resa) return res.status(404).json({ error: 'Réservation introuvable.' });
+  const uid  = req.user.id;
+  const resa = await db.reservations.findById(Number(reservation_id));
+  if (!resa || resa.guest_id !== uid) return res.status(404).json({ error: 'Réservation introuvable.' });
   if (resa.status === 'confirmed')
     return res.status(409).json({ error: 'Cette réservation est déjà payée.' });
 
-  await db.payments.update(
-    p => p.reservation_id === resa.id && p.status === 'pending',
-    { status: 'cancelled' }
+  // Annuler tous les paiements en attente pour cette réservation
+  await pool.query(
+    "UPDATE payments SET status = 'cancelled' WHERE reservation_id = $1 AND status = 'pending'",
+    [resa.id]
   );
 
-  const payment = await db.payments.insert({
-    reservation_id: resa.id, user_id: req.user.id,
+  const payment = await db.payments.create({
+    reservation_id: resa.id, user_id: uid,
     amount: resa.total_price, currency: 'DZD', method,
     status: 'pending', reference: genRef(),
   });
@@ -99,24 +102,24 @@ router.post('/init', auth, async (req, res) => {
 
 // POST /api/payments/:id/process
 router.post('/:id/process', auth, async (req, res) => {
-  const payment = await db.payments.findOne(p => p.id === Number(req.params.id) && p.user_id === req.user.id);
+  const payment = await db.payments.findByIdAndUser(Number(req.params.id), req.user.id);
   if (!payment) return res.status(404).json({ error: 'Paiement introuvable.' });
   if (!['pending', 'pending_otp'].includes(payment.status))
     return res.status(409).json({ error: "Ce paiement n'est plus actif." });
 
   // ── Espèces à l'arrivée ──────────────────────────────────
   if (payment.method === 'especes') {
-    await db.payments.update(p => p.id === payment.id, { status: 'success', processed_at: new Date().toISOString() });
-    await db.reservations.update(r => r.id === payment.reservation_id, { status: 'confirmed', payment_id: payment.id });
-    const resa = await db.reservations.findOne(r => r.id === payment.reservation_id);
+    await db.payments.updateById(payment.id, { status: 'success', processed_at: new Date().toISOString() });
+    await db.reservations.updateById(payment.reservation_id, { status: 'confirmed', payment_id: payment.id });
+    const resa = await db.reservations.findById(payment.reservation_id);
     notifyPaymentConfirmed({ ...payment, status: 'success' }, resa).catch(() => {});
     return res.json({ success: true, reference: payment.reference, amount: payment.amount, message: 'Réservation confirmée. Paiement en espèces à l\'arrivée.' });
   }
 
   // ── Virement bancaire ────────────────────────────────────
   if (payment.method === 'virement') {
-    await db.payments.update(p => p.id === payment.id, { status: 'pending_transfer', processed_at: new Date().toISOString() });
-    const resa = await db.reservations.findOne(r => r.id === payment.reservation_id);
+    await db.payments.updateById(payment.id, { status: 'pending_transfer', processed_at: new Date().toISOString() });
+    const resa = await db.reservations.findById(payment.reservation_id);
     notifyVirementToHost({ ...payment, status: 'pending_transfer' }, resa).catch(() => {});
     return res.json({ success: true, pending: true, reference: payment.reference, amount: payment.amount, message: 'Votre réservation sera confirmée après réception du virement (24–48h ouvrables).' });
   }
@@ -135,7 +138,7 @@ router.post('/:id/process', auth, async (req, res) => {
 
     if (!otp) {
       // Phase 1 : envoi OTP (simulé)
-      await db.payments.update(p => p.id === payment.id, { status: 'pending_otp' });
+      await db.payments.updateById(payment.id, { status: 'pending_otp' });
       return res.json({ otp_sent: true, message: `Code OTP envoyé au ${cleanPhone}` });
     }
 
@@ -143,13 +146,13 @@ router.post('/:id/process', auth, async (req, res) => {
     if (!/^\d{6}$/.test(otp))
       return res.status(400).json({ error: 'Code OTP invalide (6 chiffres requis).' });
     if (otp === '000000') {
-      await db.payments.update(p => p.id === payment.id, { status: 'failed', error_code: 'INSUFFICIENT', error_msg: 'Solde BaridiMob insuffisant.' });
+      await db.payments.updateById(payment.id, { status: 'failed', error_code: 'INSUFFICIENT', error_msg: 'Solde BaridiMob insuffisant.' });
       return res.status(402).json({ success: false, code: 'INSUFFICIENT', error: 'Solde BaridiMob insuffisant.' });
     }
 
-    await db.payments.update(p => p.id === payment.id, { status: 'success', card_masked: cleanPhone, card_type: 'baridimob', processed_at: new Date().toISOString() });
-    await db.reservations.update(r => r.id === payment.reservation_id, { status: 'confirmed', payment_id: payment.id });
-    const resa = await db.reservations.findOne(r => r.id === payment.reservation_id);
+    await db.payments.updateById(payment.id, { status: 'success', card_masked: cleanPhone, card_type: 'baridimob', processed_at: new Date().toISOString() });
+    await db.reservations.updateById(payment.reservation_id, { status: 'confirmed', payment_id: payment.id });
+    const resa = await db.reservations.findById(payment.reservation_id);
     notifyPaymentConfirmed({ ...payment, status: 'success' }, resa).catch(() => {});
     return res.json({ success: true, reference: payment.reference, amount: payment.amount, message: 'Paiement BaridiMob approuvé.' });
   }
@@ -175,27 +178,27 @@ router.post('/:id/process', auth, async (req, res) => {
 
   const result = simulateProcessing(cleanCard);
   if (result.success) {
-    await db.payments.update(p => p.id === payment.id, { status: 'success', card_masked: maskCard(cleanCard), card_type: cardType, processed_at: new Date().toISOString() });
-    await db.reservations.update(r => r.id === payment.reservation_id, { status: 'confirmed', payment_id: payment.id });
-    const resa = await db.reservations.findOne(r => r.id === payment.reservation_id);
+    await db.payments.updateById(payment.id, { status: 'success', card_masked: maskCard(cleanCard), card_type: cardType, processed_at: new Date().toISOString() });
+    await db.reservations.updateById(payment.reservation_id, { status: 'confirmed', payment_id: payment.id });
+    const resa = await db.reservations.findById(payment.reservation_id);
     notifyPaymentConfirmed({ ...payment, status: 'success' }, resa).catch(() => {});
     res.json({ success: true, reference: payment.reference, amount: payment.amount, card_masked: maskCard(cleanCard), message: result.msg });
   } else {
-    await db.payments.update(p => p.id === payment.id, { status: 'failed', error_code: result.code, error_msg: result.msg });
+    await db.payments.updateById(payment.id, { status: 'failed', error_code: result.code, error_msg: result.msg });
     res.status(402).json({ success: false, code: result.code, error: result.msg });
   }
 });
 
 // GET /api/payments/:id/status
 router.get('/:id/status', auth, async (req, res) => {
-  const payment = await db.payments.findOne(p => p.id === Number(req.params.id) && p.user_id === req.user.id);
+  const payment = await db.payments.findByIdAndUser(Number(req.params.id), req.user.id);
   if (!payment) return res.status(404).json({ error: 'Paiement introuvable.' });
   res.json({ id: payment.id, reference: payment.reference, status: payment.status, amount: payment.amount, method: payment.method, card_masked: payment.card_masked, processed_at: payment.processed_at, error_msg: payment.error_msg });
 });
 
 // GET /api/payments/reservation/:resa_id
 router.get('/reservation/:resa_id', auth, async (req, res) => {
-  const payments = await db.payments.find(p => p.reservation_id === Number(req.params.resa_id) && p.user_id === req.user.id);
+  const payments = await db.payments.findByResaAndUser(Number(req.params.resa_id), req.user.id);
   payments.sort((a, b) => b.id - a.id);
   res.json(payments);
 });

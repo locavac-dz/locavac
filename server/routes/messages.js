@@ -6,15 +6,15 @@ const ws     = require('../ws');
 // GET /api/messages — conversations de l'utilisateur
 router.get('/', auth, async (req, res) => {
   const uid  = req.user.id;
-  const msgs = await db.messages.find(m => m.from_id === uid || m.to_id === uid);
+  const msgs = await db.messages.findByUser(uid);
 
   const convMap = {};
   for (const m of msgs) {
     const otherId = m.from_id === uid ? m.to_id : m.from_id;
     const key     = `${m.listing_id}-${otherId}`;
     if (!convMap[key] || String(m.created_at) > convMap[key].last_at) {
-      const other   = await db.users.findOne(u => u.id === otherId);
-      const listing = await db.listings.findOne(l => l.id === m.listing_id);
+      const other   = await db.users.findById(otherId);
+      const listing = await db.listings.findById(m.listing_id);
       convMap[key] = {
         key, listing_id: m.listing_id,
         listing_title: listing?.title || '',
@@ -36,19 +36,13 @@ router.get('/:listing_id/:other_id', auth, async (req, res) => {
   const lid     = Number(req.params.listing_id);
   const otherId = Number(req.params.other_id);
 
-  const thread = await db.messages.find(m =>
-    m.listing_id === lid &&
-    ((m.from_id === uid && m.to_id === otherId) || (m.from_id === otherId && m.to_id === uid))
-  );
-  thread.sort((a,b) => String(a.created_at).localeCompare(String(b.created_at)));
+  // Déjà trié ASC par le DAO — pas de sort() manuel nécessaire
+  const thread = await db.messages.findThread(uid, otherId, lid);
 
-  await db.messages.update(
-    m => m.to_id === uid && m.from_id === otherId && m.listing_id === lid && !m.read,
-    { read: true }
-  );
+  await db.messages.markThreadRead(uid, otherId, lid);
 
-  const other   = await db.users.findOne(u => u.id === otherId);
-  const listing = await db.listings.findOne(l => l.id === lid);
+  const other   = await db.users.findById(otherId);
+  const listing = await db.listings.findById(lid);
   res.json({ thread, other: { id: otherId, name: other?.name }, listing: { id: lid, title: listing?.title, image: listing?.image } });
 });
 
@@ -62,16 +56,16 @@ router.post('/', auth, async (req, res) => {
   if (Number(to_id) === req.user.id)
     return res.status(400).json({ error: 'Vous ne pouvez pas vous envoyer un message.' });
 
-  const listing = await db.listings.findOne(l => l.id === Number(listing_id));
+  const listing = await db.listings.findById(Number(listing_id));
   if (!listing) return res.status(404).json({ error: 'Annonce introuvable.' });
 
-  const msg = await db.messages.insert({
+  const msg = await db.messages.create({
     from_id: req.user.id, to_id: Number(to_id),
     listing_id: Number(listing_id), body: body.trim(), read: false,
   });
 
-  const recipient = await db.users.findOne(u => u.id === Number(to_id));
-  const sender    = await db.users.findOne(u => u.id === req.user.id);
+  const recipient = await db.users.findById(Number(to_id));
+  const sender    = await db.users.findById(req.user.id);
   if (recipient?.email) {
     require('../mailer').mailNewMessage({
       to: recipient.email, senderName: sender.name,
@@ -87,7 +81,7 @@ router.post('/', auth, async (req, res) => {
 
 // GET /api/messages/unread-count
 router.get('/unread-count', auth, async (req, res) => {
-  const count = await db.messages.count(m => m.to_id === req.user.id && !m.read);
+  const count = await db.messages.countUnread(req.user.id);
   res.json({ count });
 });
 

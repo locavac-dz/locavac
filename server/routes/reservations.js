@@ -24,13 +24,7 @@ function calcRefund(policy, totalPrice, checkIn) {
 }
 
 async function isAvailable(listingId, checkIn, checkOut, excludeId = null) {
-  const conflict = await db.reservations.findOne(r =>
-    r.listing_id === listingId &&
-    r.status !== 'cancelled' &&
-    r.id !== excludeId &&
-    r.check_in < checkOut &&
-    r.check_out > checkIn
-  );
+  const conflict = await db.reservations.findConflict(listingId, checkIn, checkOut, excludeId);
   return !conflict;
 }
 
@@ -41,8 +35,8 @@ router.post('/', auth, async (req, res) => {
     return res.status(400).json({ error: "Logement, dates d'arrivée et de départ requis." });
 
   const lid     = Number(listing_id);
-  const listing = await db.listings.findOne(l => l.id === lid && l.available);
-  if (!listing) return res.status(404).json({ error: 'Logement introuvable ou indisponible.' });
+  const listing = await db.listings.findById(lid);
+  if (!listing || !listing.available) return res.status(404).json({ error: 'Logement introuvable ou indisponible.' });
   if (listing.host_id === req.user.id)
     return res.status(400).json({ error: 'Vous ne pouvez pas réserver votre propre logement.' });
 
@@ -57,13 +51,13 @@ router.post('/', auth, async (req, res) => {
     return res.status(409).json({ error: "Ces dates sont indisponibles (logement bloqué par l'hôte)." });
 
   const total = listing.price * n;
-  const resa  = await db.reservations.insert({
+  const resa  = await db.reservations.create({
     listing_id: lid, guest_id: req.user.id, check_in, check_out,
     guests_count: guests_count || 1, total_price: total, status: 'pending',
   });
 
-  const guest = await db.users.findOne(u => u.id === req.user.id);
-  const host  = await db.users.findOne(u => u.id === listing.host_id);
+  const guest = await db.users.findById(req.user.id);
+  const host  = await db.users.findById(listing.host_id);
   mailer.mailReservationCreated({
     guestName: guest.name, guestEmail: guest.email,
     listingTitle: listing.title, checkIn: check_in, checkOut: check_out,
@@ -90,15 +84,15 @@ router.post('/', auth, async (req, res) => {
 
 // GET /api/reservations/mine
 router.get('/mine', auth, async (req, res) => {
-  const resas = await db.reservations.find(r => r.guest_id === req.user.id);
+  const resas = await db.reservations.findByGuest(req.user.id);
   resas.sort((a, b) => String(b.created_at).localeCompare(String(a.created_at)));
   const now = new Date();
   const result = await Promise.all(resas.map(async r => {
-    const l = await db.listings.findOne(x => x.id === r.listing_id);
+    const l = await db.listings.findById(r.listing_id);
     const stayed = r.status === 'confirmed' && new Date(r.check_out) < now;
     let can_review = false;
     if (stayed) {
-      const existing = await db.reviews.findOne(rv => rv.listing_id === r.listing_id && (rv.author_id === req.user.id || rv.user_id === req.user.id));
+      const existing = await db.reviews.findOne(r.listing_id, req.user.id);
       can_review = !existing;
     }
     return { ...r, title: l?.title, location: l?.location, image: l?.image, price_per_night: l?.price, cancellation_policy: l?.cancellation_policy || 'flexible', can_review };
@@ -108,13 +102,13 @@ router.get('/mine', auth, async (req, res) => {
 
 // GET /api/reservations/hosting
 router.get('/hosting', auth, async (req, res) => {
-  const myListings = await db.listings.find(l => l.host_id === req.user.id);
+  const myListings = await db.listings.findByHost(req.user.id);
   const myIds = myListings.map(l => l.id);
-  const resas = await db.reservations.find(r => myIds.includes(r.listing_id));
+  const resas = await db.reservations.findByListings(myIds);
   resas.sort((a, b) => String(b.created_at).localeCompare(String(a.created_at)));
   const result = await Promise.all(resas.map(async r => {
-    const l = await db.listings.findOne(x => x.id === r.listing_id);
-    const g = await db.users.findOne(u => u.id === r.guest_id);
+    const l = await db.listings.findById(r.listing_id);
+    const g = await db.users.findById(r.guest_id);
     return { ...r, title: l?.title, location: l?.location, guest_name: g?.name, guest_email: g?.email };
   }));
   res.json(result);
@@ -126,10 +120,10 @@ router.patch('/:id/status', auth, async (req, res) => {
   if (!['confirmed', 'cancelled'].includes(status))
     return res.status(400).json({ error: 'Statut invalide.' });
 
-  const resa = await db.reservations.findOne(r => r.id === Number(req.params.id));
+  const resa = await db.reservations.findById(Number(req.params.id));
   if (!resa) return res.status(404).json({ error: 'Réservation introuvable.' });
 
-  const listing = await db.listings.findOne(l => l.id === resa.listing_id);
+  const listing = await db.listings.findById(resa.listing_id);
   const isHost  = listing?.host_id === req.user.id;
   const isGuest = resa.guest_id === req.user.id;
   if (!isHost && !isGuest) return res.status(403).json({ error: 'Accès refusé.' });
@@ -137,7 +131,7 @@ router.patch('/:id/status', auth, async (req, res) => {
 
   // Vérifier qu'un paiement valide existe avant confirmation
   if (status === 'confirmed') {
-    const paid = await db.payments.findOne(p => p.reservation_id === resa.id && p.status === 'success');
+    const paid = await db.payments.findSuccessByReservation(resa.id);
     if (!paid) return res.status(402).json({ error: 'Impossible de confirmer : aucun paiement valide enregistré pour cette réservation.' });
   }
 
@@ -148,10 +142,10 @@ router.patch('/:id/status', auth, async (req, res) => {
     refund.amount = Math.round(Number(resa.total_price) * refund.pct / 100);
   }
 
-  await db.reservations.update(r => r.id === resa.id, { status });
+  await db.reservations.updateById(resa.id, { status });
 
-  const guest = await db.users.findOne(u => u.id === resa.guest_id);
-  const host  = await db.users.findOne(u => u.id === listing?.host_id);
+  const guest = await db.users.findById(resa.guest_id);
+  const host  = listing ? await db.users.findById(listing.host_id) : null;
   if (status === 'confirmed' && guest) {
     mailer.mailReservationConfirmed({
       guestName: guest.name, guestEmail: guest.email,

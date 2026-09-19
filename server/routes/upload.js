@@ -109,7 +109,7 @@ router.post('/identity', auth, (req, res) => {
     const db  = require('../db');
     const url = '/uploads/' + req.file.filename;
     // Soumettre le document pour revue manuelle — id_verified reste false jusqu'à validation admin
-    await db.users.update(u => u.id === req.user.id, { id_document: url, id_verified: false });
+    await db.users.updateById(req.user.id, { id_document: url, id_verified: false });
     res.json({ url, message: 'Document soumis. Votre identité sera vérifiée par notre équipe sous 24–48h.' });
   });
 });

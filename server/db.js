@@ -12,7 +12,26 @@ const pool = new Pool({
     : false,
 });
 
-function now() { return new Date().toISOString().replace('T', ' ').slice(0, 19); }
+// ── Helpers bas niveau ────────────────────────────────────────
+const _q   = (sql, p = []) => pool.query(sql, p).then(r => r.rows);
+const _one = (sql, p = []) => pool.query(sql, p).then(r => r.rows[0] || null);
+const _run = (sql, p = []) => pool.query(sql, p).then(r => r.rowCount);
+
+async function _insert(table, doc) {
+  const keys   = Object.keys(doc);
+  const vals   = Object.values(doc);
+  const cols   = keys.join(', ');
+  const params = keys.map((_, i) => `$${i + 1}`).join(', ');
+  return _one(`INSERT INTO ${table} (${cols}) VALUES (${params}) RETURNING *`, vals);
+}
+
+async function _updateById(table, id, changes) {
+  const keys = Object.keys(changes);
+  if (!keys.length) return;
+  const vals = Object.values(changes);
+  const sets = keys.map((k, i) => `${k} = $${i + 1}`).join(', ');
+  await pool.query(`UPDATE ${table} SET ${sets} WHERE id = $${keys.length + 1}`, [...vals, id]);
+}
 
 // ── Initialisation du schéma ─────────────────────────────────
 async function initSchema() {
@@ -20,76 +39,244 @@ async function initSchema() {
   await pool.query(schema);
 }
 
-// ── Helper : rows → plain objects ────────────────────────────
-function rows(r) { return r.rows; }
-function row(r)  { return r.rows[0] || null; }
+// ═══════════════════════════════════════════════════════════════
+// DAO USERS
+// ═══════════════════════════════════════════════════════════════
+const users = {
+  findById:                id     => _one('SELECT * FROM users WHERE id = $1', [id]),
+  findByEmail:             email  => _one('SELECT * FROM users WHERE email = $1', [email]),
+  findByVerificationToken: token  => _one('SELECT * FROM users WHERE verification_token = $1', [token]),
+  findAll:                 ()     => _q('SELECT * FROM users ORDER BY id'),
 
-// ── Collection — interface identique à l'ancienne ────────────
-class Collection {
-  constructor(table) { this._t = table; }
-
-  async findOne(pred) {
-    if (typeof pred === 'function') {
-      const all = await this.find();
-      return all.find(pred) || null;
+  // Recherche admin avec filtres optionnels
+  async search({ q, role } = {}) {
+    const conds = [];
+    const params = [];
+    let i = 1;
+    if (q) {
+      conds.push(`(lower(name) LIKE $${i} OR lower(email) LIKE $${i})`);
+      params.push(`%${q.toLowerCase()}%`);
+      i++;
     }
-    return null;
-  }
+    if (role === 'host')   { conds.push(`is_host = true`); }
+    if (role === 'admin')  { conds.push(`is_admin = true`); }
+    if (role === 'banned') { conds.push(`banned = true`); }
+    const where = conds.length ? `WHERE ${conds.join(' AND ')}` : '';
+    return _q(`SELECT * FROM users ${where} ORDER BY id`, params);
+  },
 
-  async find(pred) {
-    const r = rows(await pool.query(`SELECT * FROM ${this._t} ORDER BY id`));
-    return pred ? r.filter(pred) : r;
-  }
+  create:    doc                => _insert('users', doc),
+  updateById: (id, changes)    => _updateById('users', id, changes),
+  deleteById:  id               => _run('DELETE FROM users WHERE id = $1', [id]),
 
-  async insert(doc) {
-    const keys   = Object.keys(doc);
-    const vals   = Object.values(doc);
-    const cols   = keys.join(', ');
-    const params = keys.map((_,i) => `$${i+1}`).join(', ');
-    const r = await pool.query(
-      `INSERT INTO ${this._t} (${cols}) VALUES (${params}) RETURNING *`, vals
-    );
-    return row(r);
-  }
+  // Compteurs pour admin
+  countListings:     hostId  => _one('SELECT COUNT(*) FROM listings WHERE host_id = $1', [hostId]).then(r => parseInt(r.count)),
+  countReservations: guestId => _one('SELECT COUNT(*) FROM reservations WHERE guest_id = $1', [guestId]).then(r => parseInt(r.count)),
+};
 
-  async update(pred, changes) {
-    if (typeof pred === 'function') {
-      const all = await this.find();
-      const targets = all.filter(pred);
-      for (const t of targets) {
-        const keys   = Object.keys(changes);
-        const vals   = Object.values(changes);
-        const sets   = keys.map((k,i) => `${k} = $${i+1}`).join(', ');
-        await pool.query(`UPDATE ${this._t} SET ${sets} WHERE id = $${keys.length+1}`, [...vals, t.id]);
-      }
-      return targets.length;
-    }
-    return 0;
-  }
+// ═══════════════════════════════════════════════════════════════
+// DAO LISTINGS
+// ═══════════════════════════════════════════════════════════════
+const listings = {
+  findById:   id     => _one('SELECT * FROM listings WHERE id = $1', [id]),
+  findByHost: hostId => _q('SELECT * FROM listings WHERE host_id = $1 ORDER BY id', [hostId]),
+  findAll:    ()     => _q('SELECT * FROM listings ORDER BY id'),
 
-  async delete(pred) {
-    if (typeof pred === 'function') {
-      const all = await this.find();
-      const targets = all.filter(pred);
-      for (const t of targets) {
-        await pool.query(`DELETE FROM ${this._t} WHERE id = $1`, [t.id]);
-      }
-      return targets.length;
-    }
-    return 0;
-  }
+  // Recherche publique avec filtres dynamiques (retourne les annonces disponibles)
+  // Les filtres amenities et blocked_ranges sont appliqués en JS après (champs JSON)
+  async search({ wilaya, category, guests, minPrice, maxPrice, minBeds, q, unavailableIds = [] } = {}) {
+    const conds  = ['available = true'];
+    const params = [];
+    let i = 1;
+    if (wilaya)    { conds.push(`wilaya = $${i++}`);            params.push(wilaya); }
+    if (category)  { conds.push(`category = $${i++}`);          params.push(category); }
+    if (guests)    { conds.push(`guests >= $${i++}`);           params.push(Number(guests)); }
+    if (minPrice)  { conds.push(`price >= $${i++}`);            params.push(Number(minPrice)); }
+    if (maxPrice)  { conds.push(`price <= $${i++}`);            params.push(Number(maxPrice)); }
+    if (minBeds)   { conds.push(`beds >= $${i++}`);             params.push(Number(minBeds)); }
+    if (q)         { conds.push(`(lower(title) LIKE $${i} OR lower(location) LIKE $${i} OR lower(coalesce(description,'')) LIKE $${i})`); params.push(`%${q.toLowerCase()}%`); i++; }
+    if (unavailableIds.length) { conds.push(`id != ALL($${i++})`); params.push(unavailableIds); }
+    return _q(`SELECT * FROM listings WHERE ${conds.join(' AND ')} ORDER BY rating DESC`, params);
+  },
 
-  async count(pred) {
-    if (!pred) {
-      const r = await pool.query(`SELECT COUNT(*) FROM ${this._t}`);
-      return parseInt(r.rows[0].count);
-    }
-    const all = await this.find();
-    return all.filter(pred).length;
-  }
-}
+  // Recherche admin avec filtres
+  async adminSearch({ q, status } = {}) {
+    const conds  = [];
+    const params = [];
+    let i = 1;
+    if (q)                 { conds.push(`(lower(title) LIKE $${i} OR lower(location) LIKE $${i})`); params.push(`%${q.toLowerCase()}%`); i++; }
+    if (status === 'active')   { conds.push('available = true'); }
+    if (status === 'inactive') { conds.push('available = false'); }
+    const where = conds.length ? `WHERE ${conds.join(' AND ')}` : '';
+    return _q(`SELECT * FROM listings ${where} ORDER BY id DESC`, params);
+  },
 
-// ── Seed données initiales ───────────────────────────────────
+  create:       doc             => _insert('listings', doc),
+  updateById:   (id, changes)  => _updateById('listings', id, changes),
+  deleteById:   id              => _run('DELETE FROM listings WHERE id = $1', [id]),
+  deleteByHost: hostId          => _run('DELETE FROM listings WHERE host_id = $1', [hostId]),
+  setAvailableByHost: (hostId, available) => _run('UPDATE listings SET available = $1 WHERE host_id = $2', [available, hostId]),
+
+  incrementViews: id => _run('UPDATE listings SET views = COALESCE(views, 0) + 1 WHERE id = $1', [id]),
+
+  updateRating: async (id) => {
+    await _run(`
+      UPDATE listings SET
+        rating   = COALESCE((SELECT ROUND(AVG(rating)::numeric, 2) FROM reviews WHERE listing_id = $1), 0),
+        reviews  = (SELECT COUNT(*) FROM reviews WHERE listing_id = $1)
+      WHERE id = $1`, [id]);
+  },
+
+  countByListing: listingId => _one('SELECT COUNT(*) FROM reservations WHERE listing_id = $1', [listingId]).then(r => parseInt(r.count)),
+};
+
+// ═══════════════════════════════════════════════════════════════
+// DAO RESERVATIONS
+// ═══════════════════════════════════════════════════════════════
+const reservations = {
+  findById:       id      => _one('SELECT * FROM reservations WHERE id = $1', [id]),
+  findByGuest:    guestId => _q('SELECT * FROM reservations WHERE guest_id = $1 ORDER BY created_at DESC', [guestId]),
+  findByListing:  listingId => _q('SELECT * FROM reservations WHERE listing_id = $1 ORDER BY created_at DESC', [listingId]),
+  findByListings: listingIds => listingIds.length
+    ? _q('SELECT * FROM reservations WHERE listing_id = ANY($1) ORDER BY created_at DESC', [listingIds])
+    : Promise.resolve([]),
+
+  // Toutes les réservations (admin) avec filtre statut optionnel
+  findAll: (status) => status
+    ? _q('SELECT * FROM reservations WHERE status = $1 ORDER BY id DESC', [status])
+    : _q('SELECT * FROM reservations ORDER BY id DESC'),
+
+  // Vérifier conflit de dates (pour créer / modifier une réservation)
+  findConflict: (listingId, checkIn, checkOut, excludeId = null) => _one(
+    `SELECT id FROM reservations
+     WHERE listing_id = $1 AND status != 'cancelled'
+       AND check_in < $2 AND check_out > $3
+       AND ($4::int IS NULL OR id != $4)
+     LIMIT 1`,
+    [listingId, checkOut, checkIn, excludeId]
+  ),
+
+  // Ids des logements déjà réservés sur une plage de dates (pour la recherche)
+  findConflictingListingIds: (checkIn, checkOut) => _q(
+    `SELECT DISTINCT listing_id FROM reservations
+     WHERE status != 'cancelled' AND check_in < $1 AND check_out > $2`,
+    [checkOut, checkIn]
+  ).then(rows => rows.map(r => r.listing_id)),
+
+  // Vérifier séjour confirmé et terminé (pour autoriser un avis)
+  findValidStay: (listingId, guestId) => _one(
+    `SELECT id FROM reservations
+     WHERE listing_id = $1 AND guest_id = $2 AND status = 'confirmed'
+       AND check_out < NOW()`,
+    [listingId, guestId]
+  ),
+
+  create:          doc           => _insert('reservations', doc),
+  updateById:      (id, changes) => _updateById('reservations', id, changes),
+  deleteByGuest:   guestId       => _run('DELETE FROM reservations WHERE guest_id = $1', [guestId]),
+  deleteByListing: listingId     => _run('DELETE FROM reservations WHERE listing_id = $1', [listingId]),
+};
+
+// ═══════════════════════════════════════════════════════════════
+// DAO REVIEWS
+// ═══════════════════════════════════════════════════════════════
+const reviews = {
+  findByListing:  listingId => _q('SELECT * FROM reviews WHERE listing_id = $1 ORDER BY created_at DESC', [listingId]),
+  findByListings: listingIds => listingIds.length
+    ? _q('SELECT * FROM reviews WHERE listing_id = ANY($1)', [listingIds])
+    : Promise.resolve([]),
+
+  findOne: (listingId, authorId) => _one(
+    'SELECT id FROM reviews WHERE listing_id = $1 AND (author_id = $2 OR user_id = $2) LIMIT 1',
+    [listingId, authorId]
+  ),
+
+  // Avis enrichis avec nom auteur pour listing detail
+  findWithAuthor: async (listingId, limit = 10) => _q(
+    `SELECT r.*, u.name AS user_name
+     FROM reviews r
+     LEFT JOIN users u ON u.id = COALESCE(r.author_id, r.user_id)
+     WHERE r.listing_id = $1
+     ORDER BY r.created_at DESC
+     LIMIT $2`,
+    [listingId, limit]
+  ),
+
+  create:          doc           => _insert('reviews', doc),
+  deleteByListing: listingId     => _run('DELETE FROM reviews WHERE listing_id = $1', [listingId]),
+  deleteByAuthor:  authorId      => _run('DELETE FROM reviews WHERE author_id = $1 OR user_id = $1', [authorId]),
+};
+
+// ═══════════════════════════════════════════════════════════════
+// DAO PAYMENTS
+// ═══════════════════════════════════════════════════════════════
+const payments = {
+  findById:           id        => _one('SELECT * FROM payments WHERE id = $1', [id]),
+  findByIdAndUser:    (id, uid) => _one('SELECT * FROM payments WHERE id = $1 AND user_id = $2', [id, uid]),
+  findByReservation:  resaId    => _q('SELECT * FROM payments WHERE reservation_id = $1', [resaId]),
+  findByResaAndUser:  (resaId, uid) => _q('SELECT * FROM payments WHERE reservation_id = $1 AND user_id = $2', [resaId, uid]),
+
+  findSuccessByReservation: resaId => _one(
+    "SELECT id FROM payments WHERE reservation_id = $1 AND status = 'success' LIMIT 1",
+    [resaId]
+  ),
+
+  findAll: (status) => status
+    ? _q('SELECT * FROM payments WHERE status = $1 ORDER BY id DESC', [status])
+    : _q('SELECT * FROM payments ORDER BY id DESC'),
+
+  create:    doc           => _insert('payments', doc),
+  updateById: (id, changes) => _updateById('payments', id, changes),
+};
+
+// ═══════════════════════════════════════════════════════════════
+// DAO MESSAGES
+// ═══════════════════════════════════════════════════════════════
+const messages = {
+  // Toutes les conversations d'un utilisateur (liste groupée)
+  findByUser: uid => _q(
+    'SELECT * FROM messages WHERE from_id = $1 OR to_id = $1 ORDER BY created_at DESC',
+    [uid]
+  ),
+
+  // Fil d'une conversation
+  findThread: (uid, otherId, listingId) => _q(
+    `SELECT * FROM messages
+     WHERE listing_id = $1
+       AND ((from_id = $2 AND to_id = $3) OR (from_id = $3 AND to_id = $2))
+     ORDER BY created_at ASC`,
+    [listingId, uid, otherId]
+  ),
+
+  // Marquer comme lus les messages d'une conversation
+  markThreadRead: (toId, fromId, listingId) => _run(
+    'UPDATE messages SET read = true WHERE to_id = $1 AND from_id = $2 AND listing_id = $3 AND read = false',
+    [toId, fromId, listingId]
+  ),
+
+  countUnread: uid => _one(
+    'SELECT COUNT(*) FROM messages WHERE to_id = $1 AND read = false',
+    [uid]
+  ).then(r => parseInt(r.count)),
+
+  create:     doc    => _insert('messages', doc),
+  deleteByUser: uid  => _run('DELETE FROM messages WHERE from_id = $1 OR to_id = $1', [uid]),
+};
+
+// ═══════════════════════════════════════════════════════════════
+// DAO PAYOUTS
+// ═══════════════════════════════════════════════════════════════
+const payouts = {
+  findByHost: hostId => _q('SELECT * FROM payouts WHERE host_id = $1 ORDER BY id DESC', [hostId]),
+  findAll:    ()     => _q('SELECT * FROM payouts ORDER BY id DESC'),
+  findById:   id     => _one('SELECT * FROM payouts WHERE id = $1', [id]),
+  create:     doc           => _insert('payouts', doc),
+  updateById: (id, changes) => _updateById('payouts', id, changes),
+};
+
+// ═══════════════════════════════════════════════════════════════
+// SEED
+// ═══════════════════════════════════════════════════════════════
 const SEED_LISTINGS = [
   { title:"Villa pieds dans l'eau à Tipaza",  description:"Vue imprenable sur la Méditerranée, terrasse privée, accès direct à la plage. Parfait pour un séjour en famille ou entre amis à deux pas d'Alger.",        location:"Tipaza",           wilaya:"Tipaza",      category:"plage",    price:12500, guests:6,  beds:3, baths:2, image:"https://images.unsplash.com/photo-1564013799919-ab600027ffc6?w=800&q=80", rating:4.97, reviews:128 },
   { title:"Camp de luxe sous les étoiles",    description:"Nuits féériques dans le Grand Erg Occidental. Bivouac équipé, dîner traditionnel targui, balade en dromadaire au lever du soleil.",                          location:"Tamanrasset",      wilaya:"Tamanrasset", category:"sahara",   price:18000, guests:4,  beds:2, baths:1, image:"https://images.unsplash.com/photo-1451337516015-6b6e9a44a8a3?w=800&q=80", rating:5.0,  reviews:54  },
@@ -126,7 +313,6 @@ async function seed() {
   );
   const hostRow = await pool.query(`SELECT id FROM users WHERE email = 'demo@locavac.dz'`);
   const hostId  = hostRow.rows[0].id;
-
   const listingCount = await pool.query(`SELECT COUNT(*) FROM listings`);
   if (parseInt(listingCount.rows[0].count) === 0) {
     for (let i = 0; i < SEED_LISTINGS.length; i++) {
@@ -143,17 +329,8 @@ async function seed() {
   }
 }
 
-// ── Export — interface compatible avec toutes les routes ─────
-const users        = new Collection('users');
-const listings     = new Collection('listings');
-const reservations = new Collection('reservations');
-const reviews      = new Collection('reviews');
-const payments     = new Collection('payments');
-const messages     = new Collection('messages');
-const payouts      = new Collection('payouts');
-
 async function connect() {
-  await pool.query('SELECT 1'); // test connexion
+  await pool.query('SELECT 1');
   await initSchema();
   const migrate = require('./migrate');
   await migrate(pool);

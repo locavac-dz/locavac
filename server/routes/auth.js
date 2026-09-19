@@ -34,10 +34,10 @@ router.post('/register', async (req, res) => {
     return res.status(400).json({ error: 'Adresse email invalide.' });
   if (password.length < 6)
     return res.status(400).json({ error: 'Le mot de passe doit contenir au moins 6 caractères.' });
-  if (await db.users.findOne(u => u.email === email))
+  if (await db.users.findByEmail(email))
     return res.status(409).json({ error: 'Cet email est déjà utilisé.' });
   const verificationToken = crypto.randomBytes(32).toString('hex');
-  const user = await db.users.insert({
+  const user = await db.users.create({
     name, email, password: await bcrypt.hash(password, 10),
     phone: phone || null, is_host: false,
     email_verified: false, verification_token: verificationToken,
@@ -53,7 +53,7 @@ router.post('/login', async (req, res) => {
   const { email, password } = req.body;
   if (!email || !password)
     return res.status(400).json({ error: 'Email et mot de passe requis.' });
-  const user = await db.users.findOne(u => u.email === email);
+  const user = await db.users.findByEmail(email);
   // Toujours exécuter bcrypt même si l'utilisateur est inconnu (anti timing oracle / énumération d'emails)
   const match = await bcrypt.compare(password, user?.password || DUMMY_HASH);
   if (!user || !match)
@@ -65,7 +65,7 @@ router.post('/login', async (req, res) => {
 
 // GET /api/auth/me
 router.get('/me', require('../middleware/auth'), async (req, res) => {
-  const user = await db.users.findOne(u => u.id === req.user.id);
+  const user = await db.users.findById(req.user.id);
   if (!user) return res.status(404).json({ error: 'Utilisateur introuvable.' });
   res.json(safe(user));
 });
@@ -81,8 +81,8 @@ router.put('/profile', require('../middleware/auth'), async (req, res) => {
   if (Array.isArray(languages)) changes.languages = languages;
   if (!Object.keys(changes).length)
     return res.status(400).json({ error: 'Aucun champ à modifier.' });
-  await db.users.update(u => u.id === req.user.id, changes);
-  const updated = await db.users.findOne(u => u.id === req.user.id);
+  await db.users.updateById(req.user.id, changes);
+  const updated = await db.users.findById(req.user.id);
   res.json(safe(updated));
 });
 
@@ -90,7 +90,7 @@ router.put('/profile', require('../middleware/auth'), async (req, res) => {
 router.post('/forgot-password', async (req, res) => {
   const { email } = req.body;
   if (!email) return res.status(400).json({ error: 'Email requis.' });
-  const user = await db.users.findOne(u => u.email === email.toLowerCase().trim());
+  const user = await db.users.findByEmail(email.toLowerCase().trim());
   // Toujours répondre avec succès pour éviter l'énumération d'emails
   if (!user) return res.json({ ok: true });
   // Invalider les anciens tokens non utilisés avant d'en créer un nouveau
@@ -117,7 +117,7 @@ router.post('/reset-password', async (req, res) => {
   );
   if (!r.rows[0]) return res.status(400).json({ error: 'Lien invalide ou expiré. Faites une nouvelle demande.' });
   const { user_id, id: tokenId } = r.rows[0];
-  await db.users.update(u => u.id === user_id, { password: await bcrypt.hash(password, 10) });
+  await db.users.updateById(user_id, { password: await bcrypt.hash(password, 10) });
   await pool.query('UPDATE password_reset_tokens SET used = true WHERE id = $1', [tokenId]);
   res.json({ ok: true });
 });
@@ -126,9 +126,9 @@ router.post('/reset-password', async (req, res) => {
 router.get('/verify-email', async (req, res) => {
   const { token } = req.query;
   if (!token) return res.redirect('/?verify=invalid');
-  const user = await db.users.findOne(u => u.verification_token === token);
+  const user = await db.users.findByVerificationToken(token);
   if (!user) return res.redirect('/?verify=invalid');
-  await db.users.update(u => u.id === user.id, { email_verified: true, verification_token: null });
+  await db.users.updateById(user.id, { email_verified: true, verification_token: null });
   res.redirect('/?verify=ok');
 });
 
@@ -149,9 +149,9 @@ router.delete('/me', require('../middleware/auth'), async (req, res) => {
 
 // GET /api/users/:id — profil public
 router.get('/users/:id', async (req, res) => {
-  const user = await db.users.findOne(u => u.id === Number(req.params.id));
+  const user = await db.users.findById(Number(req.params.id));
   if (!user) return res.status(404).json({ error: 'Utilisateur introuvable.' });
-  const listings = await db.listings.find(l => l.host_id === user.id && l.available);
+  const listings = (await db.listings.findByHost(user.id)).filter(l => l.available);
   res.json({
     id: user.id, name: user.name, bio: user.bio || '',
     avatar: user.avatar || '', is_host: user.is_host,
