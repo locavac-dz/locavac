@@ -494,6 +494,12 @@ footer{background:var(--g100);border-top:1px solid var(--g200);padding:48px 24px
 .msg-input-row input{flex:1;border:1.5px solid var(--g200);border-radius:24px;padding:10px 16px;font-size:14px;font-family:inherit;outline:none}
 .msg-input-row input:focus{border-color:var(--red)}
 .msg-send-btn{background:var(--red);border:none;color:#fff;width:40px;height:40px;border-radius:50%;cursor:pointer;font-size:18px}
+.msg-char-count{font-size:11px;color:var(--g400);padding:0 16px 6px;text-align:right;min-height:16px}
+.msg-char-count.warn{color:#d97706}
+.msg-char-count.danger{color:var(--red);font-weight:600}
+.conv-search-wrap{padding:10px 12px;border-bottom:1px solid var(--g200);flex-shrink:0}
+.conv-search-wrap input{width:100%;border:1.5px solid var(--g200);border-radius:20px;padding:7px 14px;font-size:13px;font-family:inherit;outline:none;box-sizing:border-box;background:var(--bg);color:var(--text)}
+.conv-search-wrap input:focus{border-color:var(--red)}
 .msg-empty{display:flex;align-items:center;justify-content:center;height:100%;color:var(--g400);font-size:15px;text-align:center;flex-direction:column;gap:8px}
 
 /* ── HOST DASHBOARD ── */
@@ -1686,8 +1692,13 @@ footer{background:var(--g100);border-top:1px solid var(--g200);padding:48px 24px
       <h2>Messages</h2><p class="sub">Conversations avec les hôtes et voyageurs</p>
     </div>
     <div class="msg-layout">
-      <div class="conv-list" id="conv-list">
-        <div style="padding:16px;color:var(--g400);font-size:14px;text-align:center">Chargement…</div>
+      <div style="display:flex;flex-direction:column;overflow:hidden;border-right:1px solid var(--g200)">
+        <div class="conv-search-wrap">
+          <input type="text" id="conv-search-input" placeholder="Rechercher…" oninput="_filterConvs(this.value)"/>
+        </div>
+        <div class="conv-list" id="conv-list" style="border-right:none">
+          <div style="padding:16px;color:var(--g400);font-size:14px;text-align:center">Chargement…</div>
+        </div>
       </div>
       <div class="thread-area">
         <div id="thread-empty" class="msg-empty"><span style="font-size:40px">💬</span><span>Sélectionnez une conversation</span></div>
@@ -1696,9 +1707,10 @@ footer{background:var(--g100);border-top:1px solid var(--g200);padding:48px 24px
           <div class="thread-msgs" id="thread-msgs"></div>
           <div class="typing-indicator" id="typing-indicator"><div class="typing-dots"><span></span><span></span><span></span></div><span id="typing-name"></span> est en train d'écrire</div>
           <div class="msg-input-row">
-            <input type="text" id="msg-input" placeholder="Écrivez un message…"/>
+            <input type="text" id="msg-input" placeholder="Écrivez un message…" maxlength="1000"/>
             <button class="msg-send-btn" id="msg-send-btn">➤</button>
           </div>
+          <div class="msg-char-count" id="msg-char-count"></div>
         </div>
       </div>
     </div>
@@ -4761,7 +4773,7 @@ function closeWs() {
 // ── STATISTIQUES HÔTE ─────────────────────────────────────
 async function loadStats() {
   const el = document.getElementById('hdp-stats');
-  el.innerHTML = '<p style="color:var(--g400);font-size:14px">Chargement…</p>';
+  el.innerHTML = `<div class="stats-grid">${'<div class="stat-card"><div class="skeleton skel-block" style="height:56px;margin:0"></div></div>'.repeat(6)}</div><div class="skeleton skel-block" style="height:110px;margin-top:20px"></div>`;
   try {
     const s = await apiFetch('/stats/host');
     const monthly = s.revenue.monthly;
@@ -4853,7 +4865,7 @@ async function loadStats() {
 // ── GAINS HÔTE ────────────────────────────────────────────
 async function loadGains() {
   const el = document.getElementById('hdp-gains');
-  el.innerHTML = '<p style="color:var(--g400);font-size:14px">Chargement…</p>';
+  el.innerHTML = `<div class="stats-grid" style="grid-template-columns:repeat(3,1fr)">${'<div class="stat-card"><div class="skeleton skel-block" style="height:56px;margin:0"></div></div>'.repeat(3)}</div><div class="skeleton skel-block" style="height:80px;margin-top:20px"></div><div class="skeleton skel-block" style="height:120px;margin-top:12px"></div>`;
   try {
     const [data, payoutsData] = await Promise.all([
       apiFetch('/stats/host/earnings'),
@@ -4936,7 +4948,8 @@ async function loadGains() {
       </div>
 
       <!-- Tableau des transactions -->
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px"><h4 style="margin:0">Détail des réservations</h4><button class="btn-sm" onclick="exportGainsCSV(window._gainsData)">📥 Exporter CSV</button></div>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px"><h4 style="margin:0">Détail des réservations</h4><button class="btn-sm" onclick="exportGainsCSV(window._gainsData)">📥 Exporter CSV</button></div>
+      <div id="gains-tx-filter-bar" style="margin-bottom:12px"></div>
       <div style="overflow-x:auto;border-radius:10px;border:1px solid var(--g200)">
         <table style="width:100%;border-collapse:collapse">
           <thead><tr style="background:var(--g50);font-size:12px;color:var(--g600)">
@@ -4947,10 +4960,35 @@ async function loadGains() {
             <th style="padding:8px 10px;text-align:right">Frais</th>
             <th style="padding:8px 10px;text-align:right">Net</th>
           </tr></thead>
-          <tbody>${txRows}</tbody>
+          <tbody id="gains-tx-tbody"></tbody>
         </table>
       </div>`;
+    _renderGainsTxRows(transactions, 'all');
   } catch(e) { el.innerHTML = '<p style="color:var(--red);font-size:14px">'+e.message+'</p>'; }
+}
+
+function _renderGainsTxRows(data, period) {
+  const now = new Date();
+  const cutoff = { '3m': new Date(now.getFullYear(), now.getMonth() - 3, now.getDate()),
+                   '6m': new Date(now.getFullYear(), now.getMonth() - 6, now.getDate()),
+                  '12m': new Date(now.getFullYear() - 1, now.getMonth(), now.getDate()) };
+  const filtered = cutoff[period] ? data.filter(t => new Date(t.paid_at) >= cutoff[period]) : data;
+  const fmt = n => Number(n).toLocaleString('fr-DZ') + ' DZD';
+  const periods = [['all','Tout'],['12m','12 mois'],['6m','6 mois'],['3m','3 mois']];
+  const fbar = document.getElementById('gains-tx-filter-bar');
+  if (fbar) fbar.innerHTML = `<div class="res-filter-bar" style="margin-bottom:0">${periods.map(([p,l]) => `<button class="res-filter-btn${p === period ? ' active' : ''}" onclick="_renderGainsTxRows(window._gainsData,'${p}')">${l}</button>`).join('')}</div>`;
+  const tbody = document.getElementById('gains-tx-tbody');
+  if (!tbody) return;
+  tbody.innerHTML = filtered.length ? filtered.map(t => `
+    <tr>
+      <td style="padding:8px 10px;font-size:13px">${String(t.paid_at).slice(0,10)}</td>
+      <td style="padding:8px 10px;font-size:13px">${t.listing_title}</td>
+      <td style="padding:8px 10px;font-size:12px;color:var(--g600)">${t.check_in} → ${t.check_out}</td>
+      <td style="padding:8px 10px;text-align:right">${fmt(t.gross)}</td>
+      <td style="padding:8px 10px;text-align:right;color:#dc2626">-${fmt(t.fee)}</td>
+      <td style="padding:8px 10px;text-align:right;font-weight:700;color:#047857">${fmt(t.net)}</td>
+    </tr>`).join('') :
+    '<tr><td colspan="6" style="padding:20px;text-align:center;color:var(--g400)">Aucune transaction sur cette période</td></tr>';
 }
 
 async function requestPayout() {
@@ -5055,26 +5093,43 @@ async function openMsgs() {
 async function loadConversations() {
   const list = document.getElementById('conv-list');
   list.innerHTML = '<div style="padding:16px;color:var(--g400);font-size:14px;text-align:center">Chargement…</div>';
+  const si = document.getElementById('conv-search-input');
+  if (si) si.value = '';
   try {
     const convs = await apiFetch('/messages');
-    if (!convs.length) { list.innerHTML='<div style="padding:24px;color:var(--g400);font-size:14px;text-align:center">Aucune conversation.</div>'; return; }
-    list.innerHTML = convs.map(c => `
-      <div class="conv-item" data-key="${c.key}" data-lid="${c.listing_id}" data-oid="${c.other_id}" data-oname="${c.other_name}">
-        <div class="conv-avatar">${c.other_name.charAt(0).toUpperCase()}</div>
-        <div class="conv-info">
-          <div class="conv-name">${c.other_name}</div>
-          <div class="conv-preview">${c.listing_title} · ${c.last_msg}</div>
-        </div>
-        ${c.unread > 0 ? `<div class="conv-badge">${c.unread}</div>` : ''}
-      </div>`).join('');
-    list.querySelectorAll('.conv-item').forEach(item => {
-      item.addEventListener('click', () => {
-        list.querySelectorAll('.conv-item').forEach(i => i.classList.remove('active'));
-        item.classList.add('active');
-        openThread(Number(item.dataset.lid), Number(item.dataset.oid), item.dataset.oname);
-      });
-    });
+    window._convData = convs;
+    _renderConvList(convs);
   } catch(e) { list.innerHTML='<div style="padding:16px;color:var(--red);font-size:14px">'+e.message+'</div>'; }
+}
+function _renderConvList(convs) {
+  const list = document.getElementById('conv-list');
+  if (!convs.length) { list.innerHTML='<div style="padding:24px;color:var(--g400);font-size:14px;text-align:center">Aucune conversation.</div>'; return; }
+  list.innerHTML = convs.map(c => `
+    <div class="conv-item" data-key="${c.key}" data-lid="${c.listing_id}" data-oid="${c.other_id}" data-oname="${c.other_name}">
+      <div class="conv-avatar">${c.other_name.charAt(0).toUpperCase()}</div>
+      <div class="conv-info">
+        <div class="conv-name">${c.other_name}</div>
+        <div class="conv-preview">${c.listing_title} · ${c.last_msg}</div>
+      </div>
+      ${c.unread > 0 ? `<div class="conv-badge">${c.unread}</div>` : ''}
+    </div>`).join('');
+  list.querySelectorAll('.conv-item').forEach(item => {
+    item.addEventListener('click', () => {
+      list.querySelectorAll('.conv-item').forEach(i => i.classList.remove('active'));
+      item.classList.add('active');
+      openThread(Number(item.dataset.lid), Number(item.dataset.oid), item.dataset.oname);
+    });
+  });
+}
+function _filterConvs(q) {
+  const data = window._convData || [];
+  if (!q.trim()) { _renderConvList(data); return; }
+  const lq = q.toLowerCase();
+  _renderConvList(data.filter(c =>
+    c.other_name.toLowerCase().includes(lq) ||
+    (c.listing_title || '').toLowerCase().includes(lq) ||
+    (c.last_msg || '').toLowerCase().includes(lq)
+  ));
 }
 async function openThread(lid, oid, oname) {
   activeConvOther   = oid;
@@ -5136,6 +5191,8 @@ async function sendMsg() {
   const body  = input.value.trim();
   if (!body || !activeConvOther || !activeConvListing) return;
   input.value = '';
+  const _cnt = document.getElementById('msg-char-count');
+  if (_cnt) { _cnt.textContent = ''; _cnt.className = 'msg-char-count'; }
   try {
     await apiFetch('/messages', { method:'POST', body: JSON.stringify({ to_id: activeConvOther, listing_id: activeConvListing, body }) });
     openThread(activeConvListing, activeConvOther, document.getElementById('thread-hd').textContent);
@@ -6282,6 +6339,15 @@ document.addEventListener('DOMContentLoaded', function() {
   document.getElementById('msg-input').addEventListener('input', () => {
     clearTimeout(_typingSendTid);
     _typingSendTid = setTimeout(sendTyping, 300);
+    const len = document.getElementById('msg-input').value.length;
+    const cnt = document.getElementById('msg-char-count');
+    if (len > 0) {
+      cnt.textContent = len + '/1000';
+      cnt.className = 'msg-char-count' + (len > 900 ? ' danger' : len > 750 ? ' warn' : '');
+    } else {
+      cnt.textContent = '';
+      cnt.className = 'msg-char-count';
+    }
   });
 
   // Dashboard hôte tabs
