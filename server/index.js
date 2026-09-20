@@ -149,6 +149,15 @@ const newsletterLimiter = rateLimit({
   message: { error: 'Trop de tentatives. Réessayez dans 15 minutes.' },
   skip: () => process.env.NODE_ENV === 'test',
 });
+const reportLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000, // 1 heure
+  max: 5, // route publique sans authentification : 5 signalements par IP et par heure
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Trop de signalements. Réessayez dans une heure.' },
+  skip: () => process.env.NODE_ENV === 'test',
+});
+app.post('/api/listings/:id/signaler', reportLimiter);
 app.use('/api/reservations', reservationLimiter);
 app.use('/api/payments',     paymentLimiter);
 app.post('/api/listings',    listingLimiter);
@@ -213,7 +222,13 @@ app.get('/api/health', async (_, res) => {
     dbLatencyMs = Date.now() - start;
   } catch (err) {
     dbStatus = 'down';
-    dbError  = err.message;
+    // Route publique : en production le détail (hôte, port, utilisateur PostgreSQL) va au journal, pas au client
+    if (process.env.NODE_ENV === 'production') {
+      console.error('[Health] PostgreSQL indisponible :', err.message);
+      dbError = err.message === 'timeout' ? 'timeout' : 'unavailable';
+    } else {
+      dbError = err.message;
+    }
   } finally {
     // Sans cet arrêt, le timer de 3 s survit à chaque sonde réussie
     clearTimeout(timer);
@@ -251,12 +266,15 @@ if (require.main === module) {
   db.connect()
     .then(() => {
       const server = http.createServer(app);
-      wsModule.setup(server);
+      const wss = wsModule.setup(server);
+      require('./lifecycle').installGracefulShutdown({ server, wss, pool });
       server.listen(PORT, () => {
         console.log(`\n🚀 Locavac démarré sur http://localhost:${PORT}`);
         console.log(`   API disponible sur http://localhost:${PORT}/api\n`);
         require('./agent').start();
         require('./cron');
+        // pm2 (wait_ready) : l'ancien processus n'est arrêté qu'une fois celui-ci réellement prêt
+        if (process.send) process.send('ready');
       });
     })
     .catch(err => {

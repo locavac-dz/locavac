@@ -33,8 +33,11 @@ module.exports = {
       autorestart:  true,
       restart_delay: 3000,
 
-      // Graceful shutdown (SIGINT → fermer les connexions proprement)
-      kill_timeout:  5000,
+      // Rechargement sans coupure : le nouveau processus signale « ready » après listen() (server/index.js) ;
+      // l'ancien reçoit alors SIGINT et ferme proprement HTTP, WebSockets et pool PostgreSQL (server/lifecycle.js).
+      wait_ready:     true,
+      listen_timeout: 20000, // schéma + migrations au démarrage
+      kill_timeout:   10000, // > délai d'arrêt propre (8 s)
     },
   ],
 };

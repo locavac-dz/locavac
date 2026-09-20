@@ -33,6 +33,30 @@ describe('GET /api/health', () => {
     expect(res.body).not.toHaveProperty('db_latency_ms');
   });
 
+  // Route publique : le message PostgreSQL brut révèle utilisateur, hôte et port de la base
+  describe('en production', () => {
+    const ORIGINAL = process.env.NODE_ENV;
+    let errSpy;
+    beforeEach(() => { process.env.NODE_ENV = 'production'; errSpy = jest.spyOn(console, 'error').mockImplementation(() => {}); });
+    afterEach(() => { process.env.NODE_ENV = ORIGINAL; errSpy.mockRestore(); });
+
+    test('le détail de l\'erreur va au journal, le client ne reçoit que « unavailable »', async () => {
+      const detail = 'password authentication failed for user "locavac" at 10.0.0.5:5432';
+      db.pool.query.mockRejectedValueOnce(new Error(detail));
+      const res = await request(app).get('/api/health');
+      expect(res.status).toBe(503);
+      expect(res.body).toMatchObject({ ok: false, db: 'down', db_error: 'unavailable' });
+      expect(JSON.stringify(res.body)).not.toMatch(/locavac|10\.0\.0\.5|5432|password/);
+      expect(errSpy.mock.calls.flat().join(' ')).toContain(detail);
+    });
+
+    test('réponse saine inchangée', async () => {
+      const res = await request(app).get('/api/health');
+      expect(res.status).toBe(200);
+      expect(res.body).not.toHaveProperty('db_error');
+    });
+  });
+
   test('503 quand PostgreSQL dépasse le timeout', async () => {
     jest.useFakeTimers();
     // Promesse qui ne se résout jamais (simule un serveur qui ne répond pas)

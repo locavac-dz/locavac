@@ -3,6 +3,9 @@
   "version": "1.0.0",
   "description": "Plateforme de location de vacances en Algérie",
   "main": "server/index.js",
+  "engines": {
+    "node": ">=20"
+  },
   "scripts": {
     "start": "node server/index.js",
     "dev": "nodemon server/index.js",

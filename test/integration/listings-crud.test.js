@@ -111,12 +111,48 @@ describe('POST /api/listings/:id/signaler', () => {
     expect(res.body.error).toMatch(/motif/i);
   });
 
-  test('200 en anonyme — user_id null', async () => {
-    const res = await request(app).post('/api/listings/1/signaler').send({ motif: 'contenu_inapproprie' });
+  const insertCall = () => db.pool.query.mock.calls.find(c => /INSERT INTO signalements/.test(c[0]));
+
+  test('200 en anonyme — user_id null, id d\'annonce numérique', async () => {
+    const res = await request(app).post('/api/listings/1/signaler').send({ motif: 'autre' });
     expect(res.status).toBe(200);
-    const insert = db.pool.query.mock.calls.find(c => /INSERT INTO signalements/.test(c[0]));
-    expect(insert).toBeDefined();
-    expect(insert[1]).toEqual(['1', null, 'contenu_inapproprie', null]);
+    expect(insertCall()[1]).toEqual([1, null, 'autre', null]);
+  });
+
+  test.each(['frauduleuse', 'photos', 'prix', 'comportement', 'autre'])('motif du formulaire accepté : %s', async motif => {
+    const res = await request(app).post('/api/listings/1/signaler').send({ motif, message: '  Détail  ' });
+    expect(res.status).toBe(200);
+    expect(insertCall()[1]).toEqual([1, null, motif, 'Détail']);
+  });
+
+  test.each(['contenu_inapproprie', '<script>alert(1)</script>', 'x'.repeat(5000), 42])('400 pour un motif hors liste : %p', async motif => {
+    const res = await request(app).post('/api/listings/1/signaler').send({ motif });
+    expect(res.status).toBe(400);
+    expect(insertCall()).toBeUndefined();
+  });
+
+  test('400 si le message dépasse 1000 caractères ou n\'est pas du texte', async () => {
+    expect((await request(app).post('/api/listings/1/signaler').send({ motif: 'autre', message: 'x'.repeat(1001) })).status).toBe(400);
+    expect((await request(app).post('/api/listings/1/signaler').send({ motif: 'autre', message: { a: 1 } })).status).toBe(400);
+    expect((await request(app).post('/api/listings/1/signaler').send({ motif: 'autre', message: 'x'.repeat(1000) })).status).toBe(200);
+  });
+
+  test('404 pour une annonce inexistante ou un id non numérique : rien n\'est inséré', async () => {
+    expect((await request(app).post('/api/listings/9999/signaler').send({ motif: 'autre' })).status).toBe(404);
+    expect((await request(app).post('/api/listings/abc/signaler').send({ motif: 'autre' })).status).toBe(404);
+    expect(insertCall()).toBeUndefined();
+  });
+
+  test('avec un jeton valide, le signalement est rattaché à son auteur', async () => {
+    const res = await request(app).post('/api/listings/1/signaler').set(GUEST_AUTH).send({ motif: 'prix' });
+    expect(res.status).toBe(200);
+    expect(insertCall()[1]).toEqual([1, 2, 'prix', null]);
+  });
+
+  test('un jeton invalide ne bloque pas le signalement : il reste anonyme', async () => {
+    const res = await request(app).post('/api/listings/1/signaler').set('Authorization', 'Bearer faux.jeton.ici').send({ motif: 'prix' });
+    expect(res.status).toBe(200);
+    expect(insertCall()[1][1]).toBeNull();
   });
 });
 

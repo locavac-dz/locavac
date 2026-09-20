@@ -1,6 +1,7 @@
 const router = require('express').Router();
 const db     = require('../db');
 const auth   = require('../middleware/auth');
+const jwt    = require('jsonwebtoken');
 
 // Enrichit une liste d'annonces avec les données hôte en une seule requête (anti N+1)
 async function attachHosts(listings) {
@@ -10,7 +11,9 @@ async function attachHosts(listings) {
   const byId  = Object.fromEntries(hosts.map(h => [h.id, h]));
   return listings.map(l => {
     const h = byId[l.host_id];
-    return { ...l, host_name: h?.name || 'Inconnu', host_phone: h?.phone || null, host_languages: h?.languages || [] };
+    // Le téléphone de l'hôte n'est jamais exposé ici (routes publiques, mises en cache) : il est communiqué
+    // au voyageur dans l'e-mail de confirmation de réservation.
+    return { ...l, host_name: h?.name || 'Inconnu', host_languages: h?.languages || [] };
   });
 }
 
@@ -157,12 +160,28 @@ router.delete('/:id', auth, async (req, res) => {
 });
 
 // POST /api/listings/:id/signaler — public (optionnellement authentifié)
+const SIGNALEMENT_MOTIFS = ['frauduleuse', 'photos', 'prix', 'comportement', 'autre'];
 router.post('/:id/signaler', async (req, res) => {
   const { motif, message } = req.body;
   if (!motif) return res.status(400).json({ error: 'Motif requis.' });
+  if (!SIGNALEMENT_MOTIFS.includes(motif))
+    return res.status(400).json({ error: 'Motif invalide.' });
+  if (message !== undefined && message !== null && (typeof message !== 'string' || message.length > 1000))
+    return res.status(400).json({ error: 'Le message ne peut pas dépasser 1000 caractères.' });
+  const lid = Number(req.params.id);
+  if (!Number.isInteger(lid) || !await db.listings.findById(lid))
+    return res.status(404).json({ error: 'Annonce introuvable.' });
+
+  // Signalement anonyme autorisé ; s'il y a un jeton valide, on rattache l'auteur
+  let userId = null;
+  const header = req.headers.authorization || '';
+  if (header.startsWith('Bearer ')) {
+    try { userId = jwt.verify(header.slice(7), process.env.JWT_SECRET, { algorithms: ['HS256'] }).id || null; } catch {}
+  }
+
   await db.pool.query(
     'INSERT INTO signalements (listing_id, user_id, motif, message) VALUES ($1,$2,$3,$4)',
-    [req.params.id, req.user?.id || null, motif, message || null]
+    [lid, userId, motif, (message || '').trim() || null]
   );
   res.json({ ok: true });
 });

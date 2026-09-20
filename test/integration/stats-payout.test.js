@@ -141,6 +141,21 @@ describe('POST /api/stats/host/payout — demande de virement', () => {
   });
 });
 
+describe('PATCH /api/stats/host/bank — validation des coordonnées', () => {
+  const bank = body => request(app).patch('/api/stats/host/bank').set(HOST).send(body);
+
+  test.each([[{ rib: 12345 }], [{ ccp: { a: 1 } }], [{ rib: ['0079'] }], [{ rib: null }]])('400 (et non 500) pour une valeur non textuelle : %p', async body => {
+    const res = await bank(body);
+    expect(res.status).toBe(400);
+    expect(db.users.updateById).not.toHaveBeenCalled();
+  });
+
+  test('400 au-delà de 40 caractères, 40 accepté', async () => {
+    expect((await bank({ rib: '1'.repeat(41) })).status).toBe(400);
+    expect((await bank({ rib: '1'.repeat(40) })).status).toBe(200);
+  });
+});
+
 describe('GET /api/stats/host — calculs du tableau de bord', () => {
   const now = new Date();
   const pad = n => String(n).padStart(2, '0');

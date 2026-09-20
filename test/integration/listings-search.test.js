@@ -75,8 +75,22 @@ describe('GET /api/listings — recherche et filtres', () => {
   test('chaque annonce est enrichie avec son hôte ; hôte inconnu = "Inconnu"', async () => {
     db.listings.search.mockResolvedValueOnce([L(1), L(2, { host_id: 555 })]);
     const res = await request(app).get('/api/listings');
-    expect(res.body.find(l => l.id === 1)).toMatchObject({ host_name: 'Hôte Test', host_phone: null, host_languages: [] });
+    expect(res.body.find(l => l.id === 1)).toMatchObject({ host_name: 'Hôte Test', host_languages: [] });
     expect(res.body.find(l => l.id === 2)).toMatchObject({ host_name: 'Inconnu' });
+  });
+
+  test('le téléphone et l\'e-mail de l\'hôte ne sont jamais exposés sur les routes publiques (liste et détail)', async () => {
+    const host = { id: 1, name: 'Hôte Test', phone: '0555123456', email: 'host@test.dz', languages: ['fr', 'ar'] };
+    db.listings.search.mockResolvedValueOnce([L(1)]);
+    db.users.findByIds.mockResolvedValueOnce([host]);
+    const list = await request(app).get('/api/listings');
+    db.users.findByIds.mockResolvedValueOnce([host]);
+    const detail = await request(app).get('/api/listings/1');
+    for (const body of [list.body[0], detail.body]) {
+      expect(body.host_name).toBe('Hôte Test');
+      expect(body.host_languages).toEqual(['fr', 'ar']);
+      expect(JSON.stringify(body)).not.toMatch(/0555123456|host@test\.dz/);
+    }
   });
 
   test('hôtes chargés en une seule requête pour toutes les annonces (anti N+1)', async () => {

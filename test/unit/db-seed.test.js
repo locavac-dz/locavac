@@ -1,15 +1,15 @@
 // Le compte de démonstration (demo@locavac.dz / demo1234) et ses 8 annonces ne doivent jamais être créés
 // en production : le mot de passe est public, et l'attaquant qui s'y connecte devient l'hôte de la page d'accueil.
 const mockQueries = [];
-jest.mock('pg', () => ({
-  Pool: jest.fn(() => ({
-    query: jest.fn(sql => {
-      mockQueries.push(String(sql));
-      // Réponse générique compatible avec tous les appels de connect() : migrations, compte démo, comptage
-      return Promise.resolve({ rows: [{ id: 1, count: '0', filename: '__aucune__' }], rowCount: 0 });
-    }),
-  })),
-}));
+jest.mock('pg', () => {
+  // Réponse générique compatible avec tous les appels de connect() : migrations, compte démo, comptage
+  const query = jest.fn(sql => {
+    mockQueries.push(String(sql));
+    return Promise.resolve({ rows: [{ id: 1, count: '0', filename: '__aucune__' }], rowCount: 0 });
+  });
+  // Les migrations passent par une connexion dédiée (pool.connect), le reste par pool.query
+  return { Pool: jest.fn(() => ({ query, connect: jest.fn().mockResolvedValue({ query, release: jest.fn() }) })) };
+});
 
 const ORIGINAL_ENV = process.env.NODE_ENV;
 let logSpy;

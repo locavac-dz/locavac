@@ -74,6 +74,38 @@ describe('.env.example ↔ variables réellement lues', () => {
   });
 });
 
+describe('Déploiement et exploitation', () => {
+  const deploy = read('deploy.sh');
+
+  test('deploy.sh : avance rapide uniquement, contrôle de santé, retour arrière', () => {
+    expect(deploy).toMatch(/set -euo pipefail/);
+    expect(deploy).toMatch(/git pull --ff-only origin master/);
+    expect(deploy).toMatch(/PREV_COMMIT="\$\(git rev-parse HEAD\)"/);
+    expect(deploy).toMatch(/health_ok\(\)/);
+    expect(deploy).toMatch(/\/api\/health/);
+    expect(deploy).toMatch(/rollback\(\)/);
+    expect(deploy).toMatch(/git reset --hard "\$PREV_COMMIT"/);
+  });
+
+  test('deploy.sh : un échec de npm ci ou du contrôle de santé déclenche le retour arrière et un code d\'erreur', () => {
+    expect(deploy).toMatch(/if ! npm ci --omit=dev; then[\s\S]*?rollback\s+exit 1/);
+    expect(deploy).toMatch(/if ! health_ok; then[\s\S]*?rollback\s+exit 1/);
+  });
+
+  test('pm2 : attend le signal ready et laisse le temps à l\'arrêt propre', () => {
+    const eco = require(path.join(ROOT, 'ecosystem.config.js')).apps[0];
+    expect(eco.wait_ready).toBe(true);
+    expect(eco.listen_timeout).toBeGreaterThanOrEqual(10000);
+    expect(eco.kill_timeout).toBeGreaterThan(8000); // délai d'arrêt propre de server/lifecycle.js
+    expect(read('server/index.js')).toMatch(/process\.send\('ready'\)/);
+    expect(read('server/index.js')).toMatch(/installGracefulShutdown\(/);
+  });
+
+  test('package.json déclare la version de Node attendue', () => {
+    expect(require(path.join(ROOT, 'package.json')).engines).toEqual({ node: '>=20' });
+  });
+});
+
 describe('Fichiers privés et dépôt Git', () => {
   test('.gitignore exclut private/ (pièces d\'identité), backups/, .env et uploads', () => {
     const ignore = read('.gitignore').split(/\r?\n/).map(l => l.trim());

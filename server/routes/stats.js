@@ -113,6 +113,10 @@ router.get('/host/earnings', auth, async (req, res) => {
 // PATCH /api/stats/host/bank — enregistrer coordonnées bancaires
 router.patch('/host/bank', auth, async (req, res) => {
   const { rib, ccp } = req.body;
+  for (const [label, value] of [['RIB', rib], ['CCP', ccp]]) {
+    if (value !== undefined && (typeof value !== 'string' || value.length > 40))
+      return res.status(400).json({ error: `${label} invalide (texte de 40 caractères maximum).` });
+  }
   const changes = {};
   if (rib !== undefined) changes.rib = rib.trim() || null;
   if (ccp !== undefined) changes.ccp = ccp.trim() || null;
