@@ -23,7 +23,7 @@ for _dir in \
   /root/bin \
   /opt/node/bin \
   /usr/local/lib/node_modules/.bin; do
-  [ -d "$_dir" ] && export PATH="$_dir:$PATH"
+  if [ -d "$_dir" ]; then export PATH="$_dir:$PATH"; fi
 done
 
 # Vérifie que npm et pm2 sont bien accessibles
