@@ -34,9 +34,9 @@
 <script type="application/ld+json">{"@context":"https://schema.org","@type":"WebSite","name":"Locavac","url":"https://locavac.dz","description":"Location de vacances en Algérie","potentialAction":{"@type":"SearchAction","target":{"@type":"EntryPoint","urlTemplate":"https://locavac.dz/?q={search_term_string}"},"query-input":"required name=search_term_string"}}</script>
 <script type="application/ld+json">{"@context":"https://schema.org","@type":"Organization","name":"Locavac","url":"https://locavac.dz","logo":"https://locavac.dz/icon.svg","contactPoint":{"@type":"ContactPoint","contactType":"customer service","email":"contact@locavac.dz","availableLanguage":["French","Arabic"]}}</script>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Cairo:wght@300;400;500;600;700&family=Sora:wght@300;700;800&display=swap" rel="stylesheet"/>
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
-<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css"/>
-<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css"/>
+<link rel="stylesheet" href="/vendor/leaflet/leaflet.css"/>
+<link rel="stylesheet" href="/vendor/leaflet.markercluster/MarkerCluster.css"/>
+<link rel="stylesheet" href="/vendor/leaflet.markercluster/MarkerCluster.Default.css"/>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{
@@ -2150,8 +2150,8 @@ footer{background:var(--g100);border-top:1px solid var(--g200);padding:48px 24px
 <div class="toast" id="toast"></div>
 
 <!-- ═══ SCRIPTS ═══ -->
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
+<script src="/vendor/leaflet/leaflet.js"></script>
+<script src="/vendor/leaflet.markercluster/leaflet.markercluster.js"></script>
 <script>
 'use strict';
 const API = '/api';
@@ -4654,8 +4654,8 @@ async function loadAdmResas() {
       <tbody>${lastAdmResas.map(r => `
         <tr>
           <td style="color:var(--g400)">#${r.id}</td>
-          <td><strong>${r.listing_title||'—'}</strong><br><span style="font-size:11px;color:var(--g400)">${r.listing_location||''}</span></td>
-          <td style="font-size:12px">${r.guest_name||'—'}<br><span style="color:var(--g400)">${r.guest_email||''}</span></td>
+          <td><strong>${escHtml(r.listing_title||'—')}</strong><br><span style="font-size:11px;color:var(--g400)">${escHtml(r.listing_location||'')}</span></td>
+          <td style="font-size:12px">${escHtml(r.guest_name||'—')}<br><span style="color:var(--g400)">${escHtml(r.guest_email||'')}</span></td>
           <td style="font-size:12px;white-space:nowrap">${r.check_in} →<br>${r.check_out}</td>
           <td style="font-weight:600;white-space:nowrap">${Number(r.total_price).toLocaleString('fr-DZ')} DZD</td>
           <td><span class="admin-badge ${statusClass(r.status)}">${statusLabel(r.status)}</span></td>
@@ -6120,10 +6120,10 @@ async function loadAdmSignalements() {
       <tbody>${rows.map(r => `
         <tr>
           <td style="color:var(--g400)">#${r.id}</td>
-          <td><a href="#" onclick="openListing(${r.listing_id});return false" style="font-weight:600;color:var(--g800)">${r.listing_title||'#'+r.listing_id}</a></td>
-          <td><span class="admin-badge host">${motifLabel(r.motif)}</span></td>
-          <td style="font-size:12px;max-width:200px;word-break:break-word">${r.message||'—'}</td>
-          <td style="font-size:12px">${r.user_name||'Anonyme'}${r.user_email?`<br><span style="color:var(--g400)">${r.user_email}</span>`:''}</td>
+          <td><a href="#" onclick="openListing(${Number(r.listing_id)});return false" style="font-weight:600;color:var(--g800)">${escHtml(r.listing_title||'#'+r.listing_id)}</a></td>
+          <td><span class="admin-badge host">${escHtml(motifLabel(r.motif))}</span></td>
+          <td style="font-size:12px;max-width:200px;word-break:break-word">${escHtml(r.message||'—')}</td>
+          <td style="font-size:12px">${escHtml(r.user_name||'Anonyme')}${r.user_email?`<br><span style="color:var(--g400)">${escHtml(r.user_email)}</span>`:''}</td>
           <td style="font-size:11px;color:var(--g400);white-space:nowrap">${new Date(r.created_at).toLocaleString('fr-DZ')}</td>
           <td style="white-space:nowrap">
             ${r.status!=='resolved'?`<button class="btn-adm" style="font-size:11px;padding:4px 10px" onclick="resolveSignalement(${r.id})">✓ Traité</button>`:'<span style="color:var(--g400);font-size:11px">Traité</span>'}
@@ -6170,9 +6170,9 @@ async function loadAdmPayouts() {
       <tbody>
         ${list.map(p => `<tr>
           <td>${String(p.requested_at).slice(0,10)}</td>
-          <td><strong>${p.host_name}</strong><br><span style="font-size:11px;color:var(--g400)">${p.host_email}</span></td>
+          <td><strong>${escHtml(p.host_name)}</strong><br><span style="font-size:11px;color:var(--g400)">${escHtml(p.host_email)}</span></td>
           <td><strong>${fmt(p.amount)}</strong></td>
-          <td style="font-size:12px">${p.host_rib ? `RIB: ${p.host_rib}` : ''}${p.host_ccp ? `<br>CCP: ${p.host_ccp}` : ''}${!p.host_rib && !p.host_ccp ? '<span style="color:var(--red)">Non renseigné</span>' : ''}</td>
+          <td style="font-size:12px">${p.host_rib ? `RIB: ${escHtml(p.host_rib)}` : ''}${p.host_ccp ? `<br>CCP: ${escHtml(p.host_ccp)}` : ''}${!p.host_rib && !p.host_ccp ? '<span style="color:var(--red)">Non renseigné</span>' : ''}</td>
           <td><span style="color:${statusColor[p.status]||'#666'};font-weight:600;font-size:12px">${statusLabel[p.status]||p.status}</span></td>
           <td style="white-space:nowrap">
             ${p.status === 'pending' ? `
@@ -6200,20 +6200,21 @@ async function loadAdmPubs() {
   el.innerHTML = '<div class="empty-state">Chargement…</div>';
   try {
     const rows = await apiFetch('/publicites/admin/all');
+    window._pubsData = rows;
     if (!rows.length) { el.innerHTML = '<div class="empty-state">Aucun établissement. Cliquez sur « Ajouter ».</div>'; return; }
     const typeLabel  = { hotel:'🏨 Hôtel', camping:'🏕️ Camping', complexe:'🌴 Complexe' };
     const forfaitLbl = { basic:'Basic', premium:'⭐ Premium', vedette:'🔥 Vedette' };
     el.innerHTML = `<div class="admin-table-wrap"><table class="admin-table">
       <thead><tr><th>Nom</th><th>Type</th><th>Wilaya</th><th>Forfait</th><th>Expire</th><th>Actif</th><th>Actions</th></tr></thead>
       <tbody>${rows.map(p => `<tr>
-        <td><strong>${p.nom}</strong>${p.ville?'<br><small style="color:var(--g600)">'+p.ville+'</small>':''}</td>
-        <td>${typeLabel[p.type]||p.type}</td>
-        <td>${p.wilaya}</td>
-        <td>${forfaitLbl[p.forfait]||p.forfait}</td>
+        <td><strong>${escHtml(p.nom)}</strong>${p.ville?'<br><small style="color:var(--g600)">'+escHtml(p.ville)+'</small>':''}</td>
+        <td>${escHtml(typeLabel[p.type]||p.type)}</td>
+        <td>${escHtml(p.wilaya)}</td>
+        <td>${escHtml(forfaitLbl[p.forfait]||p.forfait)}</td>
         <td>${p.expire_le?new Date(p.expire_le).toLocaleDateString('fr-DZ'):'—'}</td>
         <td>${p.actif?'✅':'❌'}</td>
         <td style="display:flex;gap:6px;flex-wrap:wrap">
-          <button class="btn-adm blue" onclick='openPubForm(${JSON.stringify(p)})'>✏️</button>
+          <button class="btn-adm blue" onclick="openPubForm(${Number(p.id)})">✏️</button>
           <button class="btn-adm ${p.actif?'gray':'green'}" onclick="togglePub(${p.id},${!p.actif})">${p.actif?'Désact.':'Activer'}</button>
           <button class="btn-adm red" onclick="deletePub(${p.id})">🗑️</button>
         </td>
@@ -6225,6 +6226,8 @@ async function loadAdmPubs() {
 }
 
 function openPubForm(pub) {
+  // Le tableau passe un id : on ne sérialise jamais un objet dans un attribut onclick
+  if (typeof pub === 'number') pub = (window._pubsData || []).find(x => x.id === pub) || null;
   editingPubId = pub ? pub.id : null;
   const f = document.getElementById('pub-form');
   const g = n => f.querySelector('[name=' + n + ']');

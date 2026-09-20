@@ -17,9 +17,9 @@ router.get('/status', (req, res) => {
 });
 
 // POST /api/agent/backup — backup manuel
-router.post('/backup', (req, res) => {
-  agent.doBackup();
-  res.json({ ok: true, lastBackup: agent.state.lastBackup });
+router.post('/backup', async (req, res) => {
+  const ok = await agent.doBackup();
+  res.json({ ok: ok !== false, lastBackup: agent.state.lastBackup });
 });
 
 // DELETE /api/agent/alerts/:id — dismisser une alerte

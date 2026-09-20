@@ -95,7 +95,6 @@ router.delete('/users/:id', async (req, res) => {
     bio:                null,
     avatar:             null,
     verification_token: null,
-    reset_token:        null,
     is_host:            false,
     is_admin:           false,
     banned:             true,

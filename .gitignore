@@ -4,6 +4,7 @@ node_modules/
 backups/
 public/uploads/*
 !public/uploads/.gitkeep
+private/
 logs/
 *.log
 server.log

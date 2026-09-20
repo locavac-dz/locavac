@@ -1,9 +1,12 @@
 'use strict';
 const fs   = require('fs');
 const path = require('path');
+const { execFile } = require('child_process');
 
-const DATA_FILE   = path.join(__dirname, '..', 'locavac.json');
 const BACKUPS_DIR = path.join(__dirname, '..', 'backups');
+const BACKUP_RE   = /^locavac_\d{4}-\d{2}-\d{2}\.dump$/;
+// pg_dump recopie l'URL de connexion dans ses erreurs : le mot de passe ne doit jamais atteindre les alertes
+const redactDbUrl = s => String(s).replace(/(postgres(?:ql)?:\/\/[^:\/\s@]+:)[^@\s]+@/gi, '$1***@');
 const MAX_ALERTS  = 60;
 const KEEP_DAYS   = 7;
 
@@ -38,24 +41,34 @@ function addAlert(level, category, message) {
   return a;
 }
 
-// ── Backup quotidien ─────────────────────────────────────────
+// ── Backup quotidien PostgreSQL ──────────────────────────────
+// pg_dump au format custom (restauration : pg_restore --dbname=$DATABASE_URL fichier.dump).
+// execFile sans shell : l'URL de connexion est un argument, jamais interprétée par un interpréteur.
 function doBackup() {
-  try {
+  return new Promise(resolve => {
+    const url = process.env.DATABASE_URL;
+    if (!url) { addAlert('error', 'backup', 'Échec de la sauvegarde : DATABASE_URL absent.'); return resolve(false); }
     if (!fs.existsSync(BACKUPS_DIR)) fs.mkdirSync(BACKUPS_DIR, { recursive: true });
     const date = new Date().toISOString().slice(0, 10);
-    const dest = path.join(BACKUPS_DIR, `dzstay_${date}.json`);
-    fs.copyFileSync(DATA_FILE, dest);
-    state.lastBackup = new Date().toISOString();
-
-    const files = fs.readdirSync(BACKUPS_DIR)
-      .filter(f => /^dzstay_\d{4}-\d{2}-\d{2}\.json$/.test(f))
-      .sort();
-    while (files.length > KEEP_DAYS) fs.unlinkSync(path.join(BACKUPS_DIR, files.shift()));
-
-    addAlert('info', 'backup', `Sauvegarde créée : dzstay_${date}.json`);
-  } catch (e) {
-    addAlert('error', 'backup', `Échec de la sauvegarde : ${e.message}`);
-  }
+    const file = `locavac_${date}.dump`;
+    const dest = path.join(BACKUPS_DIR, file);
+    const bin  = process.env.PG_DUMP_PATH || 'pg_dump';
+    execFile(bin, ['--dbname', url, '--format=custom', '--no-owner', '--file', dest], { timeout: 10 * 60 * 1000 }, (err, _stdout, stderr) => {
+      if (err) {
+        try { if (fs.existsSync(dest)) fs.unlinkSync(dest); } catch {}
+        const why = err.code === 'ENOENT'
+          ? `binaire « ${bin} » introuvable (installez postgresql-client ou définissez PG_DUMP_PATH)`
+          : redactDbUrl(stderr || err.message).trim();
+        addAlert('error', 'backup', `Échec de la sauvegarde : ${why}`);
+        return resolve(false);
+      }
+      state.lastBackup = new Date().toISOString();
+      const files = fs.readdirSync(BACKUPS_DIR).filter(f => BACKUP_RE.test(f)).sort();
+      while (files.length > KEEP_DAYS) fs.unlinkSync(path.join(BACKUPS_DIR, files.shift()));
+      addAlert('info', 'backup', `Sauvegarde créée : ${file}`);
+      resolve(true);
+    });
+  });
 }
 
 // ── Analyse de sécurité ──────────────────────────────────────
@@ -170,7 +183,7 @@ async function tick() {
   const day     = now.getDay();
   const dateStr = now.toISOString().slice(0, 10);
   const weekStr = isoWeek(now);
-  if (hour === 3 && _lastDay !== dateStr)               { _lastDay = dateStr;  doBackup(); }
+  if (hour === 3 && _lastDay !== dateStr)               { _lastDay = dateStr;  await doBackup(); }
   if (day === 1 && hour === 8 && _lastWeek !== weekStr) { _lastWeek = weekStr; await sendWeeklyReport(); }
   await checkSecurity();
 }
@@ -179,7 +192,7 @@ async function tick() {
 function start() {
   console.log('🤖 Agent IA de surveillance Locavac démarré');
   const today     = new Date().toISOString().slice(0, 10);
-  const todayFile = path.join(BACKUPS_DIR, `locavac_${today}.json`);
+  const todayFile = path.join(BACKUPS_DIR, `locavac_${today}.dump`);
   if (!fs.existsSync(todayFile)) { _lastDay = today; doBackup(); }
   else state.lastBackup = new Date().toISOString();
   checkSecurity().catch(e => console.error('[Agent] checkSecurity:', e.message));

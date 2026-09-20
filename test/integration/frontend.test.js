@@ -9,8 +9,9 @@ jest.mock('../../server/ws', () => ({ send: jest.fn(), setup: jest.fn() }));
 
 const app = require('../../server/index');
 
-const PUBLIC_DIR  = path.join(__dirname, '..', '..', 'public');
-const UPLOAD_DIR  = path.join(PUBLIC_DIR, 'uploads');
+const PUBLIC_DIR = path.join(__dirname, '..', '..', 'public');
+const UPLOAD_DIR = path.join(PUBLIC_DIR, 'uploads');
+const HTML       = fs.readFileSync(path.join(PUBLIC_DIR, 'index.html'), 'utf8');
 const sign = payload => jwt.sign(payload, process.env.JWT_SECRET);
 
 describe('Fichiers statiques servis par Express', () => {
@@ -134,68 +135,80 @@ describe('En-têtes de sécurité (helmet)', () => {
   });
 });
 
-// Documents d'identité (CNI) : accès réservé au propriétaire et aux admins
-describe('Protection des PDF — /uploads/*.pdf', () => {
-  const OWNER_ID = 2;
-  const filename = `${OWNER_ID}_${Date.now()}_${crypto.randomBytes(8).toString('hex')}.pdf`;
-  const filePath = path.join(UPLOAD_DIR, filename);
+// Les pièces d'identité vivent hors de public/ ; aucun PDF ne doit jamais sortir de /uploads,
+// quel que soit l'encodage du chemin ou le jeton présenté.
+describe('/uploads — aucun PDF servi, quel que soit l\'encodage', () => {
+  const name     = `2_${Date.now()}_${crypto.randomBytes(8).toString('hex')}.pdf`;
+  const filePath = path.join(UPLOAD_DIR, name);
+  const TOKEN    = sign({ id: 2, email: 'guest@test.dz' });
 
-  const OWNER_TOKEN = sign({ id: OWNER_ID, email: 'guest@test.dz' });
-  const OTHER_TOKEN = sign({ id: 1,        email: 'host@test.dz' });
-  const ADMIN_TOKEN = sign({ id: 98,       email: 'admin@test.dz', is_admin: true });
-
-  beforeAll(() => {
-    fs.mkdirSync(UPLOAD_DIR, { recursive: true });
-    fs.writeFileSync(filePath, '%PDF-1.4\n%test\n');
-  });
+  beforeAll(() => { fs.mkdirSync(UPLOAD_DIR, { recursive: true }); fs.writeFileSync(filePath, '%PDF-1.4\n%test\n'); });
   afterAll(() => { try { fs.unlinkSync(filePath); } catch {} });
 
-  test('401 sans token', async () => {
-    const res = await request(app).get('/uploads/' + filename);
-    expect(res.status).toBe(401);
+  test.each([
+    ['.pdf',           n => n],
+    ['%2Epdf',         n => n.replace('.pdf', '%2Epdf')],
+    ['.PDF',           n => n.replace('.pdf', '.PDF')],
+    ['%2E%50%44%46',   n => n.replace('.pdf', '%2E%50%44%46')],
+  ])('404 JSON pour %s, même avec un jeton valide du propriétaire', async (_label, encode) => {
+    const res = await request(app).get('/uploads/' + encode(name)).set('Authorization', `Bearer ${TOKEN}`);
+    expect(res.status).toBe(404);
+    expect(res.headers['content-type']).toMatch(/json/);
   });
 
-  test('401 avec un token invalide', async () => {
-    const res = await request(app).get('/uploads/' + filename).set('Authorization', 'Bearer pas.un.jwt');
-    expect(res.status).toBe(401);
-    expect(res.body.error).toMatch(/invalide/i);
+  test('un jeton en query string n\'ouvre rien non plus', async () => {
+    const res = await request(app).get(`/uploads/${name}?token=${TOKEN}`);
+    expect(res.status).toBe(404);
   });
 
-  test('401 avec un token signé par une autre clé', async () => {
-    const forged = jwt.sign({ id: OWNER_ID }, 'autre-secret');
-    const res = await request(app).get('/uploads/' + filename).set('Authorization', `Bearer ${forged}`);
-    expect(res.status).toBe(401);
+  test('400 sur un encodage de chemin invalide', async () => {
+    const res = await request(app).get('/uploads/%E0%A4%A');
+    expect(res.status).toBe(400);
   });
 
-  test('403 pour un utilisateur qui n\'est pas le propriétaire', async () => {
-    const res = await request(app).get('/uploads/' + filename).set('Authorization', `Bearer ${OTHER_TOKEN}`);
-    expect(res.status).toBe(403);
-  });
-
-  test('200 pour le propriétaire (en-tête Authorization)', async () => {
-    const res = await request(app).get('/uploads/' + filename).set('Authorization', `Bearer ${OWNER_TOKEN}`);
-    expect(res.status).toBe(200);
-    expect(res.headers['content-type']).toMatch(/application\/pdf/);
-  });
-
-  test('200 pour le propriétaire (?token= dans l\'URL, pour l\'ouverture dans un onglet)', async () => {
-    const res = await request(app).get(`/uploads/${filename}?token=${OWNER_TOKEN}`);
-    expect(res.status).toBe(200);
-  });
-
-  test('200 pour un admin', async () => {
-    const res = await request(app).get('/uploads/' + filename).set('Authorization', `Bearer ${ADMIN_TOKEN}`);
-    expect(res.status).toBe(200);
-  });
-
-  test('extension en majuscules (.PDF) protégée aussi', async () => {
-    const res = await request(app).get('/uploads/' + filename.replace('.pdf', '.PDF'));
-    expect(res.status).toBe(401);
-  });
-
-  test('les images ne sont pas soumises à la vérification de token', async () => {
+  test('les images restent servies sans jeton (404 si absente, jamais 401/403)', async () => {
     const res = await request(app).get('/uploads/inexistante.jpg');
-    expect(res.status).not.toBe(401);
-    expect(res.status).not.toBe(403);
+    expect([200, 404]).toContain(res.status);
+  });
+});
+
+describe('Leaflet auto-hébergé — compatible avec script-src \'self\'', () => {
+  test('index.html ne charge plus aucun script ou style depuis un CDN', () => {
+    expect(HTML).not.toMatch(/unpkg\.com|cdn\.jsdelivr\.net|cdnjs\.cloudflare\.com/);
+  });
+
+  test('chaque ressource /vendor/ référencée existe dans public/', () => {
+    const refs = [...HTML.matchAll(/(?:src|href)="(\/vendor\/[^"]+)"/g)].map(m => m[1]);
+    expect(refs.length).toBeGreaterThanOrEqual(5);
+    for (const ref of refs) expect(fs.existsSync(path.join(PUBLIC_DIR, ref))).toBe(true);
+  });
+
+  test('GET /vendor/leaflet/leaflet.js — 200 JavaScript, version 1.9.4', async () => {
+    const res = await request(app).get('/vendor/leaflet/leaflet.js');
+    expect(res.status).toBe(200);
+    expect(res.headers['content-type']).toMatch(/javascript/);
+    expect(res.text).toContain('1.9.4');
+  });
+
+  test('GET /vendor/leaflet.markercluster/leaflet.markercluster.js — 200', async () => {
+    const res = await request(app).get('/vendor/leaflet.markercluster/leaflet.markercluster.js');
+    expect(res.status).toBe(200);
+    expect(res.headers['content-type']).toMatch(/javascript/);
+  });
+
+  test('feuille de style et images des marqueurs servies depuis l\'origine', async () => {
+    const css = await request(app).get('/vendor/leaflet/leaflet.css');
+    expect(css.status).toBe(200);
+    expect(css.headers['content-type']).toMatch(/text\/css/);
+    const icon = await request(app).get('/vendor/leaflet/images/marker-icon.png');
+    expect(icon.status).toBe(200);
+    expect(icon.headers['content-type']).toMatch(/image\/png/);
+  });
+
+  test('la CSP servie n\'autorise aucun script externe', async () => {
+    const res = await request(app).get('/');
+    const csp = res.headers['content-security-policy'];
+    expect(csp).toMatch(/script-src 'self' 'unsafe-inline'(;|$)/);
+    expect(csp).not.toMatch(/unpkg/);
   });
 });

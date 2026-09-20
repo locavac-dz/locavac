@@ -10,9 +10,10 @@ jest.mock('../../server/ws', () => ({ send: jest.fn(), setup: jest.fn() }));
 const app = require('../../server/index');
 const db  = require('../mocks/db');
 
-const UPLOAD_DIR = path.join(__dirname, '..', '..', 'public', 'uploads');
+const UPLOAD_DIR   = path.join(__dirname, '..', '..', 'public', 'uploads');
+const IDENTITY_DIR = path.join(__dirname, '..', '..', 'private', 'identity');
 const auth = (id, extra = {}) => ({ Authorization: `Bearer ${jwt.sign({ id, email: `u${id}@test.dz`, ...extra }, process.env.JWT_SECRET)}` });
-// Les suites Jest tournent en parallèle et partagent public/uploads : cette suite est la seule à écrire
+// Les suites Jest tournent en parallèle et partagent les dossiers d'upload : cette suite est la seule à écrire
 // avec l'id 99, ce qui rend le contrôle de résidus (préfixe "99_") insensible aux autres suites.
 const UPLOADER = 99;
 const USER  = auth(UPLOADER);
@@ -24,31 +25,36 @@ const JPEG = Buffer.concat([Buffer.from([0xFF, 0xD8, 0xFF, 0xE0]), Buffer.alloc(
 const WEBP = Buffer.concat([Buffer.from('RIFF'), Buffer.from([0x10, 0, 0, 0]), Buffer.from('WEBP'), Buffer.alloc(8)]);
 const PDF  = Buffer.from('%PDF-1.4\n1 0 obj\n<<>>\nendobj\n');
 
-// Suivi des fichiers créés pour ne rien laisser dans public/uploads
+// Suivi des fichiers créés (chemins absolus) pour ne rien laisser sur le disque
 const created = new Set();
-const track = name => { if (name) created.add(name); return name; };
-const list  = () => new Set(fs.readdirSync(UPLOAD_DIR));
+const track = p => { if (p) created.add(p); return p; };
+const list  = dir => new Set(fs.existsSync(dir) ? fs.readdirSync(dir) : []);
 let before;
-beforeEach(() => { fs.mkdirSync(UPLOAD_DIR, { recursive: true }); before = list(); });
+beforeEach(() => {
+  fs.mkdirSync(UPLOAD_DIR, { recursive: true });
+  fs.mkdirSync(IDENTITY_DIR, { recursive: true });
+  before = { [UPLOAD_DIR]: list(UPLOAD_DIR), [IDENTITY_DIR]: list(IDENTITY_DIR) };
+});
 afterEach(() => {
   jest.clearAllMocks();
-  for (const name of created) { try { fs.unlinkSync(path.join(UPLOAD_DIR, name)); } catch {} }
+  for (const p of created) { try { fs.unlinkSync(p); } catch {} }
   created.clear();
 });
-const leftovers = () => [...list()].filter(f => !before.has(f) && f.startsWith(`${UPLOADER}_`));
+const leftovers = (dir = UPLOAD_DIR) => [...list(dir)].filter(f => !before[dir].has(f) && f.startsWith(`${UPLOADER}_`));
 
-// Dépose un faux fichier possédé par ownerId
+// Dépose un faux fichier possédé par ownerId dans public/uploads
 function plant(ownerId, ext = 'jpg') {
   const name = `${ownerId}_${Date.now()}_${crypto.randomBytes(8).toString('hex')}.${ext}`;
   fs.writeFileSync(path.join(UPLOAD_DIR, name), JPEG);
-  return track(name);
+  track(path.join(UPLOAD_DIR, name));
+  return name;
 }
 
 describe('POST /api/upload — photo unique', () => {
   test.each([['JPEG', JPEG, 'image/jpeg', 'jpg'], ['PNG', PNG, 'image/png', 'png'], ['WebP', WEBP, 'image/webp', 'webp']])(
     '200 pour une image %s valide : nom {userId}_{horodatage}_{hex}.{ext}', async (_n, buf, mime, ext) => {
       const res = await request(app).post('/api/upload').set(USER).attach('photo', buf, { filename: `x.${ext}`, contentType: mime });
-      track(res.body.filename);
+      track(res.body.filename && path.join(UPLOAD_DIR, res.body.filename));
       expect(res.status).toBe(200);
       expect(res.body.filename).toMatch(new RegExp(`^${UPLOADER}_\\d+_[a-f0-9]{16}\\.${ext}$`));
       expect(res.body.url).toBe('/uploads/' + res.body.filename);
@@ -58,7 +64,7 @@ describe('POST /api/upload — photo unique', () => {
 
   test('le nom du fichier envoyé (../../evil.php) n\'influence jamais le nom stocké', async () => {
     const res = await request(app).post('/api/upload').set(USER).attach('photo', PNG, { filename: '../../evil.php', contentType: 'image/png' });
-    track(res.body.filename);
+    track(res.body.filename && path.join(UPLOAD_DIR, res.body.filename));
     expect(res.status).toBe(200);
     expect(res.body.filename).not.toMatch(/evil|php|\.\./);
     expect(res.body.filename).toMatch(/\.png$/);
@@ -66,7 +72,7 @@ describe('POST /api/upload — photo unique', () => {
 
   test('l\'extension suit le type MIME validé, pas le nom fourni', async () => {
     const res = await request(app).post('/api/upload').set(USER).attach('photo', PNG, { filename: 'photo.exe', contentType: 'image/png' });
-    track(res.body.filename);
+    track(res.body.filename && path.join(UPLOAD_DIR, res.body.filename));
     expect(res.body.filename).toMatch(/\.png$/);
   });
 
@@ -113,7 +119,7 @@ describe('POST /api/upload/multiple — jusqu\'à 10 photos', () => {
     let req = request(app).post('/api/upload/multiple').set(USER);
     for (let i = 0; i < 10; i++) req = req.attach('photos', PNG, { filename: `p${i}.png`, contentType: 'image/png' });
     const res = await req;
-    (res.body.urls || []).forEach(u => track(u.filename));
+    (res.body.urls || []).forEach(u => track(path.join(UPLOAD_DIR, u.filename)));
     expect(res.status).toBe(200);
     expect(res.body.urls).toHaveLength(10);
     expect(new Set(res.body.urls.map(u => u.filename)).size).toBe(10);
@@ -132,12 +138,15 @@ describe('POST /api/upload/identity — CNI algérienne', () => {
   const send = (buf, filename, contentType) => request(app).post('/api/upload/identity').set(USER).attach('document', buf, { filename, contentType });
 
   test.each([['PNG', PNG, 'image/png', 'png'], ['JPEG', JPEG, 'image/jpeg', 'jpg'], ['PDF', PDF, 'application/pdf', 'pdf']])(
-    '200 pour une CNI en %s : soumise à revue, identité NON vérifiée automatiquement', async (_n, buf, mime, ext) => {
+    '200 pour une CNI en %s : stockée hors de public/, soumise à revue, identité NON vérifiée automatiquement', async (_n, buf, mime, ext) => {
       const res = await send(buf, `cni.${ext}`, mime);
-      track(path.basename(res.body.url || ''));
+      const base = path.basename(res.body.url || '');
+      track(path.join(IDENTITY_DIR, base));
       expect(res.status).toBe(200);
-      expect(res.body.url).toMatch(new RegExp(`^/uploads/${UPLOADER}_\\d+_[a-f0-9]{16}\\.${ext}$`));
+      expect(res.body.url).toMatch(new RegExp(`^/api/upload/identity/${UPLOADER}_\\d+_[a-f0-9]{16}\\.${ext}$`));
       expect(res.body.message).toMatch(/24.48h/);
+      expect(fs.existsSync(path.join(IDENTITY_DIR, base))).toBe(true);
+      expect(fs.existsSync(path.join(UPLOAD_DIR, base))).toBe(false);
       expect(db.users.updateById).toHaveBeenCalledWith(UPLOADER, { id_document: res.body.url, id_verified: false });
     });
 
@@ -146,7 +155,7 @@ describe('POST /api/upload/identity — CNI algérienne', () => {
     expect(res.status).toBe(400);
     expect(res.body.error).toMatch(/non reconnu/i);
     expect(db.users.updateById).not.toHaveBeenCalled();
-    expect(leftovers()).toEqual([]);
+    expect(leftovers(IDENTITY_DIR)).toEqual([]);
   });
 
   test('400 : type MIME non autorisé (texte)', async () => {
@@ -160,12 +169,12 @@ describe('POST /api/upload/identity — CNI algérienne', () => {
     const res = await send(big, 'cni.pdf', 'application/pdf');
     expect(res.status).toBe(400);
     expect(db.users.updateById).not.toHaveBeenCalled();
-    expect(leftovers()).toEqual([]);
+    expect(leftovers(IDENTITY_DIR)).toEqual([]);
   });
 
   test('un nouveau dépôt remet id_verified à false (revue de nouveau requise)', async () => {
     const res = await send(PNG, 'cni2.png', 'image/png');
-    track(path.basename(res.body.url));
+    track(path.join(IDENTITY_DIR, path.basename(res.body.url)));
     expect(db.users.updateById.mock.calls[0][1].id_verified).toBe(false);
   });
 });

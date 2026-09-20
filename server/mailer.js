@@ -48,9 +48,10 @@ async function _drainQueue() {
   }
 }
 
-// Lancer la vérification toutes les 30 secondes (sauf en test)
+// Lancer la vérification toutes les 30 secondes (sauf en test).
+// unref : ce timer ne doit jamais retenir le processus à lui seul (arrêt propre sous pm2, sortie des tests).
 if (process.env.NODE_ENV !== 'test') {
-  setInterval(_drainQueue, 30_000);
+  setInterval(_drainQueue, 30_000).unref();
 }
 
 async function sendMail({ to, subject, html }) {

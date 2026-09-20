@@ -4,9 +4,12 @@ const path    = require('path');
 const crypto  = require('crypto');
 const fs      = require('fs');
 const auth    = require('../middleware/auth');
+const db      = require('../db');
 
-const UPLOAD_DIR = path.join(__dirname, '..', '..', 'public', 'uploads');
-if (!fs.existsSync(UPLOAD_DIR)) fs.mkdirSync(UPLOAD_DIR, { recursive: true });
+const UPLOAD_DIR   = path.join(__dirname, '..', '..', 'public', 'uploads');
+// Pièces d'identité hors de public/ : jamais servies statiquement, uniquement via GET /identity/:filename
+const IDENTITY_DIR = path.join(__dirname, '..', '..', 'private', 'identity');
+for (const dir of [UPLOAD_DIR, IDENTITY_DIR]) if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
 
 // ── Vérification magic bytes côté serveur (anti MIME-spoofing) ──
 function checkMagicBytes(filePath, allowPdf = false) {
@@ -30,8 +33,8 @@ const MIME_EXT = {
 };
 
 // ── Stockage disque — inclut l'id utilisateur dans le nom de fichier ──
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => cb(null, UPLOAD_DIR),
+const makeStorage = dir => multer.diskStorage({
+  destination: (req, file, cb) => cb(null, dir),
   filename:    (req, file, cb) => {
     const ext    = MIME_EXT[file.mimetype] || '.jpg';
     const userId = req.user ? String(req.user.id) : '0';
@@ -40,6 +43,7 @@ const storage = multer.diskStorage({
     cb(null, name);
   },
 });
+const storage = makeStorage(UPLOAD_DIR);
 
 function fileFilter(req, file, cb) {
   const allowed = ['image/jpeg', 'image/png', 'image/webp', 'image/jpg'];
@@ -95,7 +99,7 @@ router.post('/multiple', auth, (req, res) => {
 
 // ── POST /api/upload/identity  (CNI algérienne — soumission pour revue admin) ──
 const uploadId = multer({
-  storage,
+  storage:    makeStorage(IDENTITY_DIR),
   limits:     { fileSize: 8 * 1024 * 1024, files: 1 },
   fileFilter: (req, file, cb) => {
     const allowed = ['image/jpeg','image/png','image/webp','image/jpg','application/pdf'];
@@ -113,12 +117,28 @@ router.post('/identity', auth, (req, res) => {
       fs.unlinkSync(req.file.path);
       return res.status(400).json({ error: 'Format de fichier non reconnu (JPG, PNG ou PDF attendu).' });
     }
-    const db  = require('../db');
-    const url = '/uploads/' + req.file.filename;
+    const url = '/api/upload/identity/' + req.file.filename;
     // Soumettre le document pour revue manuelle — id_verified reste false jusqu'à validation admin
     await db.users.updateById(req.user.id, { id_document: url, id_verified: false });
     res.json({ url, message: 'Document soumis. Votre identité sera vérifiée par notre équipe sous 24–48h.' });
   });
+});
+
+// ── GET /api/upload/identity/:filename  (propriétaire ou admin uniquement) ──
+const IDENTITY_NAME_RE = /^(\d+)_\d+_[0-9a-f]{16}\.(jpg|png|webp|pdf)$/i;
+router.get('/identity/:filename', auth, async (req, res) => {
+  const m = IDENTITY_NAME_RE.exec(req.params.filename);
+  if (!m) return res.status(400).json({ error: 'Nom de fichier invalide.' });
+  if (String(req.user.id) !== m[1]) {
+    // Droit admin relu en base : un admin rétrogradé ne garde pas l'accès via un ancien JWT
+    const me = await db.users.findById(req.user.id);
+    if (!me?.is_admin) return res.status(403).json({ error: 'Accès refusé.' });
+  }
+  const fp = path.join(IDENTITY_DIR, m[0]);
+  if (!fs.existsSync(fp)) return res.status(404).json({ error: 'Document introuvable.' });
+  res.set('Cache-Control', 'private, no-store');
+  res.set('Content-Disposition', 'inline');
+  res.sendFile(fp);
 });
 
 // ── DELETE /api/upload  (supprimer une photo) ───────────

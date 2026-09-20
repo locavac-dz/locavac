@@ -65,7 +65,7 @@ CREATE TABLE IF NOT EXISTS reviews (
 
 CREATE TABLE IF NOT EXISTS payments (
   id              SERIAL PRIMARY KEY,
-  reservation_id  INTEGER REFERENCES reservations(id),
+  reservation_id  INTEGER REFERENCES reservations(id) ON DELETE SET NULL,
   user_id         INTEGER REFERENCES users(id),
   amount          NUMERIC,
   currency        TEXT DEFAULT 'DZD',

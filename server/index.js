@@ -9,7 +9,6 @@ const express     = require('express');
 const http        = require('http');
 const cors        = require('cors');
 const path        = require('path');
-const jwt         = require('jsonwebtoken');
 const rateLimit   = require('express-rate-limit');
 const compression = require('compression');
 const helmet      = require('helmet');
@@ -18,6 +17,8 @@ const { pool }    = require('./db');
 const wsModule    = require('./ws');
 
 const app = express();
+// Un seul saut de confiance (Nginx) : sans cela req.ip vaut 127.0.0.1 pour tous et le rate limiting devient global
+app.set('trust proxy', 1);
 app.use(compression());
 app.use(helmet({
   // CSP assouplie pour le SPA vanilla (inline scripts et styles autorisés)
@@ -35,15 +36,25 @@ app.use(helmet({
 }));
 
 // ── CORS ────────────────────────────────────────────────────────
-const ALLOWED_ORIGINS = (process.env.CORS_ORIGINS || 'http://localhost:3000')
-  .split(',').map(o => o.trim());
+const IS_PROD = process.env.NODE_ENV === 'production';
+// Les navigateurs envoient Origin sur toute écriture, même same-origin : APP_URL est donc toujours acceptée,
+// et localhost n'est toléré qu'en dehors de la production.
+const ALLOWED_ORIGINS = [...new Set(
+  [...(process.env.CORS_ORIGINS || '').split(','), process.env.APP_URL, IS_PROD ? null : 'http://localhost:3000']
+    .map(o => (o || '').trim().replace(/\/+$/, ''))
+    .filter(Boolean)
+)];
+if (IS_PROD && !ALLOWED_ORIGINS.some(o => !/^https?:\/\/(localhost|127\.0\.0\.1)(:|$)/.test(o)))
+  throw new Error('[Locavac] CORS_ORIGINS ou APP_URL doit pointer vers le domaine public en production — sinon toute écriture (POST/PUT/DELETE) serait refusée.');
 
 app.use(cors({
   origin: (origin, cb) => {
     // Requêtes sans origin (curl, mobile natif, même serveur)
     if (!origin) return cb(null, true);
-    if (ALLOWED_ORIGINS.includes(origin)) return cb(null, true);
-    cb(new Error('CORS: origine non autorisée — ' + origin));
+    if (ALLOWED_ORIGINS.includes(origin.replace(/\/+$/, ''))) return cb(null, true);
+    const err = new Error('CORS: origine non autorisée — ' + origin);
+    err.status = 403;
+    cb(err);
   },
   credentials: true,
 }));
@@ -153,19 +164,12 @@ if (process.env.NODE_ENV !== 'test') {
   });
 }
 
-// Protection des documents CNI (PDF) — accès réservé au propriétaire et aux admins
-// Les fichiers sont nommés {userId}_{timestamp}_{hex}.pdf par le module upload
+// Aucun PDF n'est servi depuis /uploads : les pièces d'identité vivent hors de public/ (private/identity)
+// et passent par GET /api/upload/identity/:filename. Chemin décodé pour couvrir « %2Epdf ».
 app.use('/uploads', (req, res, next) => {
-  if (!req.path.toLowerCase().endsWith('.pdf')) return next();
-  const raw   = (req.headers['authorization'] || '').replace(/^Bearer\s+/, '');
-  const token = raw || req.query.token || null;
-  if (!token) return res.status(401).json({ error: 'Authentification requise pour accéder à ce document.' });
-  let payload;
-  try { payload = jwt.verify(token, process.env.JWT_SECRET); }
-  catch { return res.status(401).json({ error: 'Token invalide.' }); }
-  const ownerId = path.basename(req.path).split('_')[0];
-  if (!payload.is_admin && String(payload.id) !== ownerId)
-    return res.status(403).json({ error: 'Accès refusé.' });
+  let decoded;
+  try { decoded = decodeURIComponent(req.path); } catch { return res.status(400).json({ error: 'Chemin invalide.' }); }
+  if (decoded.toLowerCase().endsWith('.pdf')) return res.status(404).json({ error: 'Document introuvable.' });
   next();
 });
 
@@ -176,6 +180,8 @@ app.get('/sw.js', (_, res) => {
   res.sendFile(path.join(__dirname, '..', 'public', 'sw.js'));
 });
 app.use(express.static(path.join(__dirname, '..', 'public')));
+// Un fichier absent sous /uploads est un 404, jamais un repli sur la page du SPA
+app.use('/uploads', (_, res) => res.status(404).json({ error: 'Fichier introuvable.' }));
 
 // Monté avant /api/auth pour éviter la capture par le routeur auth générique
 app.use('/api/auth/google',  require('./routes/auth-google'));
