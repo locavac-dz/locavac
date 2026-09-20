@@ -57,6 +57,8 @@ if (process.env.NODE_ENV !== 'test') {
 async function sendMail({ to, subject, html }) {
   const t = getTransporter();
   if (!t || !to) return; // Silencieux si non configuré
+  // Les objets contiennent des titres d'annonces saisis par les hôtes : jamais de saut de ligne dans un en-tête
+  subject = String(subject ?? '').replace(/[\r\n]+/g, ' ').slice(0, 200);
   try {
     await t.sendMail({
       from: `"Locavac 🇩🇿" <${process.env.EMAIL_USER}>`,
@@ -94,7 +96,7 @@ function mailReservationCreated({ guestName, guestEmail, listingTitle, checkIn, 
         <p style="margin:4px 0"><strong>📍 Logement :</strong> ${esc(listingTitle)}</p>
         <p style="margin:4px 0"><strong>📅 Arrivée :</strong> ${esc(checkIn)}</p>
         <p style="margin:4px 0"><strong>📅 Départ :</strong> ${esc(checkOut)}</p>
-        <p style="margin:4px 0"><strong>🌙 Nuits :</strong> ${nights}</p>
+        <p style="margin:4px 0"><strong>🌙 Nuits :</strong> ${Number(nights) || 0}</p>
         <p style="margin:4px 0"><strong>💰 Total :</strong> ${Number(total).toLocaleString('fr-DZ')} DZD</p>
       </div>
       <p style="color:#666;font-size:13px">Vous serez notifié par email dès que l'hôte aura confirmé votre séjour.</p>
@@ -157,7 +159,7 @@ function mailNewReservationToHost({ hostName, hostEmail, guestName, listingTitle
         <p style="margin:4px 0"><strong>👤 Voyageur :</strong> ${esc(guestName)}</p>
         <p style="margin:4px 0"><strong>📅 Arrivée :</strong> ${esc(checkIn)}</p>
         <p style="margin:4px 0"><strong>📅 Départ :</strong> ${esc(checkOut)}</p>
-        <p style="margin:4px 0"><strong>🌙 Nuits :</strong> ${nights}</p>
+        <p style="margin:4px 0"><strong>🌙 Nuits :</strong> ${Number(nights) || 0}</p>
         <p style="margin:4px 0"><strong>💰 Total voyageur :</strong> ${Number(total).toLocaleString('fr-DZ')} DZD</p>
       </div>
       <a href="https://locavac.dz" style="display:inline-block;background:#E8261A;color:#fff;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:700">Voir la réservation →</a>
@@ -171,14 +173,14 @@ function mailPaymentConfirmedToGuest({ guestName, guestEmail, listingTitle, chec
     to: guestEmail, subject: `✅ Paiement confirmé — ${listingTitle}`,
     html: wrap(`
       <h2 style="color:#0a7c47;margin-top:0">Réservation et paiement confirmés ✅</h2>
-      <p>Bonjour <strong>${guestName}</strong>,</p>
-      <p>Votre paiement pour <strong>${listingTitle}</strong> a été accepté.</p>
+      <p>Bonjour <strong>${esc(guestName)}</strong>,</p>
+      <p>Votre paiement pour <strong>${esc(listingTitle)}</strong> a été accepté.</p>
       <div style="background:#e6f9f0;border-radius:10px;padding:16px;margin:20px 0">
-        <p style="margin:4px 0"><strong>📅 Arrivée :</strong> ${checkIn}</p>
-        <p style="margin:4px 0"><strong>📅 Départ :</strong> ${checkOut}</p>
-        <p style="margin:4px 0"><strong>💳 Méthode :</strong> ${methodLabel}</p>
+        <p style="margin:4px 0"><strong>📅 Arrivée :</strong> ${esc(checkIn)}</p>
+        <p style="margin:4px 0"><strong>📅 Départ :</strong> ${esc(checkOut)}</p>
+        <p style="margin:4px 0"><strong>💳 Méthode :</strong> ${esc(methodLabel)}</p>
         <p style="margin:4px 0"><strong>💰 Montant :</strong> ${Number(amount).toLocaleString('fr-DZ')} DZD</p>
-        <p style="margin:4px 0"><strong>🔖 Référence :</strong> <code>${reference}</code></p>
+        <p style="margin:4px 0"><strong>🔖 Référence :</strong> <code>${esc(reference)}</code></p>
       </div>
       <p>Bon séjour en Algérie ! 🇩🇿</p>
     `),
@@ -190,13 +192,13 @@ function mailVirementToHost({ hostName, hostEmail, guestName, listingTitle, amou
     to: hostEmail, subject: `⏳ Virement en attente — ${listingTitle}`,
     html: wrap(`
       <h2 style="color:#92400e;margin-top:0">Virement bancaire déclaré ⏳</h2>
-      <p>Bonjour <strong>${hostName}</strong>,</p>
-      <p><strong>${guestName}</strong> a déclaré avoir effectué un virement pour <strong>${listingTitle}</strong>.</p>
+      <p>Bonjour <strong>${esc(hostName)}</strong>,</p>
+      <p><strong>${esc(guestName)}</strong> a déclaré avoir effectué un virement pour <strong>${esc(listingTitle)}</strong>.</p>
       <div style="background:#fffbeb;border-radius:10px;padding:16px;margin:20px 0">
-        <p style="margin:4px 0"><strong>📅 Arrivée :</strong> ${checkIn}</p>
-        <p style="margin:4px 0"><strong>📅 Départ :</strong> ${checkOut}</p>
+        <p style="margin:4px 0"><strong>📅 Arrivée :</strong> ${esc(checkIn)}</p>
+        <p style="margin:4px 0"><strong>📅 Départ :</strong> ${esc(checkOut)}</p>
         <p style="margin:4px 0"><strong>💰 Montant :</strong> ${Number(amount).toLocaleString('fr-DZ')} DZD</p>
-        <p style="margin:4px 0"><strong>🔖 Référence :</strong> <code>${reference}</code></p>
+        <p style="margin:4px 0"><strong>🔖 Référence :</strong> <code>${esc(reference)}</code></p>
       </div>
       <p style="font-size:13px;color:#666">Vérifiez la réception du virement sur votre compte bancaire. Contactez Locavac si vous n'avez pas reçu le paiement dans 48h ouvrables.</p>
     `),
@@ -260,10 +262,10 @@ function mailPasswordReset({ name, email, resetUrl }) {
       <p>Bonjour <strong>${esc(name)}</strong>,</p>
       <p>Vous avez demandé à réinitialiser votre mot de passe. Cliquez sur le bouton ci-dessous pour choisir un nouveau mot de passe :</p>
       <div style="text-align:center;margin:28px 0">
-        <a href="${resetUrl}" style="display:inline-block;background:#E8261A;color:#fff;padding:14px 32px;border-radius:10px;text-decoration:none;font-weight:700;font-size:15px">Réinitialiser mon mot de passe →</a>
+        <a href="${esc(resetUrl)}" style="display:inline-block;background:#E8261A;color:#fff;padding:14px 32px;border-radius:10px;text-decoration:none;font-weight:700;font-size:15px">Réinitialiser mon mot de passe →</a>
       </div>
       <p style="font-size:13px;color:#666">Ce lien est valable <strong>1 heure</strong>. Si vous n'avez pas fait cette demande, ignorez cet email — votre mot de passe reste inchangé.</p>
-      <p style="font-size:12px;color:#999;margin-top:16px">Lien alternatif : <a href="${resetUrl}" style="color:#E8261A">${resetUrl}</a></p>
+      <p style="font-size:12px;color:#999;margin-top:16px">Lien alternatif : <a href="${esc(resetUrl)}" style="color:#E8261A">${esc(resetUrl)}</a></p>
     `),
   });
 }
@@ -276,7 +278,7 @@ function mailVerifyEmail({ name, email, verifyUrl }) {
       <p>Bonjour <strong>${esc(name)}</strong>,</p>
       <p>Merci de vous être inscrit sur Locavac ! Pour activer votre compte, confirmez votre adresse email :</p>
       <div style="text-align:center;margin:28px 0">
-        <a href="${verifyUrl}" style="display:inline-block;background:#0a7c47;color:#fff;padding:14px 32px;border-radius:10px;text-decoration:none;font-weight:700;font-size:15px">Confirmer mon email →</a>
+        <a href="${esc(verifyUrl)}" style="display:inline-block;background:#0a7c47;color:#fff;padding:14px 32px;border-radius:10px;text-decoration:none;font-weight:700;font-size:15px">Confirmer mon email →</a>
       </div>
       <p style="font-size:13px;color:#666">Ce lien est valable <strong>24 heures</strong>. Si vous n'avez pas créé de compte, ignorez cet email.</p>
     `),
@@ -284,7 +286,7 @@ function mailVerifyEmail({ name, email, verifyUrl }) {
 }
 
 module.exports = {
-  sendMail,
+  sendMail, esc,
   mailReservationCreated, mailReservationConfirmed, mailReservationCancelled,
   mailNewMessage, mailNewReservationToHost,
   mailPaymentConfirmedToGuest, mailVirementToHost,

@@ -40,14 +40,21 @@ describe('PATCH /api/reservations/:id/status — annulation & remboursement', ()
   });
 
   test('402 si hôte confirme sans paiement', async () => {
-    const res = await request(app).patch('/api/reservations/300/status')
+    // Réservation 301 : en attente, sans paiement → findSuccessByReservation retourne null → 402
+    const res = await request(app).patch('/api/reservations/301/status')
       .set(HOST_AUTH).send({ status: 'confirmed' });
-    // payment_id=null donc findSuccessByReservation retourne null → 402
     expect(res.status).toBe(402);
   });
 
-  test('200 + refund calculé si voyageur annule (politique flexible)', async () => {
+  test('409 si l\'hôte tente de confirmer une réservation qui n\'est plus en attente', async () => {
     const res = await request(app).patch('/api/reservations/300/status')
+      .set(HOST_AUTH).send({ status: 'confirmed' });
+    expect(res.status).toBe(409);
+  });
+
+  test('200 + refund calculé si voyageur annule (politique flexible)', async () => {
+    // Réservation 301 : séjour à venir (la 300 est terminée et ne peut plus être annulée)
+    const res = await request(app).patch('/api/reservations/301/status')
       .set(GUEST_AUTH).send({ status: 'cancelled' });
     expect(res.status).toBe(200);
     expect(res.body.ok).toBe(true);

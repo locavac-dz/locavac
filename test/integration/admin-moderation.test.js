@@ -9,23 +9,8 @@ jest.mock('../../server/ws', () => ({ send: jest.fn(), setup: jest.fn() }));
 const app = require('../../server/index');
 const db  = require('../mocks/db');
 
-// Colonnes réelles de la table users (schema.sql + ADD COLUMN des migrations) : les tests tournent sur un
-// mock, donc une écriture vers une colonne inexistante ne serait détectée qu'en production.
-function usersColumns() {
-  const serverDir = path.join(__dirname, '..', '..', 'server');
-  const schema = fs.readFileSync(path.join(serverDir, 'schema.sql'), 'utf8');
-  const block  = schema.match(/CREATE TABLE IF NOT EXISTS users \(([\s\S]*?)\n\);/)[1];
-  const cols   = block.split('\n').map(l => l.trim().split(/\s+/)[0]).filter(c => /^[a-z_]+$/.test(c));
-  const migDir = path.join(serverDir, 'migrations');
-  for (const f of fs.readdirSync(migDir).filter(f => f.endsWith('.sql'))) {
-    for (const stmt of fs.readFileSync(path.join(migDir, f), 'utf8').split(';')) {
-      if (!/ALTER TABLE\s+users\b/i.test(stmt)) continue;
-      for (const m of stmt.matchAll(/ADD COLUMN(?:\s+IF NOT EXISTS)?\s+([a-z_]+)/gi)) cols.push(m[1].toLowerCase());
-    }
-  }
-  return new Set(cols);
-}
-const USERS_COLUMNS = usersColumns();
+const { tableColumns } = require('../helpers/schema');
+const USERS_COLUMNS = tableColumns('users');
 
 // id=98 est le seul admin dans le mock
 const ADMIN_AUTH = { Authorization: `Bearer ${jwt.sign({ id: 98, email: 'admin@test.dz', is_admin: true }, process.env.JWT_SECRET)}` };
@@ -61,9 +46,12 @@ describe('DELETE /api/admin/users/:id — anonymisation RGPD', () => {
     const [uid, changes] = db.users.updateById.mock.calls[0];
     expect(uid).toBe(2);
     expect(changes).toMatchObject({
-      name: 'Utilisateur supprimé', email: 'deleted_2@locavac.dz', phone: null, password: '',
+      name: 'Utilisateur supprimé', phone: null, password: '',
       is_host: false, is_admin: false, banned: true,
+      // Données que l'ancienne suppression admin laissait en place
+      rib: null, ccp: null, id_document: null, id_verified: false, google_id: null,
     });
+    expect(changes.email).toMatch(/^deleted_2_\d+@deleted\.invalid$/);
   });
 
   test('garde-fou du parseur de schéma : colonnes connues présentes', () => {

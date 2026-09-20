@@ -84,6 +84,41 @@ describe('POST /api/payments/init — détails', () => {
   });
 });
 
+describe('Paiement d\'une réservation qui n\'est plus en attente', () => {
+  test('init : 409 pour une réservation annulée, aucun paiement créé', async () => {
+    db.reservations.findById.mockResolvedValueOnce({ id: 301, guest_id: 2, total_price: 25000, status: 'cancelled' });
+    const res = await request(app).post('/api/payments/init').set(AUTH).send({ reservation_id: 301, method: 'cib' });
+    expect(res.status).toBe(409);
+    expect(res.body.error).toMatch(/annulée/i);
+    expect(db.payments.create).not.toHaveBeenCalled();
+  });
+
+  test.each(['cancelled', 'confirmed'])('process : réservation devenue "%s" depuis l\'initialisation → 409, paiement annulé, réservation intacte', async status => {
+    withPayment({ method: 'especes' });
+    db.reservations.findById.mockResolvedValueOnce({ id: 301, guest_id: 2, listing_id: 1, total_price: 25000, status });
+    const res = await pay({});
+    expect(res.status).toBe(409);
+    expect(db.payments.updateById).toHaveBeenCalledTimes(1);
+    expect(db.payments.updateById).toHaveBeenCalledWith(600, { status: 'cancelled' });
+    expect(db.reservations.updateById).not.toHaveBeenCalled();
+    expect(mailer.mailPaymentConfirmedToGuest).not.toHaveBeenCalled();
+  });
+
+  test('process : carte valide sur une réservation annulée — aucune confirmation (pas de double réservation)', async () => {
+    withPayment({ method: 'cib' });
+    db.reservations.findById.mockResolvedValueOnce({ id: 301, guest_id: 2, listing_id: 1, total_price: 25000, status: 'cancelled' });
+    const res = await pay(card(CIB_CARD));
+    expect(res.status).toBe(409);
+    expect(db.reservations.updateById).not.toHaveBeenCalled();
+  });
+
+  test('process : réservation supprimée entre-temps → 409', async () => {
+    withPayment({ method: 'especes' });
+    db.reservations.findById.mockResolvedValueOnce(null);
+    expect((await pay({})).status).toBe(409);
+  });
+});
+
 describe('POST /api/payments/:id/process — état du paiement', () => {
   test.each(['success', 'failed', 'cancelled', 'pending_transfer'])('409 si le paiement est déjà "%s"', async status => {
     withPayment({ status });

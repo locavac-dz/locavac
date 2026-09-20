@@ -80,6 +80,8 @@ router.post('/init', auth, async (req, res) => {
   if (!resa || resa.guest_id !== uid) return res.status(404).json({ error: 'Réservation introuvable.' });
   if (resa.status === 'confirmed')
     return res.status(409).json({ error: 'Cette réservation est déjà payée.' });
+  if (resa.status !== 'pending')
+    return res.status(409).json({ error: 'Cette réservation a été annulée : elle ne peut plus être payée.' });
 
   // Annuler tous les paiements en attente pour cette réservation
   await pool.query(
@@ -106,6 +108,14 @@ router.post('/:id/process', auth, async (req, res) => {
   if (!payment) return res.status(404).json({ error: 'Paiement introuvable.' });
   if (!['pending', 'pending_otp'].includes(payment.status))
     return res.status(409).json({ error: "Ce paiement n'est plus actif." });
+
+  // La réservation a pu être annulée (ou expirer) depuis l'initialisation : la payer la re-confirmerait
+  // sur des dates peut-être relouées entre-temps.
+  const current = await db.reservations.findById(payment.reservation_id);
+  if (!current || current.status !== 'pending') {
+    await db.payments.updateById(payment.id, { status: 'cancelled' });
+    return res.status(409).json({ error: "Cette réservation n'est plus en attente de paiement." });
+  }
 
   // ── Espèces à l'arrivée ──────────────────────────────────
   if (payment.method === 'especes') {

@@ -254,15 +254,91 @@ describe('PATCH /api/reservations/:id/status — confirmation et notifications',
     expect(ws.send).toHaveBeenCalledWith(2, expect.objectContaining({ status: 'cancelled' }));
   });
 
-  test('réservation déjà annulée : pas de remboursement recalculé ni de paiement modifié', async () => {
+  test('réservation déjà annulée : 409, ni remboursement recalculé, ni écriture, ni e-mail en double', async () => {
     db.reservations.findById.mockResolvedValueOnce({
       id: 301, listing_id: 1, guest_id: 2, check_in: day(20), check_out: day(25),
       total_price: 25000, status: 'cancelled', payment_id: 600,
     });
     const res = await patch(301, 'cancelled', auth(2));
-    expect(res.status).toBe(200);
-    expect(res.body.refund).toBeNull();
+    expect(res.status).toBe(409);
+    expect(db.reservations.updateById).not.toHaveBeenCalled();
     expect(db.payments.updateById).not.toHaveBeenCalled();
+    expect(mailer.mailReservationCancelled).not.toHaveBeenCalled();
+  });
+
+  test('confirmer une réservation annulée est refusé même avec un ancien paiement réussi (dates peut-être relouées)', async () => {
+    db.reservations.findById.mockResolvedValueOnce({ id: 301, listing_id: 1, guest_id: 2, check_in: day(20), check_out: day(25), total_price: 25000, status: 'cancelled' });
+    db.payments.findSuccessByReservation.mockResolvedValueOnce({ id: 600 });
+    const res = await patch(301, 'confirmed', HOST);
+    expect(res.status).toBe(409);
+    expect(db.reservations.updateById).not.toHaveBeenCalled();
+  });
+
+  test('un séjour terminé ne peut plus être annulé, ni par le voyageur ni par l\'hôte', async () => {
+    const finished = { id: 301, listing_id: 1, guest_id: 2, check_in: day(-10), check_out: day(-5), total_price: 25000, status: 'confirmed', payment_id: 600 };
+    for (const who of [auth(2), HOST]) {
+      db.reservations.findById.mockResolvedValueOnce(finished);
+      const res = await patch(301, 'cancelled', who);
+      expect(res.status).toBe(400);
+      expect(res.body.error).toMatch(/terminé/i);
+    }
+    expect(db.reservations.updateById).not.toHaveBeenCalled();
+    expect(db.payments.updateById).not.toHaveBeenCalled();
+  });
+
+  test('un séjour qui se termine aujourd\'hui reste annulable', async () => {
+    db.reservations.findById.mockResolvedValueOnce({ id: 301, listing_id: 1, guest_id: 2, check_in: day(-3), check_out: day(0), total_price: 25000, status: 'confirmed' });
+    const res = await patch(301, 'cancelled', auth(2));
+    expect(res.status).toBe(200);
+  });
+});
+
+describe('Annulation par l\'hôte — le voyageur est remboursé intégralement', () => {
+  const hostCancels = async (policy, checkInInDays) => {
+    db.reservations.findById.mockResolvedValueOnce({
+      id: 301, listing_id: 1, guest_id: 2, check_in: day(checkInInDays), check_out: day(checkInInDays + 4),
+      total_price: 20000, status: 'confirmed', payment_id: 600,
+    });
+    db.listings.findById.mockResolvedValueOnce({ id: 1, host_id: 1, title: 'Villa de test', cancellation_policy: policy });
+    return request(app).patch('/api/reservations/301/status').set(HOST).send({ status: 'cancelled' });
+  };
+
+  test.each([['stricte', 2], ['stricte', 30], ['moderee', 1], ['flexible', 0]])(
+    'politique %s à J-%i : 100 %% remboursés quand c\'est l\'hôte qui annule', async (policy, days) => {
+      const res = await hostCancels(policy, days);
+      expect(res.status).toBe(200);
+      expect(res.body.refund).toMatchObject({ pct: 100, amount: 20000, cancelled_by: 'host' });
+      expect(db.payments.updateById).toHaveBeenCalledWith(600, { status: 'refunded', refund_amount: 20000, refund_pct: 100 });
+    });
+
+  test('la même annulation par le voyageur (stricte, J-2) ne rembourse rien', async () => {
+    db.reservations.findById.mockResolvedValueOnce({ id: 301, listing_id: 1, guest_id: 2, check_in: day(2), check_out: day(6), total_price: 20000, status: 'confirmed', payment_id: 600 });
+    db.listings.findById.mockResolvedValueOnce({ id: 1, host_id: 1, title: 'Villa de test', cancellation_policy: 'stricte' });
+    const res = await request(app).patch('/api/reservations/301/status').set(auth(2)).send({ status: 'cancelled' });
+    expect(res.body.refund).toMatchObject({ pct: 0, amount: 0, cancelled_by: 'guest' });
+    expect(db.payments.updateById).not.toHaveBeenCalled();
+  });
+});
+
+describe('POST /api/reservations — bornes anti-blocage de calendrier', () => {
+  test('séjour de 90 nuits accepté, 91 nuits refusé', async () => {
+    mockClient();
+    expect((await book({ listing_id: 1, check_in: day(10), check_out: day(100) })).status).toBe(201);
+    const res = await book({ listing_id: 1, check_in: day(10), check_out: day(101) });
+    expect(res.status).toBe(400);
+    expect(res.body.error).toMatch(/90 nuits/);
+  });
+
+  test('réservation à plus de 730 jours refusée, aucune transaction ouverte', async () => {
+    const res = await book({ listing_id: 1, check_in: day(731), check_out: day(735) });
+    expect(res.status).toBe(400);
+    expect(res.body.error).toMatch(/730 jours/);
+    expect(db.pool.connect).not.toHaveBeenCalled();
+  });
+
+  test('réservation à exactement 730 jours acceptée', async () => {
+    mockClient();
+    expect((await book({ listing_id: 1, check_in: day(730), check_out: day(733) })).status).toBe(201);
   });
 });
 

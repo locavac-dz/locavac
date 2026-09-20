@@ -2,6 +2,7 @@ const router    = require('express').Router();
 const db        = require('../db');
 const { pool }  = require('../db');
 const admin     = require('../middleware/admin');
+const { anonymizeUser } = require('../anonymize');
 
 router.use(admin);
 
@@ -81,24 +82,8 @@ router.patch('/users/:id', async (req, res) => {
 router.delete('/users/:id', async (req, res) => {
   const uid = Number(req.params.id);
   if (uid === req.user.id) return res.status(400).json({ error: 'Impossible de supprimer votre propre compte.' });
-  const user = await db.users.findById(uid);
-  if (!user) return res.status(404).json({ error: 'Utilisateur introuvable.' });
-  // Désactiver et rendre les annonces indisponibles (ne pas les supprimer — elles sont dans l'historique)
-  await db.listings.setAvailableByHost(uid, false);
-  await db.messages.deleteByUser(uid);
-  // Pseudonymisation : effacement des données personnelles, conservation de l'ID
-  await db.users.updateById(uid, {
-    name:               'Utilisateur supprimé',
-    email:              `deleted_${uid}@locavac.dz`,
-    phone:              null,
-    password:           '',
-    bio:                null,
-    avatar:             null,
-    verification_token: null,
-    is_host:            false,
-    is_admin:           false,
-    banned:             true,
-  });
+  // Effacement RGPD centralisé (server/anonymize.js) : même traitement que la suppression par l'utilisateur
+  if (!await anonymizeUser(uid)) return res.status(404).json({ error: 'Utilisateur introuvable.' });
   res.json({ ok: true });
 });
 

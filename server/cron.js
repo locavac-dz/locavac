@@ -2,15 +2,47 @@ const cron   = require('node-cron');
 const db     = require('./db');
 const mailer = require('./mailer');
 
+// Délais avant libération automatique du calendrier
+const UNPAID_EXPIRY_HOURS   = 24; // réservation en attente sans paiement
+const TRANSFER_EXPIRY_HOURS = 72; // virement bancaire déclaré mais non reçu
+
 // Tourne toutes les heures (hh:00)
 cron.schedule('0 * * * *', async () => {
   try {
+    await expireUnpaidReservations();
     await sendCheckInReminders();
     await sendReviewReminders();
   } catch (e) {
     console.error('[Cron]', e.message);
   }
 });
+
+// Une réservation « pending » compte comme un conflit de dates : sans expiration, n'importe qui pourrait
+// bloquer gratuitement le calendrier d'un hôte. Un virement déclaré prolonge le délai.
+async function expireUnpaidReservations() {
+  const { rows } = await db.pool.query(`
+    UPDATE reservations r SET status = 'cancelled'
+    WHERE r.status = 'pending'
+      AND r.created_at < NOW() - make_interval(hours => $1)
+      AND NOT EXISTS (
+        SELECT 1 FROM payments p
+        WHERE p.reservation_id = r.id AND p.status = 'pending_transfer'
+          AND p.created_at > NOW() - make_interval(hours => $2)
+      )
+    RETURNING r.id
+  `, [UNPAID_EXPIRY_HOURS, TRANSFER_EXPIRY_HOURS]);
+
+  const ids = rows.map(r => r.id);
+  if (!ids.length) return 0;
+
+  await db.pool.query(
+    `UPDATE payments SET status = 'cancelled'
+     WHERE reservation_id = ANY($1) AND status IN ('pending', 'pending_otp', 'pending_transfer')`,
+    [ids]
+  );
+  console.log(`[Cron] ${ids.length} réservation(s) impayée(s) expirée(s) : ${ids.join(', ')}`);
+  return ids.length;
+}
 
 // Rappel check-in : envoyé 24h avant la date d'arrivée (une seule fois, entre H-25 et H-23)
 async function sendCheckInReminders() {
@@ -77,4 +109,6 @@ async function sendReviewReminders() {
   }
 }
 
-console.log('[Cron] Rappels check-in et avis actifs (toutes les heures)');
+console.log('[Cron] Expiration des impayés, rappels check-in et avis actifs (toutes les heures)');
+
+module.exports = { expireUnpaidReservations, sendCheckInReminders, sendReviewReminders, UNPAID_EXPIRY_HOURS, TRANSFER_EXPIRY_HOURS };

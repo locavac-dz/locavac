@@ -137,7 +137,8 @@ async function sendWeeklyReport() {
 
   const openAlerts = state.alerts.filter(a => !a.dismissed && a.level !== 'info');
   const alertRows  = openAlerts.slice(0, 5).map(a =>
-    `<tr><td style="padding:6px 10px">${a.level==='error'?'🔴':'🟡'}</td><td style="padding:6px 10px">${a.category}</td><td style="padding:6px 10px">${a.message}</td></tr>`
+    // Les alertes citent des titres d'annonces, des noms et des e-mails saisis par les utilisateurs
+    `<tr><td style="padding:6px 10px">${a.level==='error'?'🔴':'🟡'}</td><td style="padding:6px 10px">${mailer.esc(a.category)}</td><td style="padding:6px 10px">${mailer.esc(a.message)}</td></tr>`
   ).join('');
 
   await mailer.sendMail({

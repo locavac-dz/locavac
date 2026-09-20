@@ -149,14 +149,21 @@ describe('DELETE /api/auth/me — suppression RGPD', () => {
     const res = await request(app).delete('/api/auth/me').set(AUTH);
     expect(res.status).toBe(200);
     expect(res.body.ok).toBe(true);
+    expect(db.messages.deleteByUser).toHaveBeenCalledWith(2);
+    expect(db.listings.setAvailableByHost).toHaveBeenCalledWith(2, false);
     const calls = db.pool.query.mock.calls;
-    expect(calls.some(c => /DELETE FROM messages/.test(c[0]) && c[1][0] === 2)).toBe(true);
-    expect(calls.some(c => /DELETE FROM reviews/.test(c[0])  && c[1][0] === 2)).toBe(true);
-    const anon = calls.find(c => /UPDATE users SET name='Utilisateur supprimé'/.test(c[0]));
-    expect(anon[1][0]).toBe(2);
-    expect(anon[1][1]).toMatch(/^deleted_2_\d+@deleted\.invalid$/);
-    expect(anon[0]).toMatch(/banned=true/);
-    expect(calls.some(c => /UPDATE listings SET available=false/.test(c[0]) && c[1][0] === 2)).toBe(true);
+    expect(calls.some(c => /DELETE FROM reviews/.test(c[0]) && c[1][0] === 2)).toBe(true);
+    const [uid, changes] = db.users.updateById.mock.calls[0];
+    expect(uid).toBe(2);
+    expect(changes).toMatchObject({ name: 'Utilisateur supprimé', password: '', phone: null, banned: true });
+    expect(changes.email).toMatch(/^deleted_2_\d+@deleted\.invalid$/);
+  });
+
+  test('la suppression par l\'utilisateur efface les mêmes données que la suppression par un admin', async () => {
+    await request(app).delete('/api/auth/me').set(AUTH);
+    expect(db.users.updateById.mock.calls[0][1]).toMatchObject({
+      rib: null, ccp: null, id_document: null, id_verified: false, google_id: null, verification_token: null, is_admin: false,
+    });
   });
 });
 

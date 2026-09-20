@@ -5,6 +5,7 @@ const crypto = require('crypto');
 const db     = require('../db');
 const mailer = require('../mailer');
 const { pool } = require('../db');
+const { anonymizeUser } = require('../anonymize');
 
 // Hash bidon utilisé pour uniformiser le temps de réponse du login (anti timing oracle)
 const DUMMY_HASH = '$2a$10$abcdefghijklmnopqrstuvuDvGoRRZkq0kN5/HfHdBySSBhWxGe5m';
@@ -151,16 +152,8 @@ router.get('/verify-email', async (req, res) => {
 
 // DELETE /api/auth/me — suppression de compte (RGPD)
 router.delete('/me', require('../middleware/auth'), async (req, res) => {
-  const uid = req.user.id;
-  // Effacement RGPD : supprimer les données personnelles, conserver l'historique financier anonymisé
-  await pool.query('DELETE FROM messages WHERE from_id = $1 OR to_id = $1', [uid]);
-  await pool.query(`DELETE FROM reviews WHERE author_id = $1 OR user_id = $1`, [uid]);
-  // Anonymiser l'utilisateur et le bannir pour invalider ses JWT actifs
-  await pool.query(
-    `UPDATE users SET name='Utilisateur supprimé', email=$2, password='', phone=NULL, bio='', avatar='', banned=true WHERE id=$1`,
-    [uid, `deleted_${uid}_${Date.now()}@deleted.invalid`]
-  );
-  await pool.query('UPDATE listings SET available=false WHERE host_id=$1', [uid]);
+  // Effacement RGPD centralisé (server/anonymize.js) : même traitement que la suppression par un admin
+  await anonymizeUser(req.user.id);
   res.json({ ok: true });
 });
 

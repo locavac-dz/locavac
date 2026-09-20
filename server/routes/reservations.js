@@ -5,6 +5,9 @@ const auth     = require('../middleware/auth');
 const mailer   = require('../mailer');
 const ws       = require('../ws');
 
+const MAX_NIGHTS       = 90;
+const MAX_ADVANCE_DAYS = 730;
+
 function nights(checkIn, checkOut) {
   return Math.round((new Date(checkOut) - new Date(checkIn)) / 86400000);
 }
@@ -54,6 +57,11 @@ router.post('/', auth, async (req, res) => {
 
   const n = nights(check_in, check_out);
   if (n < 1) return res.status(400).json({ error: "La date de départ doit être après la date d'arrivée." });
+  // Une réservation non payée bloque le calendrier : bornes raisonnables sur la durée et l'anticipation
+  if (n > MAX_NIGHTS)
+    return res.status(400).json({ error: `Un séjour ne peut pas dépasser ${MAX_NIGHTS} nuits.` });
+  if (nights(today, check_in) > MAX_ADVANCE_DAYS)
+    return res.status(400).json({ error: `Les réservations sont ouvertes au maximum ${MAX_ADVANCE_DAYS} jours à l'avance.` });
 
   // Vérification blocked_ranges (données JS/JSON, hors transaction)
   const ranges = Array.isArray(listing.blocked_ranges) ? listing.blocked_ranges
@@ -187,16 +195,30 @@ router.patch('/:id/status', auth, async (req, res) => {
   if (!isHost && !isGuest) return res.status(403).json({ error: 'Accès refusé.' });
   if (isGuest && status === 'confirmed') return res.status(403).json({ error: "Seul l'hôte peut confirmer." });
 
-  // Vérifier qu'un paiement valide existe avant confirmation
   if (status === 'confirmed') {
+    // Une réservation annulée ou déjà confirmée ne se « re-confirme » pas (dates peut-être relouées entre-temps)
+    if (resa.status !== 'pending')
+      return res.status(409).json({ error: 'Seule une réservation en attente peut être confirmée.' });
+    // Vérifier qu'un paiement valide existe avant confirmation
     const paid = await db.payments.findSuccessByReservation(resa.id);
     if (!paid) return res.status(402).json({ error: 'Impossible de confirmer : aucun paiement valide enregistré pour cette réservation.' });
   }
 
   let refund = null;
-  if (status === 'cancelled' && resa.status !== 'cancelled') {
+  if (status === 'cancelled') {
+    if (resa.status === 'cancelled')
+      return res.status(409).json({ error: 'Cette réservation est déjà annulée.' });
+    // Séjour terminé : l'annuler effacerait un revenu acquis par l'hôte
+    const startOfToday = new Date(new Date().toISOString().slice(0, 10));
+    if (new Date(resa.check_out) < startOfToday)
+      return res.status(400).json({ error: 'Un séjour terminé ne peut plus être annulé.' });
+
     const policy = listing?.cancellation_policy || 'flexible';
     refund = calcRefund(policy, resa.total_price, resa.check_in);
+    // La politique d'annulation protège l'hôte contre un désistement du voyageur ; si c'est l'hôte
+    // qui annule, le voyageur n'y est pour rien : remboursement intégral.
+    if (!isGuest) refund.pct = 100;
+    refund.cancelled_by = isGuest ? 'guest' : 'host';
     refund.amount = Math.round(Number(resa.total_price) * refund.pct / 100);
   }
 
