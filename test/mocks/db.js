@@ -7,6 +7,7 @@ const VALID_HASH = bcrypt.hashSync('MotDePasse123!', 10);
 const USERS = {
   1:  { id: 1,  name: 'Hôte Test',   email: 'host@test.dz',   password: VALID_HASH, is_host: true,  banned: false, is_admin: false },
   2:  { id: 2,  name: 'Guest Test',  email: 'guest@test.dz',  password: VALID_HASH, is_host: false, banned: false, is_admin: false },
+  98: { id: 98, name: 'Admin Test',  email: 'admin@test.dz',  password: VALID_HASH, is_host: false, banned: false, is_admin: true  },
   99: { id: 99, name: 'Guest Test',  email: 'guest@test.dz',  password: VALID_HASH, is_host: false, banned: false, is_admin: false },
 };
 const BANNED_USER = { id: 3, name: 'Banni', email: 'banned@test.dz', password: VALID_HASH, banned: true };
@@ -41,8 +42,10 @@ const PAYMENT_1 = {
 const pool = {
   query: jest.fn((sql, params) => {
     const id = params && params[0];
+    // Auth middleware : SELECT id, banned FROM users WHERE id = $1
     if (id === 3) return Promise.resolve({ rows: [{ id: 3, banned: true }] });
-    if (USERS[id])  return Promise.resolve({ rows: [{ id, banned: false }] });
+    if (USERS[id]) return Promise.resolve({ rows: [{ id, banned: false }] });
+    // Routes admin utilisent pool.query directement — retourner des lignes vides par défaut
     return Promise.resolve({ rows: [] });
   }),
   connect: jest.fn().mockResolvedValue({

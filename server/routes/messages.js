@@ -49,8 +49,9 @@ router.get('/', auth, async (req, res) => {
 // GET /api/messages/:listing_id/:other_id
 router.get('/:listing_id/:other_id', auth, async (req, res) => {
   const uid     = req.user.id;
-  const lid     = Number(req.params.listing_id);
-  const otherId = Number(req.params.other_id);
+  const lid     = parseInt(req.params.listing_id, 10);
+  const otherId = parseInt(req.params.other_id, 10);
+  if (isNaN(lid) || isNaN(otherId)) return res.status(400).json({ error: 'Identifiants invalides.' });
 
   // Déjà trié ASC par le DAO — pas de sort() manuel nécessaire
   const thread = await db.messages.findThread(uid, otherId, lid);
@@ -75,13 +76,15 @@ router.post('/', auth, async (req, res) => {
   const listing = await db.listings.findById(Number(listing_id));
   if (!listing) return res.status(404).json({ error: 'Annonce introuvable.' });
 
-  const msg = await db.messages.create({
+  const recipient = await db.users.findById(Number(to_id));
+  if (!recipient) return res.status(404).json({ error: 'Destinataire introuvable.' });
+
+  const msg    = await db.messages.create({
     from_id: req.user.id, to_id: Number(to_id),
     listing_id: Number(listing_id), body: body.trim(), read: false,
   });
 
-  const recipient = await db.users.findById(Number(to_id));
-  const sender    = await db.users.findById(req.user.id);
+  const sender = await db.users.findById(req.user.id);
   if (recipient?.email) {
     require('../mailer').mailNewMessage({
       to: recipient.email, senderName: sender.name,

@@ -4,8 +4,11 @@ module.exports = {
     {
       name:         'locavac',
       script:       'server/index.js',
-      instances:    'max',          // 1 worker par cœur CPU
-      exec_mode:    'cluster',      // mode cluster pour load-balancing
+      // instances: 'max' désactivé — le WebSocket maintient une Map en mémoire par worker.
+      // En cluster multi-process, un send() vers un client connecté sur un autre worker
+      // échoue silencieusement. Passage à Redis Pub/Sub requis avant de repasser à 'max'.
+      instances:    1,
+      exec_mode:    'cluster',
       watch:        false,
       max_memory_restart: '512M',
 

@@ -2190,6 +2190,20 @@ const TRANSLATIONS = {
     'profile.avatar':'Photo de profil (URL ou upload)','profile.save':'Enregistrer',
     'admin.title':'Panel Administration',
     'no_listings':'Aucun logement trouvé.','loading':'Chargement…',
+    'toast.day_blocked':'Jour bloqué 🔒','toast.day_unblocked':'Jour débloqué',
+    'pay.fill_all':'Remplissez tous les champs.','pay.phone_required':'Numéro de téléphone requis.',
+    'pay.err_expiry_format':"Format d'expiration invalide (MM/AA requis).",
+    'pay.err_expired':'Carte expirée.',
+    'pay.err_cvv':'CVV invalide (3 ou 4 chiffres).',
+    'pay.err_card_length':'Numéro de carte invalide (16 à 19 chiffres).',
+    'pay.err_required':'Tous les champs carte sont requis.',
+    'pay.err_card_invalid':'Numéro de carte invalide.',
+    'pay.err_refused':'Paiement refusé par la banque.',
+    'pay.err_timeout':'Délai dépassé. Réessayez.',
+    'pay.err_insufficient':'Solde insuffisant.',
+    'pay.err_bm_insufficient':'Solde BaridiMob insuffisant.',
+    'pay.err_phone_invalid':'Numéro algérien invalide (05/06/07 + 8 chiffres requis).',
+    'pay.err_otp_invalid':'Code OTP invalide (6 chiffres requis).',
   },
   ar: {
     'nav.host':'كن مضيفاً','nav.register':'إنشاء حساب','nav.login':'تسجيل الدخول',
@@ -2247,6 +2261,20 @@ const TRANSLATIONS = {
     'profile.avatar':'صورة الملف الشخصي','profile.save':'حفظ',
     'admin.title':'لوحة الإدارة',
     'no_listings':'لم يتم العثور على إقامات.','loading':'جارٍ التحميل…',
+    'toast.day_blocked':'يوم محجوب 🔒','toast.day_unblocked':'تم إلغاء الحجب',
+    'pay.fill_all':'يرجى ملء جميع الحقول.','pay.phone_required':'رقم الهاتف مطلوب.',
+    'pay.err_expiry_format':'صيغة الانتهاء غير صحيحة (شش/سس مطلوب).',
+    'pay.err_expired':'البطاقة منتهية الصلاحية.',
+    'pay.err_cvv':'رمز CVV غير صالح (3 أو 4 أرقام).',
+    'pay.err_card_length':'رقم البطاقة غير صالح (16 إلى 19 رقماً).',
+    'pay.err_required':'جميع حقول البطاقة مطلوبة.',
+    'pay.err_card_invalid':'رقم البطاقة غير صالح.',
+    'pay.err_refused':'رفض البنك عملية الدفع.',
+    'pay.err_timeout':'انتهت مهلة العملية. أعد المحاولة.',
+    'pay.err_insufficient':'الرصيد غير كافٍ.',
+    'pay.err_bm_insufficient':'رصيد BaridiMob غير كافٍ.',
+    'pay.err_phone_invalid':'رقم جزائري غير صالح (05/06/07 + 8 أرقام مطلوبة).',
+    'pay.err_otp_invalid':'رمز OTP غير صالح (6 أرقام مطلوبة).',
   },
   en: {
     'nav.host':'Become a host','nav.register':'Sign up','nav.login':'Log in',
@@ -2304,6 +2332,20 @@ const TRANSLATIONS = {
     'profile.avatar':'Profile photo (URL or upload)','profile.save':'Save',
     'admin.title':'Admin Panel',
     'no_listings':'No stays found.','loading':'Loading…',
+    'toast.day_blocked':'Day blocked 🔒','toast.day_unblocked':'Day unblocked',
+    'pay.fill_all':'Please fill in all fields.','pay.phone_required':'Phone number required.',
+    'pay.err_expiry_format':'Invalid expiry format (MM/YY required).',
+    'pay.err_expired':'Card expired.',
+    'pay.err_cvv':'Invalid CVV (3 or 4 digits).',
+    'pay.err_card_length':'Invalid card number (16 to 19 digits).',
+    'pay.err_required':'All card fields are required.',
+    'pay.err_card_invalid':'Invalid card number.',
+    'pay.err_refused':'Payment refused by the bank.',
+    'pay.err_timeout':'Request timed out. Please retry.',
+    'pay.err_insufficient':'Insufficient funds.',
+    'pay.err_bm_insufficient':'Insufficient BaridiMob balance.',
+    'pay.err_phone_invalid':'Invalid Algerian number (05/06/07 + 8 digits required).',
+    'pay.err_otp_invalid':'Invalid OTP code (6 digits required).',
   },
   kab: {
     'nav.host':'Ili d amknu','nav.register':'Kcem','nav.login':'Kcem',
@@ -2369,6 +2411,22 @@ let currentLang = localStorage.getItem('dz_lang') || 'fr';
 function t(key) {
   return TRANSLATIONS[currentLang]?.[key] ?? TRANSLATIONS['fr'][key] ?? key;
 }
+// Traduit les messages d'erreur connus renvoyés par le serveur en français
+const _SERVER_ERR_MAP = {
+  "Format d'expiration invalide (MM/AA requis).": 'pay.err_expiry_format',
+  "Carte expirée.": 'pay.err_expired',
+  "CVV invalide (3 ou 4 chiffres).": 'pay.err_cvv',
+  "Numéro de carte invalide (16 à 19 chiffres).": 'pay.err_card_length',
+  "Tous les champs carte sont requis.": 'pay.err_required',
+  "Numéro de carte invalide.": 'pay.err_card_invalid',
+  "Paiement refusé par la banque.": 'pay.err_refused',
+  "Délai dépassé. Réessayez.": 'pay.err_timeout',
+  "Solde insuffisant.": 'pay.err_insufficient',
+  "Solde BaridiMob insuffisant.": 'pay.err_bm_insufficient',
+  "Numéro algérien invalide (05/06/07 + 8 chiffres requis).": 'pay.err_phone_invalid',
+  "Code OTP invalide (6 chiffres requis).": 'pay.err_otp_invalid',
+};
+function te(msg) { return _SERVER_ERR_MAP[msg] ? t(_SERVER_ERR_MAP[msg]) : msg; }
 
 function escapeHtml(s) {
   return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
@@ -5146,11 +5204,11 @@ async function toggleBlockDay(iso) {
     if (isBlocked) {
       await apiFetch('/availability/' + calListingId + '/block', { method: 'DELETE', body: JSON.stringify({ start: iso, end: endISO }) });
       calUnavailable = calUnavailable.filter(u => !(u.type === 'blocked' && u.start === iso));
-      toast('Jour débloqué');
+      toast(t('toast.day_unblocked'));
     } else {
       await apiFetch('/availability/' + calListingId + '/block', { method: 'POST', body: JSON.stringify({ start: iso, end: endISO }) });
       calUnavailable.push({ type: 'blocked', start: iso, end: endISO });
-      toast('Jour bloqué 🔒');
+      toast(t('toast.day_blocked'));
     }
     renderCalendar();
   } catch(e) { toast('Erreur: ' + e.message); }
@@ -5681,21 +5739,21 @@ function showPayResult({ icon, title, msg, ref, amount, instrument, instrumentLa
 async function submitPayment() {
   const card=document.getElementById('pay-card').value, holder=document.getElementById('pay-holder').value.trim(), expiry=document.getElementById('pay-expiry').value, cvv=document.getElementById('pay-cvv').value;
   const errEl=document.getElementById('pay-err'); errEl.classList.remove('show');
-  if (!card||!holder||!expiry||!cvv) { errEl.textContent='Remplissez tous les champs.'; errEl.classList.add('show'); return; }
+  if (!card||!holder||!expiry||!cvv) { errEl.textContent=t('pay.fill_all'); errEl.classList.add('show'); return; }
   showPayStep(3);
   await new Promise(r=>setTimeout(r,1500));
   try {
     const data = await apiFetch('/payments/'+activePaymentId+'/process', { method:'POST', body: JSON.stringify({ card_number:card, expiry, cvv, card_holder:holder }) });
-    showPayResult({ icon:'✅', title:'Paiement accepté !', msg:'Réservation confirmée. Un reçu a été généré.', ref:data.reference, amount:data.amount, instrument:data.card_masked, instrumentLabel:'Carte', statusText:'✅ Approuvé' });
-    toast('✅ Paiement approuvé !');
+    showPayResult({ icon:'✅', title:t('pay.success'), msg:'Réservation confirmée. Un reçu a été généré.', ref:data.reference, amount:data.amount, instrument:data.card_masked, instrumentLabel:'Carte', statusText:'✅ Approuvé' });
+    toast('✅ ' + t('pay.success'));
   } catch(e) {
-    showPayStep(2); errEl.textContent='❌ '+e.message; errEl.classList.add('show');
+    showPayStep(2); errEl.textContent='❌ '+te(e.message); errEl.classList.add('show');
   }
 }
 async function sendBaridimobOtp() {
   const phone = document.getElementById('pay-bm-phone').value.trim();
   const errEl  = document.getElementById('pay-bm-err'); errEl.classList.remove('show');
-  if (!phone) { errEl.textContent='Numéro de téléphone requis.'; errEl.classList.add('show'); return; }
+  if (!phone) { errEl.textContent=t('pay.phone_required'); errEl.classList.add('show'); return; }
   const btn = document.getElementById('pay-bm-send-btn');
   btn.disabled = true; btn.textContent = 'Envoi en cours…';
   try {
@@ -5704,7 +5762,7 @@ async function sendBaridimobOtp() {
     document.getElementById('pay-bm-phone-phase').style.display = 'none';
     document.getElementById('pay-bm-otp-phase').style.display  = 'block';
   } catch(e) {
-    errEl.textContent = '❌ ' + e.message; errEl.classList.add('show');
+    errEl.textContent = '❌ ' + te(e.message); errEl.classList.add('show');
     btn.disabled = false; btn.textContent = 'Envoyer le code OTP →';
   }
 }
@@ -5712,20 +5770,20 @@ async function confirmBaridimob() {
   const otp   = document.getElementById('pay-bm-otp').value.trim();
   const phone  = document.getElementById('pay-bm-phone').value.trim();
   const errEl  = document.getElementById('pay-bm-otp-err'); errEl.classList.remove('show');
-  if (otp.length !== 6) { errEl.textContent='Code OTP invalide (6 chiffres requis).'; errEl.classList.add('show'); return; }
+  if (otp.length !== 6) { errEl.textContent=t('pay.err_otp_invalid'); errEl.classList.add('show'); return; }
   const btn = document.getElementById('pay-bm-confirm-btn');
   btn.disabled = true; btn.textContent = 'Traitement…';
   showPayStep(3);
   await new Promise(r => setTimeout(r, 1500));
   try {
     const data = await apiFetch('/payments/'+activePaymentId+'/process', { method:'POST', body: JSON.stringify({ phone, otp }) });
-    showPayResult({ icon:'✅', title:'Paiement BaridiMob approuvé !', msg:'Réservation confirmée. Paiement effectué via BaridiMob.', ref:data.reference, amount:data.amount, instrument:phone, instrumentLabel:'Téléphone', statusText:'✅ Approuvé' });
-    toast('✅ Paiement BaridiMob approuvé !');
+    showPayResult({ icon:'✅', title:t('pay.success'), msg:'Réservation confirmée. Paiement effectué via BaridiMob.', ref:data.reference, amount:data.amount, instrument:phone, instrumentLabel:'Téléphone', statusText:'✅ Approuvé' });
+    toast('✅ ' + t('pay.success'));
   } catch(e) {
     showPayStep('pay-step-baridimob');
     document.getElementById('pay-bm-otp-phase').style.display  = 'block';
     document.getElementById('pay-bm-phone-phase').style.display = 'none';
-    errEl.textContent = '❌ ' + e.message; errEl.classList.add('show');
+    errEl.textContent = '❌ ' + te(e.message); errEl.classList.add('show');
     btn.disabled = false; btn.textContent = '🔒 Confirmer le paiement';
   }
 }
