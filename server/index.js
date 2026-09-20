@@ -197,15 +197,19 @@ app.get('/api/health', async (_, res) => {
   let dbStatus = 'up';
   let dbLatencyMs = null;
   let dbError = null;
+  let timer;
   try {
     await Promise.race([
       pool.query('SELECT 1'),
-      new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), 3000)),
+      new Promise((_, rej) => { timer = setTimeout(() => rej(new Error('timeout')), 3000); }),
     ]);
     dbLatencyMs = Date.now() - start;
   } catch (err) {
     dbStatus = 'down';
     dbError  = err.message;
+  } finally {
+    // Sans cet arrêt, le timer de 3 s survit à chaque sonde réussie
+    clearTimeout(timer);
   }
   const ok = dbStatus === 'up';
   res.status(ok ? 200 : 503).json({
@@ -217,6 +221,8 @@ app.get('/api/health', async (_, res) => {
     timestamp: new Date().toISOString(),
   });
 });
+// Toute route /api non reconnue (toutes méthodes) : 404 JSON, jamais le HTML du SPA
+app.use('/api', (_, res) => res.status(404).json({ error: 'Route API introuvable.' }));
 app.get('/404', (_, res) => res.sendFile(path.join(__dirname, '..', 'public', '404.html')));
 app.get('*', (_, res) => res.sendFile(path.join(__dirname, '..', 'public', 'index.html')));
 
