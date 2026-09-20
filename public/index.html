@@ -4914,9 +4914,11 @@ function connectWs() {
   const token = localStorage.getItem('dz_token');
   if (!token) return;
   const proto = location.protocol === 'https:' ? 'wss' : 'ws';
-  const url   = `${proto}://${location.host}/ws?token=${encodeURIComponent(token)}`;
-  _ws = new WebSocket(url);
-  _ws.onopen  = () => { _wsRetryCount = 0; };
+  // Le jeton n'est jamais placé dans l'URL (journaux du proxy, historique) : il part dans le premier message
+  const url   = `${proto}://${location.host}/ws`;
+  const sock  = new WebSocket(url);
+  _ws = sock;
+  _ws.onopen  = () => { _wsRetryCount = 0; sock.send(JSON.stringify({ type: 'auth', token })); };
   _ws.onclose = e => {
     _ws = null;
     if (currentUser && e.code !== 4001 && _wsRetryCount < 10) {

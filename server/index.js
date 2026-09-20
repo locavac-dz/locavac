@@ -15,6 +15,7 @@ const helmet      = require('helmet');
 const db          = require('./db');
 const { pool }    = require('./db');
 const wsModule    = require('./ws');
+const { redactUrl } = require('./redact');
 
 const app = express();
 // Un seul saut de confiance (Nginx) : sans cela req.ip vaut 127.0.0.1 pour tous et le rate limiting devient global
@@ -159,7 +160,7 @@ app.use(express.json({ limit: '2mb' }));
 // Journal HTTP (désactivé en test pour ne pas polluer la sortie Jest)
 if (process.env.NODE_ENV !== 'test') {
   app.use((req, _res, next) => {
-    console.log(`[${new Date().toISOString()}] ${req.method} ${req.url}`);
+    console.log(`[${new Date().toISOString()}] ${req.method} ${redactUrl(req.url)}`);
     next();
   });
 }
