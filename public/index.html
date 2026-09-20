@@ -2478,6 +2478,14 @@ const _SERVER_ERR_MAP = {
 };
 function te(msg) { return _SERVER_ERR_MAP[msg] ? t(_SERVER_ERR_MAP[msg]) : msg; }
 
+// URL sûre pour un attribut src/href : http(s), chemin local, blob: ou data:image uniquement, puis échappée.
+// Tout autre schéma (javascript:, vbscript:, //hôte…) donne une chaîne vide.
+function safeUrl(u) {
+  const s = String(u ?? '').trim();
+  if (!/^(https?:\/\/|\/(?!\/)|blob:|data:image\/)/i.test(s)) return '';
+  return escapeHtml(s);
+}
+
 function escapeHtml(s) {
   return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
 }
@@ -2608,7 +2616,7 @@ function addPhotoPreview(url, index) {
   item.dataset.url = url;
   item.draggable = true;
   item.innerHTML = `
-    <img src="${url}" alt="photo ${index+1}" onerror="this.style.display='none'"/>
+    <img src="${safeUrl(url)}" alt="photo ${index+1}" onerror="this.style.display='none'"/>
     <button class="rm-photo" title="Supprimer">✕</button>`;
   item.querySelector('.rm-photo').addEventListener('click', () => {
     uploadedPhotoUrls = uploadedPhotoUrls.filter(u => u !== url);
@@ -2861,7 +2869,7 @@ function renderLightbox() {
   document.getElementById('lb-counter').textContent = (lbIdx + 1) + ' / ' + currentPhotos.length;
   const thumbs = document.getElementById('lb-thumbs');
   thumbs.innerHTML = currentPhotos.map((p, i) =>
-    `<div class="lb-thumb ${i===lbIdx?'active':''}" data-i="${i}"><img src="${p}" loading="lazy" alt=""/></div>`
+    `<div class="lb-thumb ${i===lbIdx?'active':''}" data-i="${i}"><img src="${safeUrl(p)}" loading="lazy" alt=""/></div>`
   ).join('');
   thumbs.querySelectorAll('.lb-thumb').forEach(t => {
     t.addEventListener('click', () => { lbIdx = Number(t.dataset.i); renderLightbox(); });
@@ -2900,7 +2908,7 @@ function openCompare() {
   const ids = [...compareSet];
   const listings = ids.map(id => allFilteredListings.find(x => x.id === id) || allListings.find(x => x.id === id) || {id});
   const rows = [
-    { label: 'Photo',       fn: l => `<img class="cmp-col-img" src="${(l.photos&&l.photos[0])||l.image||''}" alt="" onerror="this.style.display='none'"/>` },
+    { label: 'Photo',       fn: l => `<img class="cmp-col-img" src="${safeUrl((l.photos&&l.photos[0])||l.image)}" alt="" onerror="this.style.display='none'"/>` },
     { label: 'Titre',       fn: l => `<div class="cmp-col-title">${escapeHtml(l.title||'—')}</div>` },
     { label: 'Localisation',fn: l => escapeHtml(l.location||'—') },
     { label: 'Prix/nuit',   fn: l => `<strong>${Number(l.price||0).toLocaleString('fr-DZ')} DZD</strong>` },
@@ -2947,7 +2955,7 @@ function renderCollList() {
   el.innerHTML = cols.map((c, i) => {
     const saved = c.ids.includes(pendingSaveId);
     return `<div class="coll-item" onclick="toggleCollItem(${i})" style="${saved?'border-color:var(--red);background:var(--g50)':''}">
-      <span>${saved?'✅':''} ${c.name}</span>
+      <span>${saved?'✅':''} ${escapeHtml(c.name)}</span>
       <span class="coll-item-count">${c.ids.length} logement${c.ids.length>1?'s':''}</span>
     </div>`;
   }).join('');
@@ -2981,7 +2989,7 @@ function printResa(r) {
   const statusBg    = r.status==='confirmed'?'#dcfce7':r.status==='pending'?'#fef3c7':'#fee2e2';
   const w = window.open('', '_blank', 'width=600,height=850');
   if (!w) { toast('Autorisez les pop-ups pour télécharger le PDF.'); return; }
-  w.document.write(`<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8"><title>Réservation #${r.id} — Locavac</title>
+  w.document.write(`<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8"><title>Réservation #${Number(r.id)} — Locavac</title>
 <style>*{box-sizing:border-box;margin:0;padding:0}body{font-family:Arial,sans-serif;color:#222;padding:40px;max-width:520px;margin:auto}
 .logo{font-size:26px;font-weight:900;color:#E8261A;letter-spacing:-1px;margin-bottom:32px;display:block}
 h2{font-size:20px;margin-bottom:8px}
@@ -2996,14 +3004,14 @@ hr{border:none;border-top:1px solid #e0e0e0;margin:24px 0}
 @media print{.no-print{display:none}}
 </style></head><body>
 <span class="logo">Locavac 🇩🇿</span>
-<h2>${r.title||'Logement'}</h2>
+<h2>${escapeHtml(r.title||'Logement')}</h2>
 <div class="status">${statusLabel}</div>
 <div class="box">
-  <div class="row"><span class="lbl">📅 Arrivée</span><span class="val">${r.check_in}</span></div>
-  <div class="row"><span class="lbl">📅 Départ</span><span class="val">${r.check_out}</span></div>
-  <div class="row"><span class="lbl">👥 Voyageurs</span><span class="val">${r.guests_count||1} personne(s)</span></div>
+  <div class="row"><span class="lbl">📅 Arrivée</span><span class="val">${escapeHtml(r.check_in)}</span></div>
+  <div class="row"><span class="lbl">📅 Départ</span><span class="val">${escapeHtml(r.check_out)}</span></div>
+  <div class="row"><span class="lbl">👥 Voyageurs</span><span class="val">${Number(r.guests_count)||1} personne(s)</span></div>
   <div class="row"><span class="lbl">💰 Total</span><span class="val">${Number(r.total_price).toLocaleString('fr-DZ')} DZD</span></div>
-  <div class="row"><span class="lbl">🔖 Référence</span><span class="val">#${r.id}</span></div>
+  <div class="row"><span class="lbl">🔖 Référence</span><span class="val">#${Number(r.id)}</span></div>
 </div>
 <hr/>
 <div class="footer">Généré le ${new Date().toLocaleDateString('fr-DZ')} · Locavac — Location de vacances en Algérie · contact@locavac.dz</div>
@@ -3268,7 +3276,7 @@ function initAutocomplete() {
       const hist = getSearchHistory();
       if (hist.length) {
         html += `<div class="hs-search-history">Recherches récentes</div>`;
-        html += hist.map(h => `<div class="hs-autocomplete-item history" data-val="${h}">${h}</div>`).join('');
+        html += hist.map(h => `<div class="hs-autocomplete-item history" data-val="${escapeHtml(h)}">${escapeHtml(h)}</div>`).join('');
         html += `<button class="hs-autocomplete-clear" onclick="clearSearchHistory();document.getElementById('hs-autocomplete').style.display='none'">Effacer l'historique</button>`;
       }
       return html;
@@ -3402,8 +3410,8 @@ function renderRecentlyViewed() {
     if (!section || !carousel || rv.length < 2) { if (section) section.style.display = 'none'; return; }
     section.style.display = 'block';
     carousel.innerHTML = rv.map(l => `
-      <div class="rv-card" onclick="openListing(${l.id})">
-        <div class="rv-card-img"><img src="${l.image}" alt="${escapeHtml(l.title)}" loading="lazy"/></div>
+      <div class="rv-card" onclick="openListing(${Number(l.id)})">
+        <div class="rv-card-img"><img src="${safeUrl(l.image)}" alt="${escapeHtml(l.title)}" loading="lazy"/></div>
         <div class="rv-card-body">
           <div class="rv-card-title">${escapeHtml(l.title)}</div>
           <div class="rv-card-price">${Number(l.price).toLocaleString('fr-DZ')} DZD / nuit</div>
@@ -3652,7 +3660,7 @@ function renderListingsPage() {
     return `
     <div class="card" data-id="${l.id}">
       <div class="card-img" data-photos="${photosJson}" data-cidx="0">
-        <img src="${cardPhotos[0] || ''}" alt="${l.title}" loading="lazy" onload="this.style.opacity=1" onerror="this.src='https://images.unsplash.com/photo-1564013799919-ab600027ffc6?w=600&q=80';this.style.opacity=1"/>
+        <img src="${safeUrl(cardPhotos[0])}" alt="${escHtml(l.title)}" loading="lazy" onload="this.style.opacity=1" onerror="this.src='https://images.unsplash.com/photo-1564013799919-ab600027ffc6?w=600&q=80';this.style.opacity=1"/>
         ${l.rating >= 4.9 ? '<div class="badge">Coup de cœur</div>' : ''}
         ${(Date.now() - new Date(l.created_at || 0)) < 7*86400000 ? '<div class="badge-new">Nouveau</div>' : ''}
         <button class="wish ${liked.has(l.id)?'liked':''}" data-wid="${l.id}">${liked.has(l.id)?'❤':'♡'}</button>
@@ -3922,10 +3930,10 @@ async function openListing(id) {
       .slice(0, 3);
     if (sims.length) {
       simGrid.innerHTML = sims.map(s => `
-        <div onclick="openListing(${s.id})" style="cursor:pointer;border-radius:10px;overflow:hidden;border:1.5px solid var(--border);background:var(--surface);transition:box-shadow .2s" onmouseenter="this.style.boxShadow='var(--sh)'" onmouseleave="this.style.boxShadow='none'">
-          <img src="${(s.photos && s.photos[0]) || s.image || ''}" alt="${s.title}" style="width:100%;height:90px;object-fit:cover;display:block" onerror="this.style.display='none'"/>
+        <div onclick="openListing(${Number(s.id)})" style="cursor:pointer;border-radius:10px;overflow:hidden;border:1.5px solid var(--border);background:var(--surface);transition:box-shadow .2s" onmouseenter="this.style.boxShadow='var(--sh)'" onmouseleave="this.style.boxShadow='none'">
+          <img src="${safeUrl((s.photos && s.photos[0]) || s.image)}" alt="${escHtml(s.title)}" style="width:100%;height:90px;object-fit:cover;display:block" onerror="this.style.display='none'"/>
           <div style="padding:7px 8px">
-            <div style="font-size:12px;font-weight:700;line-height:1.3;margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${s.title}</div>
+            <div style="font-size:12px;font-weight:700;line-height:1.3;margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escHtml(s.title)}</div>
             <div style="font-size:11px;color:var(--g500)">${Number(s.price).toLocaleString('fr-DZ')} DZD/nuit</div>
           </div>
         </div>`).join('');
@@ -4108,20 +4116,32 @@ function _renderResaCards(data, filter) {
     const policy = r.cancellation_policy || 'flexible';
     return `
     <div class="resa-card">
-      <img src="${r.image||''}" alt="" onerror="this.style.display='none'"/>
+      <img src="${safeUrl(r.image)}" alt="" onerror="this.style.display='none'"/>
       <div class="resa-info" style="flex:1">
-        <div class="resa-title">${r.title||'Logement'}</div>
-        <div class="resa-dates">📅 ${r.check_in} → ${r.check_out}</div>
+        <div class="resa-title">${escHtml(r.title||'Logement')}</div>
+        <div class="resa-dates">📅 ${escHtml(r.check_in)} → ${escHtml(r.check_out)}</div>
         <div class="resa-dates">💰 ${Number(r.total_price).toLocaleString('fr-DZ')} DZD</div>
         ${countdown}
-        ${r.can_review ? `<button class="btn-sm" style="margin-top:6px;background:var(--accent);color:#fff;border:none;padding:5px 12px;border-radius:8px;cursor:pointer" onclick="openReviewModal(${r.listing_id})">⭐ Laisser un avis</button>` : ''}
-        ${r.status==='pending' ? `<button class="btn-sm" style="margin-top:6px;background:var(--red);color:#fff;border:none;padding:5px 12px;border-radius:8px;cursor:pointer;font-weight:600" onclick="openPayment(${r.id},${r.total_price})">💳 Payer maintenant</button>` : ''}
-        ${canCancel ? `<button class="btn-sm" style="margin-top:6px;background:#fff;border:1.5px solid var(--g300);color:var(--g700);padding:5px 12px;border-radius:8px;cursor:pointer" onclick="cancelResa(${r.id},${r.total_price},'${r.check_in}','${policy}',${JSON.stringify(r.title||'').replace(/</g,'&lt;')})">✕ Annuler</button>` : ''}
-        <button class="btn-sm" style="margin-top:6px;background:var(--g100);color:var(--g800);border:none;padding:5px 12px;border-radius:8px;cursor:pointer" onclick='printResa(${JSON.stringify(r).replace(/'/g,"&#39;")})'>📄 PDF</button>
+        ${r.can_review ? `<button class="btn-sm" style="margin-top:6px;background:var(--accent);color:#fff;border:none;padding:5px 12px;border-radius:8px;cursor:pointer" onclick="openReviewModal(${Number(r.listing_id)})">⭐ Laisser un avis</button>` : ''}
+        ${r.status==='pending' ? `<button class="btn-sm" style="margin-top:6px;background:var(--red);color:#fff;border:none;padding:5px 12px;border-radius:8px;cursor:pointer;font-weight:600" onclick="openPayment(${Number(r.id)},${Number(r.total_price)})">💳 Payer maintenant</button>` : ''}
+        ${canCancel ? `<button class="btn-sm" style="margin-top:6px;background:#fff;border:1.5px solid var(--g300);color:var(--g700);padding:5px 12px;border-radius:8px;cursor:pointer" onclick="cancelResaById(${Number(r.id)})">✕ Annuler</button>` : ''}
+        <button class="btn-sm" style="margin-top:6px;background:var(--g100);color:var(--g800);border:none;padding:5px 12px;border-radius:8px;cursor:pointer" onclick="printResaById(${Number(r.id)})">📄 PDF</button>
       </div>
-      <span class="resa-status-badge ${r.status}">${r.status==='pending'?'En attente':r.status==='confirmed'?'Confirmée ✅':'Annulée'}</span>
+      <span class="resa-status-badge ${['pending','confirmed','cancelled'].includes(r.status)?r.status:''}">${r.status==='pending'?'En attente':r.status==='confirmed'?'Confirmée ✅':'Annulée'}</span>
     </div>`;
   }).join('');
+}
+
+// Les boutons des cartes ne transportent qu'un id : les données viennent de la liste déjà chargée,
+// jamais d'un objet ou d'un titre sérialisé dans un attribut onclick (cassait le bouton et permettait l'injection).
+function _findGuestResa(id) { return (window._guestResasData || []).find(x => Number(x.id) === Number(id)) || null; }
+function cancelResaById(id) {
+  const r = _findGuestResa(id);
+  if (r) cancelResa(r.id, r.total_price, r.check_in, r.cancellation_policy || 'flexible', r.title || '');
+}
+function printResaById(id) {
+  const r = _findGuestResa(id);
+  if (r) printResa(r);
 }
 
 let _cancelResaId = null;
@@ -4140,7 +4160,7 @@ function cancelResa(id, totalPrice, checkIn, policy, title) {
   else                      { rLabel = '❌ Aucun remboursement'; rColor = '#b91c1c'; rBg = '#fee2e2'; }
   document.getElementById('cancel-listing-name').textContent = title || 'Votre réservation';
   document.getElementById('cancel-details').innerHTML = `
-    <div class="detail-row" style="padding:7px 0"><span class="lbl">Arrivée</span><span class="val">${checkIn}</span></div>
+    <div class="detail-row" style="padding:7px 0"><span class="lbl">Arrivée</span><span class="val">${escHtml(checkIn)}</span></div>
     <div class="detail-row" style="padding:7px 0"><span class="lbl">Total payé</span><span class="val">${Number(totalPrice).toLocaleString('fr-DZ')} DZD</span></div>
     <div class="detail-row" style="padding:7px 0;border:none"><span class="lbl">Politique</span><span class="val">${policyLabel}</span></div>`;
   const rInfoEl = document.getElementById('cancel-refund-info');
@@ -4604,7 +4624,7 @@ async function loadAdmListings() {
       <thead><tr><th>Photo</th><th>Titre</th><th>Hôte</th><th>Prix</th><th>Statut</th><th>⭐</th><th>Résa.</th><th>Actions</th></tr></thead>
       <tbody>${listings.map(l => `
         <tr>
-          <td><img class="listing-thumb" src="${l.image||''}" alt="" onerror="this.style.display='none'"/></td>
+          <td><img class="listing-thumb" src="${safeUrl(l.image)}" alt="" onerror="this.style.display='none'"/></td>
           <td><strong>${escHtml(l.title)}</strong><br><span style="color:var(--g400);font-size:11px">📍 ${escHtml(l.location)}</span></td>
           <td style="font-size:12px;color:var(--g600)">${escHtml(l.host_name)}<br>${escHtml(l.host_email||'')}</td>
           <td style="font-weight:600;color:var(--red);white-space:nowrap">${Number(l.price).toLocaleString('fr-DZ')} DZD</td>
@@ -5468,10 +5488,10 @@ function _renderListingsRows(data) {
   const listEl = document.getElementById('listings-list');
   listEl.innerHTML = data.map(l => `
     <div class="annonce-row">
-      <img src="${(l.photos&&l.photos[0])||l.image||''}" alt="" onerror="this.style.display='none'"/>
+      <img src="${safeUrl((l.photos&&l.photos[0])||l.image)}" alt="" onerror="this.style.display='none'"/>
       <div class="annonce-info">
-        <div class="annonce-title">${l.title}</div>
-        <div class="annonce-meta">${l.location} · ${Number(l.price).toLocaleString('fr-DZ')} DZD/nuit · ⭐${l.rating||'—'} (${l.reviews||0})${(l.views||0)>0?' · 👁 '+l.views+' vue'+(l.views>1?'s':''):''}</div>
+        <div class="annonce-title">${escHtml(l.title)}</div>
+        <div class="annonce-meta">${escHtml(l.location)} · ${Number(l.price).toLocaleString('fr-DZ')} DZD/nuit · ⭐${Number(l.rating)||'—'} (${Number(l.reviews)||0})${(l.views||0)>0?' · 👁 '+Number(l.views)+' vue'+(l.views>1?'s':''):''}</div>
       </div>
       <div class="annonce-actions">
         <button class="btn-sm" data-action="edit" data-id="${l.id}">✏️ Éditer</button>
@@ -6031,15 +6051,21 @@ function renderPubCard(p) {
   const typeIcon  = { hotel:'🏨', camping:'🏕️', complexe:'🌴' };
   const typeLabel = { hotel:'Hôtel', camping:'Camping', complexe:'Complexe touristique' };
   const stars = p.etoiles > 0 ? `<span class="pub-stars">${'★'.repeat(Math.min(p.etoiles,5))}</span>` : '';
-  const img = p.logo
-    ? `<img src="${p.logo}" alt="${p.nom}" loading="lazy" onerror="this.parentNode.innerHTML='<div class=pub-card-img-ph>${typeIcon[p.type]||'🏢'}</div>'">`
+  const nom  = escHtml(p.nom);
+  const logo = safeUrl(p.logo);
+  const img = logo
+    ? `<img src="${logo}" alt="${nom}" loading="lazy" onerror="this.parentNode.innerHTML='<div class=pub-card-img-ph>${typeIcon[p.type]||'🏢'}</div>'">`
     : `<div class="pub-card-img-ph">${typeIcon[p.type]||'🏢'}</div>`;
-  const typeLine = `<div class="pub-card-type">${typeIcon[p.type]||'🏢'} ${typeLabel[p.type]||p.type} ${stars}</div>`;
-  const loc  = `<div class="pub-card-loc">📍 ${p.wilaya}${p.ville?' · '+p.ville:''}</div>`;
-  const desc = p.description ? `<div class="pub-card-desc">${p.description}</div>` : '';
-  const callBtn = p.telephone ? `<a class="pub-btn-call" href="tel:${p.telephone}">📞 ${p.telephone}</a>` : '';
-  const webBtn  = p.site_web  ? `<a class="pub-btn" href="${p.site_web}" target="_blank" rel="noopener">🌐 Site web</a>` : '';
-  const mailBtn = p.email_contact ? `<a class="pub-btn" href="mailto:${p.email_contact}">✉️ Email</a>` : '';
+  const typeLine = `<div class="pub-card-type">${typeIcon[p.type]||'🏢'} ${escHtml(typeLabel[p.type]||p.type)} ${stars}</div>`;
+  const loc  = `<div class="pub-card-loc">📍 ${escHtml(p.wilaya)}${p.ville?' · '+escHtml(p.ville):''}</div>`;
+  const desc = p.description ? `<div class="pub-card-desc">${escHtml(p.description)}</div>` : '';
+  // Liens : seuls tel:, http(s) et mailto: construits ici sont possibles — jamais un schéma fourni par la donnée
+  const tel  = String(p.telephone || '').replace(/[^\d+\s().-]/g, '');
+  const web  = /^https?:\/\//i.test(String(p.site_web || '').trim()) ? safeUrl(p.site_web) : '';
+  const mail = /^[^\s@<>"']+@[^\s@<>"']+\.[^\s@<>"']+$/.test(String(p.email_contact || '')) ? escHtml(p.email_contact) : '';
+  const callBtn = tel  ? `<a class="pub-btn-call" href="tel:${escHtml(tel)}">📞 ${escHtml(tel)}</a>` : '';
+  const webBtn  = web  ? `<a class="pub-btn" href="${web}" target="_blank" rel="noopener noreferrer">🌐 Site web</a>` : '';
+  const mailBtn = mail ? `<a class="pub-btn" href="mailto:${mail}">✉️ Email</a>` : '';
 
   if (p.forfait === 'vedette') {
     return `<div class="pub-card vedette-card">
@@ -6047,9 +6073,9 @@ function renderPubCard(p) {
       <div class="pub-card-body">
         <div>
           ${typeLine}
-          <div class="pub-card-nom">${p.nom}</div>
+          <div class="pub-card-nom">${nom}</div>
           ${loc}
-          <div class="pub-card-desc">${p.description||''}</div>
+          <div class="pub-card-desc">${escHtml(p.description||'')}</div>
         </div>
         <div class="pub-card-actions">${callBtn}${webBtn}${mailBtn}</div>
       </div>
@@ -6060,7 +6086,7 @@ function renderPubCard(p) {
       <div class="pub-card-img">${img}<div class="pub-badge premium">⭐ Premium</div></div>
       <div class="pub-card-body">
         ${typeLine}
-        <div class="pub-card-nom">${p.nom}</div>
+        <div class="pub-card-nom">${nom}</div>
         ${loc}${desc}
         <div class="pub-card-actions">${callBtn}${webBtn}${mailBtn}</div>
       </div>
@@ -6070,7 +6096,7 @@ function renderPubCard(p) {
     <div class="pub-card-img">${img}</div>
     <div class="pub-card-body">
       ${typeLine}
-      <div class="pub-card-nom">${p.nom}</div>
+      <div class="pub-card-nom">${nom}</div>
       ${loc}${desc}
       <div class="pub-card-actions">${callBtn}${webBtn}${mailBtn}</div>
     </div>
@@ -6605,7 +6631,7 @@ document.addEventListener('DOMContentLoaded', function() {
     try {
       const url = await uploadFile(this.files[0]);
       document.getElementById('prof-avatar-url').value = url;
-      document.getElementById('prof-avatar-display').innerHTML = `<img src="${url}" alt=""/>`;
+      document.getElementById('prof-avatar-display').innerHTML = `<img src="${safeUrl(url)}" alt=""/>`;
       toast('Photo chargée ✅');
     } catch(e) { toast('Erreur: ' + e.message); }
   });
