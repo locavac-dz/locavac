@@ -4070,7 +4070,7 @@ async function openResas() {
     if (!data.length) { list.innerHTML='<p style="color:var(--g400);text-align:center;padding:24px">Aucune réservation.</p>'; return; }
     window._guestResasData = data;
     _renderResaCards(data, 'all');
-  } catch(e) { list.innerHTML='<p style="color:var(--red);text-align:center;padding:24px">'+e.message+'</p>'; }
+  } catch(e) { list.innerHTML='<p style="color:var(--red);text-align:center;padding:24px">'+escHtml(e.message)+'</p>'; }
 }
 function _renderResaCards(data, filter) {
   const now = new Date();
@@ -4509,7 +4509,7 @@ async function loadAdmStats() {
       <div class="admin-stat"><div class="admin-stat-val">${s.reservations.confirmed}</div><div class="admin-stat-lbl">Séjours confirmés</div></div>
       <div class="admin-stat"><div class="admin-stat-val">${s.reservations.pending}</div><div class="admin-stat-lbl">En attente</div></div>
       <div class="admin-stat"><div class="admin-stat-val">${s.messages.total}</div><div class="admin-stat-lbl">Messages</div></div>`;
-  } catch(e) { el.innerHTML = `<div class="empty-state">${e.message}</div>`; }
+  } catch(e) { el.innerHTML = `<div class="empty-state">${escHtml(e.message)}</div>`; }
 }
 
 async function loadAdmUsers() {
@@ -4557,7 +4557,7 @@ async function loadAdmUsers() {
         btn.addEventListener('click', () => handleAdmUserAction(btn));
       });
     }, 0);
-  } catch(e) { document.getElementById('adm-users-body').innerHTML = `<div class="empty-state" style="color:var(--red)">${e.message}</div>`; }
+  } catch(e) { document.getElementById('adm-users-body').innerHTML = `<div class="empty-state" style="color:var(--red)">${escHtml(e.message)}</div>`; }
 }
 
 async function handleAdmUserAction(btn) {
@@ -4618,7 +4618,7 @@ async function loadAdmListings() {
         btn.addEventListener('click', () => handleAdmListingAction(btn));
       });
     }, 0);
-  } catch(e) { document.getElementById('adm-listings-body').innerHTML = `<div class="empty-state" style="color:var(--red)">${e.message}</div>`; }
+  } catch(e) { document.getElementById('adm-listings-body').innerHTML = `<div class="empty-state" style="color:var(--red)">${escHtml(e.message)}</div>`; }
 }
 
 async function handleAdmListingAction(btn) {
@@ -4662,7 +4662,7 @@ async function loadAdmResas() {
         </tr>`).join('')}
       </tbody>
     </table></div>`;
-  } catch(e) { wrap.innerHTML = `<div class="empty-state" style="color:var(--red)">${e.message}</div>`; }
+  } catch(e) { wrap.innerHTML = `<div class="empty-state" style="color:var(--red)">${escHtml(e.message)}</div>`; }
 }
 
 async function rembourserResa(id) {
@@ -4738,7 +4738,7 @@ async function loadAdmAgent() {
           </div>`).join('') + `</div>`;
     }
   } catch(e) {
-    grid.innerHTML = `<div class="empty-state" style="color:var(--red)">${e.message}</div>`;
+    grid.innerHTML = `<div class="empty-state" style="color:var(--red)">${escHtml(e.message)}</div>`;
   }
 }
 
@@ -5034,7 +5034,7 @@ async function loadStats() {
           </svg></div>`;
         })()}
       </div>`;
-  } catch(e) { el.innerHTML = '<p style="color:var(--red);font-size:14px">'+e.message+'</p>'; }
+  } catch(e) { el.innerHTML = '<p style="color:var(--red);font-size:14px">'+escHtml(e.message)+'</p>'; }
 }
 
 // ── GAINS HÔTE ────────────────────────────────────────────
@@ -5139,7 +5139,7 @@ async function loadGains() {
         </table>
       </div>`;
     _renderGainsTxRows(transactions, 'all');
-  } catch(e) { el.innerHTML = '<p style="color:var(--red);font-size:14px">'+e.message+'</p>'; }
+  } catch(e) { el.innerHTML = '<p style="color:var(--red);font-size:14px">'+escHtml(e.message)+'</p>'; }
 }
 
 function _renderGainsTxRows(data, period) {
@@ -5274,7 +5274,7 @@ async function loadConversations() {
     const convs = await apiFetch('/messages');
     window._convData = convs;
     _renderConvList(convs);
-  } catch(e) { list.innerHTML='<div style="padding:16px;color:var(--red);font-size:14px">'+e.message+'</div>'; }
+  } catch(e) { list.innerHTML='<div style="padding:16px;color:var(--red);font-size:14px">'+escHtml(e.message)+'</div>'; }
 }
 function _renderConvList(convs) {
   const list = document.getElementById('conv-list');
@@ -5342,7 +5342,7 @@ async function openThread(lid, oid, oname) {
       box.scrollTop = box.scrollHeight;
     }
     checkUnread();
-  } catch(e) { document.getElementById('thread-msgs').innerHTML='<p style="color:var(--red);padding:16px">'+e.message+'</p>'; }
+  } catch(e) { document.getElementById('thread-msgs').innerHTML='<p style="color:var(--red);padding:16px">'+escHtml(e.message)+'</p>'; }
 }
 let _typingTid = null;
 function showTypingIndicator() {
@@ -5447,7 +5447,7 @@ async function loadMyListings() {
     });
     document.getElementById('cal-prev').onclick = () => { calDate.setMonth(calDate.getMonth()-1); renderCalendar(); };
     document.getElementById('cal-next').onclick = () => { calDate.setMonth(calDate.getMonth()+1); renderCalendar(); };
-  } catch(e) { el.innerHTML='<p style="color:var(--red);font-size:14px">'+e.message+'</p>'; }
+  } catch(e) { el.innerHTML='<p style="color:var(--red);font-size:14px">'+escHtml(e.message)+'</p>'; }
 }
 function _renderListingsRows(data) {
   const listEl = document.getElementById('listings-list');
@@ -5523,7 +5523,7 @@ async function loadMyHostResas() {
     if (!data.length) { el.innerHTML='<p style="color:var(--g400);font-size:14px;padding:8px 0">Aucune réservation reçue.</p>'; return; }
     window._hostResasData = data;
     _renderHostResaPanel(data, 'all');
-  } catch(e) { el.innerHTML='<p style="color:var(--red);font-size:14px">'+e.message+'</p>'; }
+  } catch(e) { el.innerHTML='<p style="color:var(--red);font-size:14px">'+escHtml(e.message)+'</p>'; }
 }
 function _renderHostResaPanel(data, filter) {
   const el = document.getElementById('hdp-reservations');
@@ -6084,7 +6084,7 @@ async function loadPublicites() {
     if (ct) ct.textContent = data.length + ' établissement' + (data.length>1?'s':'') + ' référencé' + (data.length>1?'s':'') + ' en Algérie';
     grid.innerHTML = data.map(renderPubCard).join('');
   } catch(e) {
-    grid.innerHTML = `<div class="empty-state" style="color:var(--red)">${e.message}</div>`;
+    grid.innerHTML = `<div class="empty-state" style="color:var(--red)">${escHtml(e.message)}</div>`;
   }
 }
 
@@ -6123,7 +6123,7 @@ async function loadAdmSignalements() {
         </tr>`).join('')}
       </tbody>
     </table></div>`;
-  } catch(e) { wrap.innerHTML = `<div class="empty-state" style="color:var(--red)">${e.message}</div>`; }
+  } catch(e) { wrap.innerHTML = `<div class="empty-state" style="color:var(--red)">${escHtml(e.message)}</div>`; }
 }
 
 async function resolveSignalement(id) {
@@ -6174,7 +6174,7 @@ async function loadAdmPayouts() {
         </tr>`).join('')}
       </tbody>
     </table></div>`;
-  } catch(e) { el.innerHTML = '<div class="empty-state" style="color:var(--red)">'+e.message+'</div>'; }
+  } catch(e) { el.innerHTML = '<div class="empty-state" style="color:var(--red)">'+escHtml(e.message)+'</div>'; }
 }
 
 async function processAdmPayout(id, status) {
@@ -6211,7 +6211,7 @@ async function loadAdmPubs() {
       </tr>`).join('')}</tbody>
     </table></div>`;
   } catch(e) {
-    el.innerHTML = `<div class="empty-state" style="color:var(--red)">${e.message}</div>`;
+    el.innerHTML = `<div class="empty-state" style="color:var(--red)">${escHtml(e.message)}</div>`;
   }
 }
 
