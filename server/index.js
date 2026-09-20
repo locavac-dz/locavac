@@ -14,6 +14,7 @@ const rateLimit   = require('express-rate-limit');
 const compression = require('compression');
 const helmet      = require('helmet');
 const db          = require('./db');
+const { pool }    = require('./db');
 const wsModule    = require('./ws');
 
 const app = express();
@@ -191,7 +192,31 @@ app.use('/api/agent',        require('./routes/agent'));
 app.use('/api/publicites',   require('./routes/publicites'));
 app.use('/api/newsletter',   require('./routes/newsletter'));
 
-app.get('/api/health', (_, res) => res.json({ ok: true, message: 'Locavac API opérationnelle 🇩🇿' }));
+app.get('/api/health', async (_, res) => {
+  const start = Date.now();
+  let dbStatus = 'up';
+  let dbLatencyMs = null;
+  let dbError = null;
+  try {
+    await Promise.race([
+      pool.query('SELECT 1'),
+      new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), 3000)),
+    ]);
+    dbLatencyMs = Date.now() - start;
+  } catch (err) {
+    dbStatus = 'down';
+    dbError  = err.message;
+  }
+  const ok = dbStatus === 'up';
+  res.status(ok ? 200 : 503).json({
+    ok,
+    db:        dbStatus,
+    ...(dbLatencyMs !== null && { db_latency_ms: dbLatencyMs }),
+    ...(dbError     !== null && { db_error: dbError }),
+    uptime_s:  Math.floor(process.uptime()),
+    timestamp: new Date().toISOString(),
+  });
+});
 app.get('/404', (_, res) => res.sendFile(path.join(__dirname, '..', 'public', '404.html')));
 app.get('*', (_, res) => res.sendFile(path.join(__dirname, '..', 'public', 'index.html')));
 
