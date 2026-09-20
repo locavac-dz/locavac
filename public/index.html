@@ -1102,7 +1102,7 @@ footer{background:var(--g100);border-top:1px solid var(--g200);padding:48px 24px
 
 <!-- CARTE -->
 <section class="map-section">
-  <h2>Carte des logements</h2>
+  <h2 data-i18n="map.title">Carte des logements</h2>
   <div class="map-wrap">
     <div id="map"></div>
     <button class="map-toggle-btn" id="map-toggle-btn">🗺 Réduire la carte</button>
@@ -1220,7 +1220,7 @@ footer{background:var(--g100);border-top:1px solid var(--g200);padding:48px 24px
       <h2 class="sec-title" id="sec-title" style="margin-bottom:0" data-i18n="main.popular">Logements populaires</h2>
       <span id="result-count" style="font-size:13px;font-weight:600;color:var(--g400)"></span>
     </div>
-    <button id="view-toggle-btn" style="display:inline-flex;align-items:center;gap:6px;border:1.5px solid var(--border);border-radius:24px;padding:8px 18px;font-size:13px;font-weight:600;background:var(--surface);color:var(--text);cursor:pointer;transition:all .2s;white-space:nowrap">🗺 Vue carte</button>
+    <button id="view-toggle-btn" data-i18n="map.view_map" style="display:inline-flex;align-items:center;gap:6px;border:1.5px solid var(--border);border-radius:24px;padding:8px 18px;font-size:13px;font-weight:600;background:var(--surface);color:var(--text);cursor:pointer;transition:all .2s;white-space:nowrap">🗺 Vue carte</button>
   </div>
   <div class="grid" id="grid"></div>
   <div id="listings-map" style="display:none;height:500px;border-radius:16px;overflow:hidden;margin-bottom:32px;border:1.5px solid var(--border)"></div>
@@ -2183,6 +2183,7 @@ const TRANSLATIONS = {
     'toast.search':' logement(s) trouvé(s)',
     'toast.logout':'Déconnecté.',
     'map.title':'Carte des logements','map.reduce':'🗺 Réduire la carte','map.show':'🗺 Afficher la carte',
+    'map.view_map':'🗺 Vue carte','map.view_list':'📋 Vue liste',
     'filter.checkin':'Arrivée','filter.checkout':'Départ','filter.clear':'✕ Effacer les dates',
     'filter.available':'logements disponibles',
     'profile.title':'Mon profil','profile.sub':'Informations personnelles et publiques',
@@ -2254,6 +2255,7 @@ const TRANSLATIONS = {
     'toast.search':' إقامة/إقامات موجودة',
     'toast.logout':'تم تسجيل الخروج.',
     'map.title':'خريطة الإقامات','map.reduce':'🗺 تصغير الخريطة','map.show':'🗺 عرض الخريطة',
+    'map.view_map':'🗺 عرض الخريطة','map.view_list':'📋 عرض القائمة',
     'filter.checkin':'الوصول','filter.checkout':'المغادرة','filter.clear':'✕ حذف التواريخ',
     'filter.available':'إقامة/إقامات متاحة',
     'profile.title':'ملفي الشخصي','profile.sub':'المعلومات الشخصية والعامة',
@@ -2325,6 +2327,7 @@ const TRANSLATIONS = {
     'toast.search':' stay(s) found',
     'toast.logout':'Logged out.',
     'map.title':'Stays map','map.reduce':'🗺 Collapse map','map.show':'🗺 Show map',
+    'map.view_map':'🗺 Map view','map.view_list':'📋 List view',
     'filter.checkin':'Check-in','filter.checkout':'Check-out','filter.clear':'✕ Clear dates',
     'filter.available':'stays available',
     'profile.title':'My profile','profile.sub':'Personal and public information',
@@ -2396,6 +2399,7 @@ const TRANSLATIONS = {
     'toast.search':' tiɣima(n) tettwaf(an)',
     'toast.logout':'Teffɣeḍ.',
     'map.title':'Taẓrigt n tiɣiman','map.reduce':'🗺 Zenẓer taẓrigt','map.show':'🗺 Bder taẓrigt',
+    'map.view_map':'🗺 Taẓrigt','map.view_list':'📋 Tabdart',
     'filter.checkin':'Asmekti','filter.checkout':'Affeɣ','filter.clear':'✕ Sfeḍ tiwura',
     'filter.available':'tiɣima tettwasnen',
     'profile.title':'Umuɣ-iw','profile.sub':'Isalen udmawan d iɣbalaten',
@@ -3027,7 +3031,7 @@ function toggleListingsMapView() {
     grid.style.display = 'none';
     if (loadBtn) loadBtn.style.display = 'none';
     mapDiv.style.display = 'block';
-    btn.textContent = '📋 Vue liste';
+    btn.textContent = t('map.view_list');
     if (!listingsMapObj) {
       listingsMapObj = L.map('listings-map').setView([28.5, 2.5], 5);
       L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -3040,7 +3044,7 @@ function toggleListingsMapView() {
     grid.style.display = '';
     if (loadBtn) loadBtn.style.display = '';
     mapDiv.style.display = 'none';
-    btn.textContent = '🗺 Vue carte';
+    btn.textContent = t('map.view_map');
   }
 }
 
@@ -5614,11 +5618,11 @@ function updateMapMarkers(listings) {
     const marker = L.marker([l.lat, l.lng], { icon });
     marker.bindPopup(`
       <div class="map-popup" onclick="openListing(${l.id})">
-        <img src="${(l.photos&&l.photos[0])||l.image||''}" alt="${l.title}" onerror="this.style.display='none'"/>
+        <img src="${escapeHtml((l.photos&&l.photos[0])||l.image||'')}" alt="${escapeHtml(l.title)}" onerror="this.style.display='none'"/>
         <div class="map-popup-body">
-          <div class="map-popup-title">${l.title}</div>
+          <div class="map-popup-title">${escapeHtml(l.title)}</div>
           <div class="map-popup-price">${Number(l.price).toLocaleString('fr-DZ')} DZD / nuit</div>
-          <div class="map-popup-rating">⭐ ${l.rating||'—'} · ${l.location}</div>
+          <div class="map-popup-rating">⭐ ${l.rating||'—'} · ${escapeHtml(l.location)}</div>
         </div>
       </div>`, { maxWidth:220, minWidth:220 });
     if (_mainCluster) _mainCluster.addLayer(marker);
@@ -6259,7 +6263,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const wrap = this.closest('.map-wrap');
     mapVisible = !mapVisible;
     document.getElementById('map').style.display = mapVisible ? 'block' : 'none';
-    this.textContent = mapVisible ? '🗺 Réduire la carte' : '🗺 Afficher la carte';
+    this.textContent = mapVisible ? t('map.reduce') : t('map.show');
     if (mapVisible) map.invalidateSize();
   });
 
