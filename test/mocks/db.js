@@ -62,6 +62,7 @@ module.exports = {
     findById:   jest.fn(id => Promise.resolve(USERS[id] || (id === 3 ? BANNED_USER : null))),
     findByIds:  jest.fn(ids => Promise.resolve(ids.map(id => USERS[id]).filter(Boolean))),
     findByGoogleId: jest.fn().mockResolvedValue(null),
+    findByVerificationToken: jest.fn().mockResolvedValue(null),
     findByEmail:jest.fn(email => {
       if (email === 'banned@test.dz') return Promise.resolve(BANNED_USER);
       const u = Object.values(USERS).find(u => u.email === email);
@@ -95,6 +96,7 @@ module.exports = {
     findConflictingListingIds: jest.fn().mockResolvedValue([]),
     create:            jest.fn(data => Promise.resolve({ id: 300, ...data })),
     updateById:        jest.fn().mockResolvedValue(),
+    deleteByListing:   jest.fn().mockResolvedValue(),
   },
 
   reviews: {
@@ -104,6 +106,7 @@ module.exports = {
     findOne:            jest.fn().mockResolvedValue(null),
     reviewedListingIds: jest.fn().mockResolvedValue(new Set()),
     create:             jest.fn(data => Promise.resolve({ id: 400, ...data })),
+    deleteByListing:    jest.fn().mockResolvedValue(),
   },
 
   messages: {
