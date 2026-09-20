@@ -28,7 +28,9 @@ router.get('/', async (req, res) => {
 
 // GET /api/publicites/:id
 router.get('/:id', async (req, res) => {
-  const { rows } = await pool.query('SELECT * FROM publicites WHERE id = $1', [req.params.id]);
+  const id = parseInt(req.params.id, 10);
+  if (isNaN(id)) return res.status(400).json({ error: 'ID invalide.' });
+  const { rows } = await pool.query('SELECT * FROM publicites WHERE id = $1', [id]);
   if (!rows.length) return res.status(404).json({ error: 'Introuvable.' });
   res.json(rows[0]);
 });
@@ -55,8 +57,16 @@ router.post('/', auth, adminOnly, async (req, res) => {
 
 // PUT /api/publicites/:id — admin only
 router.put('/:id', auth, adminOnly, async (req, res) => {
+  const id = parseInt(req.params.id, 10);
+  if (isNaN(id)) return res.status(400).json({ error: 'ID invalide.' });
   const { nom, type, wilaya, ville, description, logo, images,
           telephone, email_contact, site_web, adresse, etoiles, forfait, actif, expire_le } = req.body;
+  const VALID_TYPES    = ['hotel', 'camping', 'complexe'];
+  const VALID_FORFAITS = ['basic', 'premium', 'vedette'];
+  if (type    !== undefined && !VALID_TYPES.includes(type))
+    return res.status(400).json({ error: 'Type invalide (hotel, camping, complexe).' });
+  if (forfait !== undefined && !VALID_FORFAITS.includes(forfait))
+    return res.status(400).json({ error: 'Forfait invalide (basic, premium, vedette).' });
   const { rows } = await pool.query(
     `UPDATE publicites SET
        nom=$1,type=$2,wilaya=$3,ville=$4,description=$5,logo=$6,images=$7,
@@ -74,7 +84,9 @@ router.put('/:id', auth, adminOnly, async (req, res) => {
 
 // DELETE /api/publicites/:id — admin only
 router.delete('/:id', auth, adminOnly, async (req, res) => {
-  await pool.query('DELETE FROM publicites WHERE id = $1', [req.params.id]);
+  const id = parseInt(req.params.id, 10);
+  if (isNaN(id)) return res.status(400).json({ error: 'ID invalide.' });
+  await pool.query('DELETE FROM publicites WHERE id = $1', [id]);
   res.json({ ok: true });
 });
 

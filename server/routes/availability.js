@@ -29,6 +29,11 @@ router.post('/:listing_id/block', auth, async (req, res) => {
   const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
   if (!start || !end || !DATE_RE.test(start) || !DATE_RE.test(end) || start >= end)
     return res.status(400).json({ error: 'Dates invalides — format AAAA-MM-JJ requis, start < end.' });
+  if (isNaN(new Date(start)) || isNaN(new Date(end)))
+    return res.status(400).json({ error: 'Date calendrier invalide (ex. mois ou jour hors plage).' });
+  const MAX_BLOCK_DAYS = 365;
+  if (Math.round((new Date(end) - new Date(start)) / 86400000) > MAX_BLOCK_DAYS)
+    return res.status(400).json({ error: `La durée de blocage ne peut pas dépasser ${MAX_BLOCK_DAYS} jours.` });
   if (reason && reason.length > 200)
     return res.status(400).json({ error: 'La raison ne peut pas dépasser 200 caractères.' });
 

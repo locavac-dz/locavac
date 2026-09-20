@@ -163,12 +163,15 @@ router.post('/:id/process', auth, async (req, res) => {
     return res.status(400).json({ error: 'Tous les champs carte sont requis.' });
 
   const cleanCard = card_number.replace(/\s/g, '');
-  if (cleanCard.length < 16) return res.status(400).json({ error: 'Numéro de carte incomplet.' });
+  if (cleanCard.length < 16 || cleanCard.length > 19)
+    return res.status(400).json({ error: 'Numéro de carte invalide (16 à 19 chiffres).' });
 
+  if (!/^(0[1-9]|1[0-2])\/\d{2}$/.test(expiry.trim()))
+    return res.status(400).json({ error: "Format d'expiration invalide (MM/AA requis)." });
   const [expM, expY] = expiry.split('/').map(s => s.trim());
   if (new Date(2000 + Number(expY), Number(expM) - 1, 1) < new Date())
     return res.status(400).json({ error: 'Carte expirée.' });
-  if (cvv.length < 3) return res.status(400).json({ error: 'CVV invalide.' });
+  if (!/^\d{3,4}$/.test(cvv)) return res.status(400).json({ error: 'CVV invalide (3 ou 4 chiffres).' });
 
   const cardType = detectCard(cleanCard);
   if (payment.method === 'edahabia' && cardType !== 'edahabia')

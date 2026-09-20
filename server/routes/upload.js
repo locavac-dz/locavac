@@ -22,11 +22,18 @@ function checkMagicBytes(filePath, allowPdf = false) {
   return false;
 }
 
+// Extension dérivée du type MIME validé (anti path-traversal via originalname)
+const MIME_EXT = {
+  'image/jpeg': '.jpg', 'image/jpg': '.jpg',
+  'image/png': '.png', 'image/webp': '.webp',
+  'application/pdf': '.pdf',
+};
+
 // ── Stockage disque — inclut l'id utilisateur dans le nom de fichier ──
 const storage = multer.diskStorage({
   destination: (req, file, cb) => cb(null, UPLOAD_DIR),
   filename:    (req, file, cb) => {
-    const ext    = path.extname(file.originalname).toLowerCase().replace(/[^.a-z]/g, '') || '.jpg';
+    const ext    = MIME_EXT[file.mimetype] || '.jpg';
     const userId = req.user ? String(req.user.id) : '0';
     // Format : {userId}_{timestamp}_{hex}.{ext}  — permet la vérification de propriété au DELETE
     const name   = userId + '_' + Date.now() + '_' + crypto.randomBytes(8).toString('hex') + ext;

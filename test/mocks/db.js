@@ -19,10 +19,21 @@ const LISTING_1 = {
   cancellation_policy: 'flexible',
 };
 
-// Réservation de test (confirmée, check_out dans le passé pour autoriser les avis)
+// Réservation confirmée, check_out dans le passé → autorise les avis et les annulations
 const RESERVATION_1 = {
   id: 300, listing_id: 1, guest_id: 2, check_in: '2026-06-01', check_out: '2026-06-05',
   guests_count: 1, total_price: 20000, status: 'confirmed', payment_id: null,
+};
+// Réservation en attente → permet d'initialiser un paiement
+const RESERVATION_2 = {
+  id: 301, listing_id: 1, guest_id: 2, check_in: '2027-03-10', check_out: '2027-03-15',
+  guests_count: 1, total_price: 25000, status: 'pending', payment_id: null,
+};
+// Paiement en attente lié à RESERVATION_2
+const PAYMENT_1 = {
+  id: 600, reservation_id: 301, user_id: 2,
+  amount: 25000, currency: 'DZD', method: 'cib',
+  status: 'pending', reference: 'DZ-TEST-001',
 };
 
 // pool.query est utilisé directement par le middleware auth
@@ -72,7 +83,7 @@ module.exports = {
   },
 
   reservations: {
-    findById:          jest.fn(id => Promise.resolve(id === 300 ? RESERVATION_1 : null)),
+    findById:          jest.fn(id => Promise.resolve(id === 300 ? RESERVATION_1 : id === 301 ? RESERVATION_2 : null)),
     findByGuest:       jest.fn().mockResolvedValue([]),
     findByListing:     jest.fn().mockResolvedValue([]),
     findByListings:    jest.fn().mockResolvedValue([]),
@@ -103,6 +114,8 @@ module.exports = {
   payments: {
     findById:                jest.fn().mockResolvedValue(null),
     findByIds:               jest.fn().mockResolvedValue([]),
+    findByIdAndUser:         jest.fn((id, uid) => Promise.resolve(id === 600 && uid === 2 ? PAYMENT_1 : null)),
+    findByResaAndUser:       jest.fn().mockResolvedValue([]),
     findSuccessByReservation:jest.fn().mockResolvedValue(null),
     create:                  jest.fn(data => Promise.resolve({ id: 600, ...data })),
     updateById:              jest.fn().mockResolvedValue(),

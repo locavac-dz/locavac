@@ -128,10 +128,19 @@ const adminLimiter = rateLimit({
   message: { error: 'Trop de requêtes admin. Réessayez dans une minute.' },
   skip: () => process.env.NODE_ENV === 'test',
 });
+const newsletterLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 5, // 5 inscriptions max par IP et par quart d'heure (anti spam)
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Trop de tentatives. Réessayez dans 15 minutes.' },
+  skip: () => process.env.NODE_ENV === 'test',
+});
 app.use('/api/reservations', reservationLimiter);
 app.use('/api/payments',     paymentLimiter);
 app.post('/api/listings',    listingLimiter);
 app.use('/api/admin',        adminLimiter);
+app.post('/api/newsletter',  newsletterLimiter);
 
 app.use(express.json({ limit: '2mb' }));
 
