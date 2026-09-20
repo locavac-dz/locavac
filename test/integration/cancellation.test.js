@@ -9,6 +9,7 @@ jest.mock('../../server/mailer', () => ({
 jest.mock('../../server/ws', () => ({ send: jest.fn(), setup: jest.fn() }));
 
 const app = require('../../server/index');
+const db  = require('../mocks/db');
 
 // id=2 est le voyageur de RESERVATION_1
 const GUEST_TOKEN = jwt.sign({ id: 2, email: 'guest@test.dz' }, process.env.JWT_SECRET);
@@ -61,5 +62,30 @@ describe('PATCH /api/reservations/:id/status — annulation & remboursement', ()
     const res = await request(app).patch('/api/reservations/300/status')
       .send({ status: 'cancelled' });
     expect(res.status).toBe(401);
+  });
+
+  test('payments.updateById appelé avec refund_amount et refund_pct (colonnes migration 016)', async () => {
+    // Réservation fictive avec payment_id défini et check_in dans le futur
+    // (flexible + daysLeft >= 1 → pct=100)
+    const resaWithPayment = {
+      id: 300, listing_id: 1, guest_id: 2,
+      check_in: '2027-06-01', check_out: '2027-06-05',
+      guests_count: 1, total_price: 20000, status: 'confirmed', payment_id: 600,
+    };
+    db.reservations.findById.mockResolvedValueOnce(resaWithPayment);
+    db.payments.updateById.mockClear();
+
+    const res = await request(app).patch('/api/reservations/300/status')
+      .set(GUEST_AUTH).send({ status: 'cancelled' });
+
+    expect(res.status).toBe(200);
+    expect(res.body.refund.pct).toBe(100);
+    expect(res.body.refund.amount).toBe(20000);
+    // Les colonnes refund_amount et refund_pct doivent être présentes dans l'update
+    expect(db.payments.updateById).toHaveBeenCalledWith(600, expect.objectContaining({
+      status:        'refunded',
+      refund_amount: 20000,
+      refund_pct:    100,
+    }));
   });
 });
