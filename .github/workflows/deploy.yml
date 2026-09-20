@@ -1,8 +1,9 @@
 name: Deploy to VPS
 
+# Déclenchement manuel uniquement tant que le VPS n'est pas provisionné.
+# Rebasculer sur `push: branches: [master]` une fois les secrets VPS_* renseignés.
 on:
-  push:
-    branches: [master]
+  workflow_dispatch:
 
 jobs:
   deploy:
