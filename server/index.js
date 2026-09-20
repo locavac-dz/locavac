@@ -176,6 +176,8 @@ app.get('/sw.js', (_, res) => {
 });
 app.use(express.static(path.join(__dirname, '..', 'public')));
 
+// Monté avant /api/auth pour éviter la capture par le routeur auth générique
+app.use('/api/auth/google',  require('./routes/auth-google'));
 app.use('/api/auth',         require('./routes/auth'));
 app.use('/api/listings',     require('./routes/listings'));
 app.use('/api/reservations', require('./routes/reservations'));

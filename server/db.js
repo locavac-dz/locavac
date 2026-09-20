@@ -47,6 +47,7 @@ const users = {
   findByIds:               ids    => ids.length ? _q('SELECT * FROM users WHERE id = ANY($1)', [ids]) : Promise.resolve([]),
   findByEmail:             email  => _one('SELECT * FROM users WHERE email = $1', [email]),
   findByVerificationToken: token  => _one('SELECT * FROM users WHERE verification_token = $1', [token]),
+  findByGoogleId:          gid    => _one('SELECT * FROM users WHERE google_id = $1', [gid]),
   findAll:                 ()     => _q('SELECT * FROM users ORDER BY id'),
 
   // Recherche admin avec filtres optionnels

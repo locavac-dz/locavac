@@ -539,6 +539,10 @@ footer{background:var(--g100);border-top:1px solid var(--g200);padding:48px 24px
 .ferr.show{display:block}
 .char-count{font-size:11px;color:var(--g400);text-align:right;margin-top:3px;transition:color .2s}
 .btn-submit{width:100%;background:var(--red);color:#fff;border:none;padding:14px;border-radius:12px;font-size:15px;font-weight:700;cursor:pointer;transition:background .2s}
+.btn-google{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;padding:11px 16px;border:1.5px solid var(--border);border-radius:12px;background:var(--surface);color:var(--text);font-size:14px;font-weight:600;cursor:pointer;text-decoration:none;transition:border-color .2s}
+.btn-google:hover{border-color:var(--red)}
+.auth-sep{display:flex;align-items:center;gap:10px;margin:14px 0 0;color:var(--g400);font-size:13px}
+.auth-sep::before,.auth-sep::after{content:'';flex:1;height:1px;background:var(--g200)}
 .btn-submit:hover{background:var(--red-dk)}
 .btn-submit:disabled{opacity:.6;cursor:not-allowed}
 .book-btn{width:100%;background:var(--red);color:#fff;border:none;padding:14px;border-radius:12px;font-size:15px;font-weight:700;cursor:pointer;transition:background .2s;margin-top:8px}
@@ -1576,6 +1580,16 @@ footer{background:var(--g100);border-top:1px solid var(--g200);padding:48px 24px
         <div class="fg"><label>Mot de passe</label><input type="password" id="l-pass" placeholder="••••••"/></div>
         <div class="ferr" id="l-err"></div>
         <button class="btn-submit" id="l-btn">Se connecter</button>
+        <div class="auth-sep" data-i18n="auth.or">ou</div>
+        <a class="btn-google" href="/api/auth/google">
+          <svg width="18" height="18" viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+            <path d="M17.64 9.205c0-.639-.057-1.252-.164-1.841H9v3.481h4.844a4.14 4.14 0 0 1-1.796 2.716v2.259h2.908c1.702-1.567 2.684-3.875 2.684-6.615z" fill="#4285F4"/>
+            <path d="M9 18c2.43 0 4.467-.806 5.956-2.18l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 0 0 9 18z" fill="#34A853"/>
+            <path d="M3.964 10.71A5.41 5.41 0 0 1 3.682 9c0-.593.102-1.17.282-1.71V4.958H.957A8.996 8.996 0 0 0 0 9c0 1.452.348 2.827.957 4.042l3.007-2.332z" fill="#FBBC05"/>
+            <path d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 0 0 .957 4.958L3.964 6.29C4.672 4.163 6.656 3.58 9 3.58z" fill="#EA4335"/>
+          </svg>
+          <span data-i18n="auth.google">Continuer avec Google</span>
+        </a>
         <p style="text-align:center;margin-top:10px;font-size:13px;color:var(--g600)"><a id="goto-forgot" style="color:var(--red);cursor:pointer">Mot de passe oublié ?</a></p>
         <p style="text-align:center;margin-top:8px;font-size:13px;color:var(--g600)">Pas de compte ? <a id="goto-register" style="color:var(--red);cursor:pointer;font-weight:600">Inscrivez-vous</a></p>
       </div>
@@ -1595,6 +1609,16 @@ footer{background:var(--g100);border-top:1px solid var(--g200);padding:48px 24px
         </div>
         <div class="ferr" id="r-err"></div>
         <button class="btn-submit" id="r-btn">Créer mon compte</button>
+        <div class="auth-sep" data-i18n="auth.or">ou</div>
+        <a class="btn-google" href="/api/auth/google">
+          <svg width="18" height="18" viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+            <path d="M17.64 9.205c0-.639-.057-1.252-.164-1.841H9v3.481h4.844a4.14 4.14 0 0 1-1.796 2.716v2.259h2.908c1.702-1.567 2.684-3.875 2.684-6.615z" fill="#4285F4"/>
+            <path d="M9 18c2.43 0 4.467-.806 5.956-2.18l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 0 0 9 18z" fill="#34A853"/>
+            <path d="M3.964 10.71A5.41 5.41 0 0 1 3.682 9c0-.593.102-1.17.282-1.71V4.958H.957A8.996 8.996 0 0 0 0 9c0 1.452.348 2.827.957 4.042l3.007-2.332z" fill="#FBBC05"/>
+            <path d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 0 0 .957 4.958L3.964 6.29C4.672 4.163 6.656 3.58 9 3.58z" fill="#EA4335"/>
+          </svg>
+          <span data-i18n="auth.google">Continuer avec Google</span>
+        </a>
       </div>
     </div>
   </div>
@@ -2164,6 +2188,10 @@ const TRANSLATIONS = {
     'auth.login':'Connexion','auth.register':'Inscription',
     'auth.email':'Email','auth.pass':'Mot de passe','auth.name':'Nom complet',
     'auth.phone':'Téléphone','auth.login_btn':'Se connecter','auth.register_btn':'Créer mon compte',
+    'auth.or':'ou','auth.google':'Continuer avec Google',
+    'auth.google_denied':'Connexion Google annulée.','auth.google_banned':'Ce compte a été suspendu.',
+    'auth.google_error':'Connexion Google échouée.','auth.google_not_configured':'Connexion Google non disponible.',
+    'auth.google_connected':'Connecté via Google !',
     'pay.title':'Paiement sécurisé','pay.cib':'CIB','pay.cib_sub':'Carte Interbancaire',
     'pay.eda':'Edahabia','pay.eda_sub':'Algérie Poste',
     'pay.next':'Continuer →','pay.submit':'🔒 Payer maintenant',
@@ -2236,6 +2264,10 @@ const TRANSLATIONS = {
     'auth.login':'تسجيل الدخول','auth.register':'إنشاء حساب',
     'auth.email':'البريد الإلكتروني','auth.pass':'كلمة المرور','auth.name':'الاسم الكامل',
     'auth.phone':'رقم الهاتف','auth.login_btn':'تسجيل الدخول','auth.register_btn':'إنشاء حسابي',
+    'auth.or':'أو','auth.google':'المتابعة عبر Google',
+    'auth.google_denied':'تم إلغاء تسجيل الدخول.','auth.google_banned':'تم تعليق هذا الحساب.',
+    'auth.google_error':'فشل تسجيل الدخول عبر Google.','auth.google_not_configured':'تسجيل الدخول عبر Google غير متاح.',
+    'auth.google_connected':'تم تسجيل الدخول عبر Google !',
     'pay.title':'دفع آمن','pay.cib':'CIB','pay.cib_sub':'بطاقة بنكية',
     'pay.eda':'Edahabia','pay.eda_sub':'بريد الجزائر',
     'pay.next':'متابعة ←','pay.submit':'🔒 ادفع الآن',
@@ -2308,6 +2340,10 @@ const TRANSLATIONS = {
     'auth.login':'Log in','auth.register':'Sign up',
     'auth.email':'Email','auth.pass':'Password','auth.name':'Full name',
     'auth.phone':'Phone','auth.login_btn':'Log in','auth.register_btn':'Create account',
+    'auth.or':'or','auth.google':'Continue with Google',
+    'auth.google_denied':'Google sign-in cancelled.','auth.google_banned':'This account has been suspended.',
+    'auth.google_error':'Google sign-in failed.','auth.google_not_configured':'Google sign-in is not available.',
+    'auth.google_connected':'Signed in with Google!',
     'pay.title':'Secure payment','pay.cib':'CIB','pay.cib_sub':'Interbank card',
     'pay.eda':'Edahabia','pay.eda_sub':'Algeria Post',
     'pay.next':'Continue →','pay.submit':'🔒 Pay now',
@@ -2380,6 +2416,10 @@ const TRANSLATIONS = {
     'auth.login':'Kcem','auth.register':'Kcem',
     'auth.email':'Imayl','auth.pass':'Awal uffir','auth.name':'Isem aččuran',
     'auth.phone':'Numiru n tiliḍunit','auth.login_btn':'Kcem','auth.register_btn':'Snulfu umiḍan-iw',
+    'auth.or':'neɣ','auth.google':'Kemmel s Google',
+    'auth.google_denied':'Akcem s Google yettuḥbes.','auth.google_banned':'Umiḍan-a yettuḥbes.',
+    'auth.google_error':'Akcem s Google yeğğa.','auth.google_not_configured':'Akcem s Google ur yelli.',
+    'auth.google_connected':'Yekcem s Google !',
     'pay.title':'Tixsi tettusemmed','pay.cib':'CIB','pay.cib_sub':'Tikart n tbankat',
     'pay.eda':'Edahabia','pay.eda_sub':'Barid n Lzzayer',
     'pay.next':'Kemmel →','pay.submit':'🔒 Sefru tura',
@@ -6616,6 +6656,36 @@ document.addEventListener('DOMContentLoaded', function() {
   document.getElementById('btn-save-alert')?.addEventListener('click', saveSearchAlert);
   document.getElementById('sab-apply')?.addEventListener('click', applySearchAlert);
   document.getElementById('sab-close')?.addEventListener('click', dismissSearchAlertBanner);
+
+  // Retour OAuth Google — récupération du token ou de l'erreur depuis l'URL
+  (async () => {
+    const _qp = new URLSearchParams(location.search);
+    const _gt = _qp.get('google_token');
+    const _ge = _qp.get('auth_error');
+    if (_gt) {
+      history.replaceState({}, '', '/');
+      token = _gt;
+      localStorage.setItem('dz_token', token);
+      try {
+        currentUser = await apiFetch('/auth/me');
+        localStorage.setItem('dz_user', JSON.stringify(currentUser));
+        refreshAuthUI();
+        connectWs();
+        toast('👋 ' + currentUser.name + ' — ' + t('auth.google_connected'));
+      } catch {
+        token = null;
+        localStorage.removeItem('dz_token');
+      }
+    } else if (_ge) {
+      history.replaceState({}, '', '/');
+      const _errMap = {
+        google_denied:         t('auth.google_denied'),
+        google_banned:         t('auth.google_banned'),
+        google_not_configured: t('auth.google_not_configured'),
+      };
+      toast('❌ ' + (_errMap[_ge] || t('auth.google_error')));
+    }
+  })();
 
   // Init
   refreshAuthUI();
