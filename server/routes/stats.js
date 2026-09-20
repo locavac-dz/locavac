@@ -70,19 +70,24 @@ router.get('/host/earnings', auth, async (req, res) => {
   const paymentsRows = await db.payments.findByIds(paymentIds);
   const paymentMap   = Object.fromEntries(paymentsRows.map(p => [p.id, p]));
 
-  const transactions = confirmed.map(r => {
-    const listing = myListings.find(l => l.id === r.listing_id);
+  // Seul l'argent encaissé par la plateforme constitue un solde à reverser : les espèces sont perçues
+  // directement par l'hôte à l'arrivée et n'entrent ni dans le relevé ni dans les virements.
+  let cashCount = 0;
+  const transactions = confirmed.flatMap(r => {
     const payment = paymentMap[r.payment_id] || null;
+    if (payment?.status !== 'success') return [];
+    if (payment.method === 'especes') { cashCount++; return []; }
+    const listing = myListings.find(l => l.id === r.listing_id);
     const gross   = Number(r.total_price || 0);
     const fee     = Math.round(gross * COMMISSION);
     const net     = gross - fee;
-    return {
+    return [{
       reservation_id: r.id, listing_title: listing?.title || '—',
       check_in: r.check_in, check_out: r.check_out,
       gross, fee, net,
-      method:  payment?.status === 'success' ? (payment?.method  || '—') : '—',
-      paid_at: payment?.status === 'success' ? (payment?.processed_at || r.created_at) : r.created_at,
-    };
+      method:  payment.method,
+      paid_at: payment.processed_at || r.created_at,
+    }];
   });
   transactions.sort((a, b) => String(b.paid_at).localeCompare(String(a.paid_at)));
 
@@ -99,7 +104,7 @@ router.get('/host/earnings', auth, async (req, res) => {
 
   const user = await db.users.findById(req.user.id);
   res.json({
-    summary:    { gross: totalGross, fee: totalFee, net: totalNet, commission_pct: COMMISSION * 100 },
+    summary:    { gross: totalGross, fee: totalFee, net: totalNet, commission_pct: COMMISSION * 100, cash_reservations: cashCount },
     bank_info:  { rib: user?.rib || null, ccp: user?.ccp || null },
     data, pagination: { page, limit, total, pages },
   });
@@ -140,8 +145,12 @@ router.post('/host/payout', auth, async (req, res) => {
       return res.status(400).json({ error: 'Aucune annonce enregistrée.' });
     }
 
+    // Uniquement les réservations dont le paiement a été encaissé par la plateforme (jamais les espèces)
     const confirmedR = await client.query(
-      `SELECT total_price FROM reservations WHERE listing_id = ANY($1) AND status = 'confirmed'`,
+      `SELECT r.total_price FROM reservations r
+         JOIN payments p ON p.id = r.payment_id
+        WHERE r.listing_id = ANY($1) AND r.status = 'confirmed'
+          AND p.status = 'success' AND p.method <> 'especes'`,
       [myIds]
     );
     const totalNet = confirmedR.rows.reduce(

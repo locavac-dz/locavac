@@ -135,7 +135,7 @@ describe('GET /api/auth/google/callback — flux avec appels Google simulés', (
   test('302 → google_auth=1 + cookie _gat si nouvel utilisateur (création)', async () => {
     mockGoogle(
       { access_token: 'fake-token' },
-      { sub: 'new-sub-999', email: 'nouveau@gmail.com', name: 'Nouveau User', picture: null },
+      { sub: 'new-sub-999', email: 'nouveau@gmail.com', email_verified: true, name: 'Nouveau User', picture: null },
     );
     db.users.findByGoogleId.mockResolvedValueOnce(null);
     db.users.findByEmail.mockResolvedValueOnce(null);
@@ -160,6 +160,7 @@ describe('GET /api/auth/google/callback — flux avec appels Google simulés', (
       email: 'nouveau@gmail.com',
       google_id: 'new-sub-999',
       verified: true,
+      email_verified: true,
       password: null,
     }));
   });
@@ -168,7 +169,7 @@ describe('GET /api/auth/google/callback — flux avec appels Google simulés', (
     const user = { id: 2, name: 'Guest Test', email: 'guest@test.dz', is_host: false, is_admin: false, banned: false };
     mockGoogle(
       { access_token: 'fake-token' },
-      { sub: 'existing-sub-2', email: 'guest@test.dz', name: 'Guest Test' },
+      { sub: 'existing-sub-2', email: 'guest@test.dz', email_verified: true, name: 'Guest Test' },
     );
     db.users.findByGoogleId.mockResolvedValueOnce(user);
 
@@ -189,7 +190,7 @@ describe('GET /api/auth/google/callback — flux avec appels Google simulés', (
   test('302 → google_banned si l\'utilisateur est banni', async () => {
     mockGoogle(
       { access_token: 'fake-token' },
-      { sub: 'banned-sub', email: 'banned@gmail.com', name: 'Banni' },
+      { sub: 'banned-sub', email: 'banned@gmail.com', email_verified: true, name: 'Banni' },
     );
     db.users.findByGoogleId.mockResolvedValueOnce({
       id: 3, name: 'Banni', email: 'banned@gmail.com', is_host: false, is_admin: false, banned: true,
@@ -204,11 +205,11 @@ describe('GET /api/auth/google/callback — flux avec appels Google simulés', (
     expect(res.headers.location).toMatch(/auth_error=google_banned/);
   });
 
-  test('liaison de compte — email existant sans google_id', async () => {
-    const existing = { id: 1, name: 'Hôte Test', email: 'host@test.dz', is_host: true, is_admin: false, banned: false };
+  test('liaison de compte — email existant, confirmé localement, sans google_id', async () => {
+    const existing = { id: 1, name: 'Hôte Test', email: 'host@test.dz', email_verified: true, is_host: true, is_admin: false, banned: false };
     mockGoogle(
       { access_token: 'fake-token' },
-      { sub: 'new-sub-for-host', email: 'host@test.dz', name: 'Hôte Test' },
+      { sub: 'new-sub-for-host', email: 'host@test.dz', email_verified: true, name: 'Hôte Test' },
     );
     db.users.findByGoogleId.mockResolvedValueOnce(null);
     db.users.findByEmail.mockResolvedValueOnce(existing);
@@ -227,6 +228,57 @@ describe('GET /api/auth/google/callback — flux avec appels Google simulés', (
     expect(cookies.some(c => c.startsWith('_gat='))).toBe(true);
     expect(db.users.updateById).toHaveBeenCalledWith(1, { google_id: 'new-sub-for-host' });
     expect(db.users.create).not.toHaveBeenCalled();
+  });
+
+  // Pré-détournement de compte : un attaquant inscrit l'adresse de sa victime sans la confirmer ; la victime
+  // se connecte plus tard via Google → sans ce contrôle, elle serait rattachée au compte de l'attaquant.
+  test('liaison REFUSÉE si le compte local n\'a jamais confirmé son adresse (google_link_unverified)', async () => {
+    const unverified = { id: 1, name: 'Hôte Test', email: 'host@test.dz', email_verified: false, is_host: true, banned: false };
+    mockGoogle(
+      { access_token: 'fake-token' },
+      { sub: 'attacker-victim-sub', email: 'host@test.dz', email_verified: true, name: 'Hôte Test' },
+    );
+    db.users.findByGoogleId.mockResolvedValueOnce(null);
+    db.users.findByEmail.mockResolvedValueOnce(unverified);
+
+    const res = await request(app)
+      .get(`/api/auth/google/callback?code=abc&state=${encodeURIComponent(makeState())}`)
+      .redirects(0);
+
+    expect(res.status).toBe(302);
+    expect(res.headers.location).toMatch(/auth_error=google_link_unverified/);
+    expect(res.headers['set-cookie'] || []).toEqual([]);
+    expect(db.users.updateById).not.toHaveBeenCalled();
+    expect(db.users.create).not.toHaveBeenCalled();
+  });
+
+  test('liaison refusée aussi quand email_verified est absent du compte local (comptes antérieurs à la migration)', async () => {
+    mockGoogle(
+      { access_token: 'fake-token' },
+      { sub: 'sub-x', email: 'host@test.dz', email_verified: true, name: 'Hôte Test' },
+    );
+    db.users.findByGoogleId.mockResolvedValueOnce(null);
+    db.users.findByEmail.mockResolvedValueOnce({ id: 1, email: 'host@test.dz', banned: false });
+    const res = await request(app)
+      .get(`/api/auth/google/callback?code=abc&state=${encodeURIComponent(makeState())}`)
+      .redirects(0);
+    expect(res.headers.location).toMatch(/auth_error=google_link_unverified/);
+    expect(db.users.updateById).not.toHaveBeenCalled();
+  });
+
+  test('adresse non certifiée par Google (email_verified absent ou faux) : refus avant toute recherche de compte', async () => {
+    for (const profile of [{ sub: 's1', email: 'x@test.dz', name: 'X' }, { sub: 's2', email: 'x@test.dz', email_verified: false, name: 'X' }]) {
+      jest.clearAllMocks();
+      mockGoogle({ access_token: 'fake-token' }, profile);
+      const res = await request(app)
+        .get(`/api/auth/google/callback?code=abc&state=${encodeURIComponent(makeState())}`)
+        .redirects(0);
+      expect(res.status).toBe(302);
+      expect(res.headers.location).toMatch(/auth_error=google_email_unverified/);
+      expect(db.users.findByGoogleId).not.toHaveBeenCalled();
+      expect(db.users.findByEmail).not.toHaveBeenCalled();
+      expect(db.users.create).not.toHaveBeenCalled();
+    }
   });
 });
 

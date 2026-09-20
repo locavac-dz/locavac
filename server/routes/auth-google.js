@@ -113,6 +113,8 @@ router.get('/callback', async (req, res) => {
   }
 
   if (!profile.email) return res.redirect(`${app}/?auth_error=google_no_email`);
+  // Google ne garantit l'adresse que si email_verified est vrai (comptes Workspace notamment)
+  if (profile.email_verified !== true) return res.redirect(`${app}/?auth_error=google_email_unverified`);
 
   // Recherche ou création du compte
   let user = await db.users.findByGoogleId(profile.sub);
@@ -121,16 +123,20 @@ router.get('/callback', async (req, res) => {
     // Lier à un compte existant partageant le même email
     user = await db.users.findByEmail(profile.email);
     if (user) {
+      // Liaison refusée si l'adresse locale n'a jamais été confirmée : sinon quiconque a inscrit cette
+      // adresse sans la vérifier capterait le compte de son vrai titulaire à sa première connexion Google.
+      if (user.email_verified !== true) return res.redirect(`${app}/?auth_error=google_link_unverified`);
       await db.users.updateById(user.id, { google_id: profile.sub });
       user = await db.users.findById(user.id);
     } else {
       user = await db.users.create({
-        name:      (profile.name || profile.email.split('@')[0]).slice(0, 100),
-        email:     profile.email,
-        password:  null,
-        avatar:    profile.picture || null,
-        google_id: profile.sub,
-        verified:  true,
+        name:           (profile.name || profile.email.split('@')[0]).slice(0, 100),
+        email:          profile.email,
+        password:       null,
+        avatar:         profile.picture || null,
+        google_id:      profile.sub,
+        verified:       true,
+        email_verified: true,
       });
     }
   }

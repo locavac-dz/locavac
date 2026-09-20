@@ -2190,6 +2190,8 @@ const TRANSLATIONS = {
     'auth.phone':'Téléphone','auth.login_btn':'Se connecter','auth.register_btn':'Créer mon compte',
     'auth.or':'ou','auth.google':'Continuer avec Google',
     'auth.google_denied':'Connexion Google annulée.','auth.google_banned':'Ce compte a été suspendu.',
+    'auth.google_email_unverified':'Google n\'a pas certifié cette adresse e-mail. Connectez-vous avec votre mot de passe.',
+    'auth.google_link_unverified':'Un compte existe déjà avec cette adresse mais elle n\'a pas été confirmée. Connectez-vous avec votre mot de passe puis confirmez votre e-mail.',
     'auth.google_error':'Connexion Google échouée.','auth.google_not_configured':'Connexion Google non disponible.',
     'auth.google_connected':'Connecté via Google !',
     'pay.title':'Paiement sécurisé','pay.cib':'CIB','pay.cib_sub':'Carte Interbancaire',
@@ -2266,6 +2268,8 @@ const TRANSLATIONS = {
     'auth.phone':'رقم الهاتف','auth.login_btn':'تسجيل الدخول','auth.register_btn':'إنشاء حسابي',
     'auth.or':'أو','auth.google':'المتابعة عبر Google',
     'auth.google_denied':'تم إلغاء تسجيل الدخول.','auth.google_banned':'تم تعليق هذا الحساب.',
+    'auth.google_email_unverified':'لم تتحقق Google من هذا البريد الإلكتروني. سجّل الدخول بكلمة المرور.',
+    'auth.google_link_unverified':'يوجد حساب بهذا البريد لكنه غير مؤكَّد. سجّل الدخول بكلمة المرور ثم أكّد بريدك الإلكتروني.',
     'auth.google_error':'فشل تسجيل الدخول عبر Google.','auth.google_not_configured':'تسجيل الدخول عبر Google غير متاح.',
     'auth.google_connected':'تم تسجيل الدخول عبر Google !',
     'pay.title':'دفع آمن','pay.cib':'CIB','pay.cib_sub':'بطاقة بنكية',
@@ -2342,6 +2346,8 @@ const TRANSLATIONS = {
     'auth.phone':'Phone','auth.login_btn':'Log in','auth.register_btn':'Create account',
     'auth.or':'or','auth.google':'Continue with Google',
     'auth.google_denied':'Google sign-in cancelled.','auth.google_banned':'This account has been suspended.',
+    'auth.google_email_unverified':'Google has not verified this email address. Please sign in with your password.',
+    'auth.google_link_unverified':'An account with this email already exists but was never confirmed. Sign in with your password, then confirm your email.',
     'auth.google_error':'Google sign-in failed.','auth.google_not_configured':'Google sign-in is not available.',
     'auth.google_connected':'Signed in with Google!',
     'pay.title':'Secure payment','pay.cib':'CIB','pay.cib_sub':'Interbank card',
@@ -6693,9 +6699,11 @@ document.addEventListener('DOMContentLoaded', function() {
     } else if (_ge) {
       history.replaceState({}, '', '/');
       const _errMap = {
-        google_denied:         t('auth.google_denied'),
-        google_banned:         t('auth.google_banned'),
-        google_not_configured: t('auth.google_not_configured'),
+        google_denied:           t('auth.google_denied'),
+        google_banned:           t('auth.google_banned'),
+        google_not_configured:   t('auth.google_not_configured'),
+        google_email_unverified: t('auth.google_email_unverified'),
+        google_link_unverified:  t('auth.google_link_unverified'),
       };
       toast('❌ ' + (_errMap[_ge] || t('auth.google_error')));
     }

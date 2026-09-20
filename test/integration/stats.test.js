@@ -64,12 +64,15 @@ describe('GET /api/stats/host/earnings', () => {
     expect(res.body.summary.commission_pct).toBe(10);
   });
 
+  const resa = (id, total_price, payment_id, over = {}) => ({
+    id, listing_id: 1, status: 'confirmed', total_price, payment_id,
+    check_in: '2026-01-01', check_out: '2026-01-05', created_at: '2026-01-01', ...over,
+  });
+  const paid = (id, method = 'cib', over = {}) => ({ id, status: 'success', method, processed_at: `2026-01-0${id % 9 + 1}`, ...over });
+
   test('200 commission 10% : fee = 10% du brut, net = 90%', async () => {
-    db.reservations.findByListings.mockResolvedValueOnce([
-      { id: 300, listing_id: 1, status: 'confirmed', total_price: 10000,
-        payment_id: null, check_in: '2026-01-01', check_out: '2026-01-05', created_at: '2026-01-01' },
-    ]);
-    db.payments.findByIds.mockResolvedValueOnce([]);
+    db.reservations.findByListings.mockResolvedValueOnce([resa(300, 10000, 600)]);
+    db.payments.findByIds.mockResolvedValueOnce([paid(600)]);
     const res = await request(app).get('/api/stats/host/earnings').set(HOST_AUTH);
     expect(res.status).toBe(200);
     expect(res.body.summary.gross).toBe(10000);
@@ -78,13 +81,8 @@ describe('GET /api/stats/host/earnings', () => {
   });
 
   test('200 pagination ?page=1&limit=1 : 1 item retourné, summary sur tout', async () => {
-    db.reservations.findByListings.mockResolvedValueOnce([
-      { id: 301, listing_id: 1, status: 'confirmed', total_price: 5000,
-        payment_id: null, check_in: '2026-02-01', check_out: '2026-02-03', created_at: '2026-02-01' },
-      { id: 302, listing_id: 1, status: 'confirmed', total_price: 8000,
-        payment_id: null, check_in: '2026-03-01', check_out: '2026-03-04', created_at: '2026-03-01' },
-    ]);
-    db.payments.findByIds.mockResolvedValueOnce([]);
+    db.reservations.findByListings.mockResolvedValueOnce([resa(301, 5000, 601), resa(302, 8000, 602)]);
+    db.payments.findByIds.mockResolvedValueOnce([paid(601), paid(602)]);
     const res = await request(app)
       .get('/api/stats/host/earnings?page=1&limit=1')
       .set(HOST_AUTH);
@@ -93,6 +91,38 @@ describe('GET /api/stats/host/earnings', () => {
     expect(res.body.pagination).toMatchObject({ page: 1, limit: 1, total: 2, pages: 2 });
     // Summary toujours calculé sur les 2 transactions, quelle que soit la page
     expect(res.body.summary.gross).toBe(13000);
+  });
+
+  // Règle : seul l'argent encaissé par la plateforme est reversable ; l'espèces va directement à l'hôte
+  test('les réservations payées en espèces sont exclues du relevé et comptées à part', async () => {
+    db.reservations.findByListings.mockResolvedValueOnce([resa(300, 10000, 600), resa(301, 5000, 601)]);
+    db.payments.findByIds.mockResolvedValueOnce([paid(600, 'cib'), paid(601, 'especes')]);
+    const res = await request(app).get('/api/stats/host/earnings').set(HOST_AUTH);
+    expect(res.body.data.map(t => t.reservation_id)).toEqual([300]);
+    expect(res.body.summary).toMatchObject({ gross: 10000, fee: 1000, net: 9000, cash_reservations: 1 });
+  });
+
+  test('une réservation confirmée sans paiement enregistré ne génère aucun gain', async () => {
+    db.reservations.findByListings.mockResolvedValueOnce([resa(300, 10000, null)]);
+    db.payments.findByIds.mockResolvedValueOnce([]);
+    const res = await request(app).get('/api/stats/host/earnings').set(HOST_AUTH);
+    expect(res.body.data).toEqual([]);
+    expect(res.body.summary).toMatchObject({ gross: 0, net: 0, cash_reservations: 0 });
+  });
+
+  test('un paiement remboursé ou en attente de virement est exclu', async () => {
+    db.reservations.findByListings.mockResolvedValueOnce([resa(300, 10000, 600), resa(301, 7000, 601)]);
+    db.payments.findByIds.mockResolvedValueOnce([paid(600, 'cib', { status: 'refunded' }), paid(601, 'virement', { status: 'pending_transfer' })]);
+    const res = await request(app).get('/api/stats/host/earnings').set(HOST_AUTH);
+    expect(res.body.data).toEqual([]);
+    expect(res.body.summary.gross).toBe(0);
+  });
+
+  test('méthode et date de la transaction proviennent du paiement', async () => {
+    db.reservations.findByListings.mockResolvedValueOnce([resa(300, 10000, 600)]);
+    db.payments.findByIds.mockResolvedValueOnce([paid(600, 'edahabia', { processed_at: '2026-01-03T10:00:00Z' })]);
+    const res = await request(app).get('/api/stats/host/earnings').set(HOST_AUTH);
+    expect(res.body.data[0]).toMatchObject({ method: 'edahabia', paid_at: '2026-01-03T10:00:00Z', gross: 10000, net: 9000 });
   });
 });
 

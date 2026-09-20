@@ -15,7 +15,7 @@ function payoutClient({ listings = [{ id: 1 }], confirmed = [], payouts = [], us
     query: jest.fn((sql, params) => {
       if (failOn && failOn.test(sql))                   return Promise.reject(new Error('boom'));
       if (/SELECT id FROM listings/.test(sql))          return Promise.resolve({ rows: listings });
-      if (/SELECT total_price FROM reservations/.test(sql)) return Promise.resolve({ rows: confirmed.map(total_price => ({ total_price })) });
+      if (/FROM reservations r/.test(sql))                return Promise.resolve({ rows: confirmed.map(total_price => ({ total_price })) });
       if (/FROM payouts/.test(sql))                     return Promise.resolve({ rows: payouts.map(amount => ({ amount })) });
       if (/SELECT rib, ccp FROM users/.test(sql))       return Promise.resolve({ rows: user ? [user] : [] });
       if (/INSERT INTO payouts/.test(sql))              return Promise.resolve({ rows: [{ id: 701, host_id: params[0], amount: params[1], status: 'pending' }] });
@@ -106,11 +106,14 @@ describe('POST /api/stats/host/payout — demande de virement', () => {
     expect(q).not.toMatch(/rejected/);
   });
 
-  test('seules les réservations confirmées des annonces de l\'hôte comptent', async () => {
+  test('seules les réservations confirmées ET encaissées par la plateforme comptent (jamais les espèces)', async () => {
     const client = payoutClient({ listings: [{ id: 1 }, { id: 4 }], confirmed: [10000] });
     await requestPayout();
-    const q = client.query.mock.calls.find(c => /SELECT total_price FROM reservations/.test(c[0]));
-    expect(q[0]).toMatch(/status = 'confirmed'/);
+    const q = client.query.mock.calls.find(c => /FROM reservations r/.test(c[0]));
+    expect(q[0]).toMatch(/JOIN payments p ON p\.id = r\.payment_id/);
+    expect(q[0]).toMatch(/r\.status = 'confirmed'/);
+    expect(q[0]).toMatch(/p\.status = 'success'/);
+    expect(q[0]).toMatch(/p\.method <> 'especes'/);
     expect(q[1]).toEqual([[1, 4]]);
   });
 

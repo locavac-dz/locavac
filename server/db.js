@@ -343,7 +343,8 @@ async function connect() {
   await initSchema();
   const migrate = require('./migrate');
   await migrate(pool);
-  await seed();
+  // Jeu de démonstration (compte demo@locavac.dz / demo1234 et 8 annonces) : jamais en production
+  if (process.env.NODE_ENV !== 'production') await seed();
   console.log('🐘 PostgreSQL connecté');
 }
 

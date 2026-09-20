@@ -204,12 +204,30 @@ describe('BaridiMob', () => {
       expect(db.payments.updateById).not.toHaveBeenCalled();
     });
 
-    test('garde levée avec BARIDIMOB_ENABLED : le flux continue (400 sans téléphone)', async () => {
+    test('garde levée uniquement avec BARIDIMOB_ENABLED=true : le flux continue (400 sans téléphone)', async () => {
       process.env.NODE_ENV = 'production';
-      process.env.BARIDIMOB_ENABLED = '1';
+      process.env.BARIDIMOB_ENABLED = 'true';
       withPayment({ method: 'baridimob' });
       const res = await pay({});
       expect(res.status).toBe(400);
+    });
+
+    // Une chaîne non vide est « truthy » : sans comparaison stricte, BARIDIMOB_ENABLED=false activerait le mode
+    test.each(['false', '0', '1', 'yes', 'TRUE', ' true'])('garde maintenue avec BARIDIMOB_ENABLED=%p', async value => {
+      process.env.NODE_ENV = 'production';
+      process.env.BARIDIMOB_ENABLED = value;
+      withPayment({ method: 'baridimob' });
+      const res = await pay({ phone: '0555123456' });
+      expect(res.status).toBe(503);
+      expect(db.payments.updateById).not.toHaveBeenCalled();
+    });
+
+    test('hors production, la garde ne s\'applique pas quelle que soit la variable', async () => {
+      process.env.BARIDIMOB_ENABLED = 'false';
+      withPayment({ method: 'baridimob' });
+      const res = await pay({ phone: '0555123456' });
+      expect(res.status).toBe(200);
+      expect(res.body.otp_sent).toBe(true);
     });
   });
 });
