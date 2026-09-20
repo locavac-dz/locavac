@@ -43,7 +43,7 @@ Locavac connecte les voyageurs algériens avec des hôtes locaux pour des séjou
 ### Prérequis
 
 - Node.js 20+
-- PostgreSQL 17 (port 5433)
+- PostgreSQL 17 (port 5432)
 
 ### Installation
 
@@ -64,7 +64,7 @@ Variables requises dans `.env` :
 
 ```env
 JWT_SECRET=votre_secret_jwt
-DATABASE_URL=postgresql://locavac:motdepasse@localhost:5433/locavac
+DATABASE_URL=postgresql://locavac:motdepasse@localhost:5432/locavac
 PORT=3000
 # Email (optionnel — silencieux si absent)
 EMAIL_HOST=smtp.example.com

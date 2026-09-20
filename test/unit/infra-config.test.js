@@ -101,6 +101,22 @@ describe('Déploiement et exploitation', () => {
     expect(read('server/index.js')).toMatch(/installGracefulShutdown\(/);
   });
 
+  test('DEPLOIEMENT.md reste cohérent avec le code (chemin, base, variables obligatoires, restauration)', () => {
+    const doc = read('DEPLOIEMENT.md');
+    const appDir = deploy.match(/APP_DIR="\$\{APP_DIR:-([^}]+)\}"/)[1];
+    expect(doc).toContain(appDir);
+    expect(doc).not.toMatch(/\/var\/www\/locavac|cp \.env\.production \.env|PostgreSQL 15/);
+    for (const needle of ['CORS_ORIGINS', 'JWT_SECRET', 'PG_DUMP_PATH', 'pg_restore', 'pm2 startup', 'pm2-logrotate', '--env production'])
+      expect(doc).toContain(needle);
+    expect(read('.github/workflows/deploy.yml')).toContain(`bash ${appDir}/deploy.sh`);
+  });
+
+  test('README et demarrer.bat annoncent les ports réels (PostgreSQL 5432, application 3000)', () => {
+    expect(read('README.md')).not.toMatch(/5433/);
+    expect(read('demarrer.bat')).not.toMatch(/4000/);
+    expect(read('server/index.js')).toMatch(/process\.env\.PORT \|\| 3000/);
+  });
+
   test('package.json déclare la version de Node attendue', () => {
     expect(require(path.join(ROOT, 'package.json')).engines).toEqual({ node: '>=20' });
   });

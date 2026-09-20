@@ -13,24 +13,28 @@
 
 ## Lot 6 — VPS + pm2
 
-### 1. Préparer le VPS (Ubuntu 22.04)
+### 1. Préparer le VPS (Ubuntu 22.04 ou 24.04)
 
 ```bash
-# Connexion SSH
+# Première connexion (root), puis création d'un compte de déploiement sans privilèges
 ssh root@IP_VPS
-
-# Mise à jour système
 apt update && apt upgrade -y
+adduser --disabled-password --gecos "" deploy
+mkdir -p /home/deploy/.ssh && cp ~/.ssh/authorized_keys /home/deploy/.ssh/
+chown -R deploy:deploy /home/deploy/.ssh && chmod 700 /home/deploy/.ssh
 
-# Node.js 20
+# Node.js 20 (version exigée par package.json : engines >= 20)
 curl -fsSL https://deb.nodesource.com/setup_20.x | bash -
-apt install -y nodejs
+apt install -y nodejs git curl
 
-# pm2 (gestionnaire de process)
+# pm2 (gestionnaire de process) + rotation des journaux
 npm install -g pm2
+pm2 install pm2-logrotate
 
-# PostgreSQL 15
-apt install -y postgresql postgresql-contrib
+# PostgreSQL 17 (dépôt officiel PGDG) — postgresql-client fournit pg_dump pour la sauvegarde quotidienne
+apt install -y postgresql-common
+/usr/share/postgresql-common/pgdg/apt.postgresql.org.sh -y
+apt install -y postgresql-17 postgresql-client-17
 ```
 
 ### 2. Créer l'utilisateur PostgreSQL
@@ -42,28 +46,88 @@ CREATE DATABASE locavac OWNER locavac;
 \q
 ```
 
-### 3. Déployer le code
+### 3. Premier déploiement
 
 ```bash
-# Depuis votre poste (Windows → VPS)
-scp -r C:\Users\33633\locavac user@IP_VPS:/var/www/locavac
+# Le dossier applicatif est /opt/locavac (chemin attendu par deploy.sh et par le workflow GitHub Actions)
+mkdir -p /opt/locavac && chown deploy:deploy /opt/locavac
+su - deploy
+git clone https://github.com/locavac-dz/locavac.git /opt/locavac
+cd /opt/locavac
 
-# Sur le VPS
-cd /var/www/locavac
-cp .env.production .env
-nano .env                # Remplir les valeurs (JWT_SECRET, DATABASE_URL, EMAIL_*)
-
-bash deploy.sh           # Lance pm2 en cluster
+# Configuration : partir de .env.example (.env et .env.production ne sont jamais dans Git)
+cp .env.example .env && chmod 600 .env
+nano .env
 ```
 
-### 4. Commandes pm2 utiles
+Variables à renseigner **obligatoirement** — le serveur refuse de démarrer si l'une des trois premières manque :
+
+| Variable | Valeur en production |
+|----------|----------------------|
+| `JWT_SECRET` | chaîne aléatoire longue : `openssl rand -hex 48` |
+| `JWT_EXPIRES_IN` | `7d` |
+| `CORS_ORIGINS` | `https://locavac.dz,https://www.locavac.dz` — sans origine publique, toute écriture serait refusée |
+| `NODE_ENV` | `production` (désactive le compte de démonstration, masque les erreurs internes) |
+| `DATABASE_URL` | `postgresql://locavac:MOT_DE_PASSE_FORT@localhost:5432/locavac` |
+| `APP_URL` | `https://locavac.dz` (liens des e-mails, retour OAuth) |
+| `GOOGLE_CALLBACK_URL` | `https://locavac.dz/api/auth/google/callback` si la connexion Google est activée |
+| `EMAIL_*` | identifiants SMTP (sans eux, aucun e-mail n'est envoyé) |
+| `BARIDIMOB_ENABLED` | laisser `false` tant que la certification Algérie Poste n'est pas obtenue |
 
 ```bash
-pm2 status                      # État des workers
-pm2 logs locavac --lines 50     # Derniers logs
-pm2 reload locavac              # Rechargement sans downtime
+npm ci --omit=dev
+pm2 start ecosystem.config.js --env production   # schéma et migrations appliqués au démarrage
+pm2 save                                          # mémorise la liste des process
+exit                                              # retour en root
+pm2 startup systemd -u deploy --hp /home/deploy   # relance automatique au redémarrage du VPS
+```
+
+Les dossiers `private/identity/` (pièces d'identité, jamais servies publiquement), `public/uploads/` et `backups/` sont créés automatiquement ; ils doivent rester hors de Git et appartenir à l'utilisateur `deploy`.
+
+### 4. Déploiements suivants
+
+```bash
+cd /opt/locavac && bash deploy.sh
+```
+
+`deploy.sh` fait `git pull --ff-only`, `npm ci --omit=dev`, `pm2 reload`, puis interroge `/api/health` pendant 30 s. Si l'installation échoue ou si l'application ne répond pas, il **revient automatiquement au commit précédent** et sort en erreur.
+
+**Déploiement automatique (GitHub Actions)** — le workflow `.github/workflows/deploy.yml` est en déclenchement manuel tant que le VPS n'existe pas. Une fois le serveur prêt :
+
+1. Dans GitHub → Settings → Secrets and variables → Actions, renseigner `VPS_HOST`, `VPS_USER` (`deploy`), `VPS_PORT` et `VPS_KEY` (clé privée dont la clé publique figure dans `/home/deploy/.ssh/authorized_keys`).
+2. Lancer « Deploy to VPS » à la main depuis l'onglet Actions.
+3. Si le run est vert, remplacer `workflow_dispatch:` par `push: branches: [master]` dans `deploy.yml`.
+
+### 5. Commandes pm2 utiles
+
+```bash
+pm2 status                      # État du process
+pm2 logs locavac --lines 50     # Derniers logs (les jetons des URL y sont masqués)
+pm2 reload locavac              # Rechargement sans coupure (arrêt propre de l'ancien process)
 pm2 monit                       # Monitoring temps réel
 ```
+
+Le process tourne avec **une seule instance** : les WebSockets, le rate limiting et les tâches planifiées vivent en mémoire. Ne pas passer à `instances: 'max'` sans bus partagé (Redis).
+
+### 6. Sauvegardes et restauration
+
+L'agent lance `pg_dump` chaque nuit à 3 h et conserve 7 jours dans `/opt/locavac/backups/locavac_AAAA-MM-JJ.dump`. Une alerte apparaît dans le panneau admin si la sauvegarde échoue (`pg_dump` introuvable → définir `PG_DUMP_PATH`).
+
+```bash
+# Restauration (écrase la base courante)
+pm2 stop locavac
+pg_restore --clean --if-exists --no-owner --dbname="$DATABASE_URL" backups/locavac_AAAA-MM-JJ.dump
+pm2 start locavac
+```
+
+> ⚠️ Ces sauvegardes restent **sur le même serveur** que la base : une panne de disque emporte les deux. Copier chaque nuit `backups/` **et** `private/identity/` vers un stockage distant chiffré (par exemple `rclone` vers un bucket objet) et tester une restauration complète au moins une fois avant l'ouverture au public. Ce transfert n'est pas automatisé par l'application.
+
+### 7. Rotation des secrets et incident
+
+- **`JWT_SECRET`** : le changer déconnecte tous les utilisateurs (leurs jetons deviennent invalides) — à faire immédiatement en cas de fuite, puis `pm2 reload locavac --update-env`.
+- **Mot de passe PostgreSQL** : `ALTER USER locavac WITH PASSWORD '…'`, mettre à jour `DATABASE_URL`, recharger.
+- **Compte compromis** : le bannir depuis le panneau admin — ses jetons sont refusés dès la requête HTTP suivante ; une connexion WebSocket déjà ouverte n'est coupée qu'à sa prochaine reconnexion (ou au prochain `pm2 reload`).
+- **Application indisponible** : `pm2 logs locavac --err --lines 100`, puis `curl -s localhost:3000/api/health` ; `"db":"down"` désigne PostgreSQL (`systemctl status postgresql`).
 
 ---
 
@@ -98,8 +162,8 @@ pm2 monit                       # Monitoring temps réel
 # Installer Nginx et Certbot
 apt install -y nginx certbot python3-certbot-nginx
 
-# Copier la config Nginx
-cp /var/www/locavac/nginx.conf /etc/nginx/sites-available/locavac
+# Copier la config Nginx (proxy de /api, du WebSocket /ws et des fichiers, journaux sans query string)
+cp /opt/locavac/nginx.conf /etc/nginx/sites-available/locavac
 ln -s /etc/nginx/sites-available/locavac /etc/nginx/sites-enabled/
 rm -f /etc/nginx/sites-enabled/default
 
@@ -120,8 +184,8 @@ certbot --nginx -d locavac.dz -d www.locavac.dz \
 ### Vérification
 
 ```bash
-curl -I https://locavac.dz/api/health
-# → HTTP/2 200  {"ok":true,"message":"Locavac API opérationnelle 🇩🇿"}
+curl -s https://locavac.dz/api/health
+# → {"ok":true,"db":"up","db_latency_ms":3,"uptime_s":42,"timestamp":"…"}   (503 et "db":"down" si PostgreSQL ne répond pas)
 ```
 
 ---

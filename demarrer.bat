@@ -38,17 +38,20 @@ if not exist "node_modules" (
     )
 )
 
-:: Liberer le port 4000 si occupe
-for /f "tokens=5" %%p in ('netstat -ano 2^>nul ^| findstr :4000 ^| findstr LISTENING') do (
+:: Port d'ecoute du serveur (PORT dans .env, 3000 par defaut - voir server/index.js)
+set "APP_PORT=3000"
+
+:: Arreter une ancienne instance de Locavac encore a l'ecoute sur ce port
+for /f "tokens=5" %%p in ('netstat -ano 2^>nul ^| findstr /R /C:":%APP_PORT% .*LISTENING"') do (
     taskkill /PID %%p /F >nul 2>&1
 )
 timeout /t 1 /nobreak >nul
 
 :: Ouvrir le navigateur apres 2 secondes (en arriere-plan)
-start "" /B cmd /c "timeout /t 2 /nobreak >nul && start http://localhost:4000"
+start "" /B cmd /c "timeout /t 2 /nobreak >nul && start http://localhost:%APP_PORT%"
 
 echo.
-echo  [OK] Serveur demarre sur http://localhost:4000
+echo  [OK] Serveur demarre sur http://localhost:%APP_PORT%
 echo  Appuyez sur Ctrl+C pour arreter.
 echo.
 
