@@ -6657,16 +6657,17 @@ document.addEventListener('DOMContentLoaded', function() {
   document.getElementById('sab-apply')?.addEventListener('click', applySearchAlert);
   document.getElementById('sab-close')?.addEventListener('click', dismissSearchAlertBanner);
 
-  // Retour OAuth Google — récupération du token ou de l'erreur depuis l'URL
+  // Retour OAuth Google — échange du cookie httpOnly contre le JWT (sans exposer le token dans l'URL)
   (async () => {
     const _qp = new URLSearchParams(location.search);
-    const _gt = _qp.get('google_token');
+    const _ga = _qp.get('google_auth');
     const _ge = _qp.get('auth_error');
-    if (_gt) {
+    if (_ga) {
       history.replaceState({}, '', '/');
-      token = _gt;
-      localStorage.setItem('dz_token', token);
       try {
+        const { token: _tok } = await apiFetch('/auth/google/token');
+        token = _tok;
+        localStorage.setItem('dz_token', token);
         currentUser = await apiFetch('/auth/me');
         localStorage.setItem('dz_user', JSON.stringify(currentUser));
         refreshAuthUI();
@@ -6675,6 +6676,7 @@ document.addEventListener('DOMContentLoaded', function() {
       } catch {
         token = null;
         localStorage.removeItem('dz_token');
+        toast('❌ ' + t('auth.google_error'));
       }
     } else if (_ge) {
       history.replaceState({}, '', '/');

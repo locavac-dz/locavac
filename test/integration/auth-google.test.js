@@ -132,7 +132,7 @@ describe('GET /api/auth/google/callback — flux avec appels Google simulés', (
     expect(res.headers.location).toMatch(/auth_error=google_no_email/);
   });
 
-  test('302 → google_token= si nouvel utilisateur (création)', async () => {
+  test('302 → google_auth=1 + cookie _gat si nouvel utilisateur (création)', async () => {
     mockGoogle(
       { access_token: 'fake-token' },
       { sub: 'new-sub-999', email: 'nouveau@gmail.com', name: 'Nouveau User', picture: null },
@@ -150,7 +150,12 @@ describe('GET /api/auth/google/callback — flux avec appels Google simulés', (
       .redirects(0);
 
     expect(res.status).toBe(302);
-    expect(res.headers.location).toMatch(/\?google_token=/);
+    expect(res.headers.location).toMatch(/\?google_auth=1/);
+    // Le JWT doit être dans un cookie httpOnly, PAS dans l'URL
+    expect(res.headers.location).not.toMatch(/google_token=/);
+    const cookies = res.headers['set-cookie'] || [];
+    expect(cookies.some(c => c.startsWith('_gat='))).toBe(true);
+    expect(cookies.some(c => /HttpOnly/i.test(c))).toBe(true);
     expect(db.users.create).toHaveBeenCalledWith(expect.objectContaining({
       email: 'nouveau@gmail.com',
       google_id: 'new-sub-999',
@@ -159,7 +164,7 @@ describe('GET /api/auth/google/callback — flux avec appels Google simulés', (
     }));
   });
 
-  test('302 → google_token= si utilisateur existant par google_id', async () => {
+  test('302 → google_auth=1 + cookie _gat si utilisateur existant par google_id', async () => {
     const user = { id: 2, name: 'Guest Test', email: 'guest@test.dz', is_host: false, is_admin: false, banned: false };
     mockGoogle(
       { access_token: 'fake-token' },
@@ -173,7 +178,10 @@ describe('GET /api/auth/google/callback — flux avec appels Google simulés', (
       .redirects(0);
 
     expect(res.status).toBe(302);
-    expect(res.headers.location).toMatch(/\?google_token=/);
+    expect(res.headers.location).toMatch(/\?google_auth=1/);
+    expect(res.headers.location).not.toMatch(/google_token=/);
+    const cookies = res.headers['set-cookie'] || [];
+    expect(cookies.some(c => c.startsWith('_gat='))).toBe(true);
     // Pas de création — l'utilisateur existait déjà
     expect(db.users.create).not.toHaveBeenCalled();
   });
@@ -213,8 +221,48 @@ describe('GET /api/auth/google/callback — flux avec appels Google simulés', (
       .redirects(0);
 
     expect(res.status).toBe(302);
-    expect(res.headers.location).toMatch(/\?google_token=/);
+    expect(res.headers.location).toMatch(/\?google_auth=1/);
+    expect(res.headers.location).not.toMatch(/google_token=/);
+    const cookies = res.headers['set-cookie'] || [];
+    expect(cookies.some(c => c.startsWith('_gat='))).toBe(true);
     expect(db.users.updateById).toHaveBeenCalledWith(1, { google_id: 'new-sub-for-host' });
     expect(db.users.create).not.toHaveBeenCalled();
+  });
+});
+
+// ── Échange du cookie contre le JWT ───────────────────────────────────────
+
+describe('GET /api/auth/google/token', () => {
+  const validJwt = jwt.sign({ id: 1, email: 'test@test.dz' }, process.env.JWT_SECRET, { expiresIn: '5m' });
+  const expiredJwt = jwt.sign({ id: 1 }, process.env.JWT_SECRET, { expiresIn: '-1s' });
+
+  test('400 si aucun cookie _gat', async () => {
+    const res = await request(app).get('/api/auth/google/token');
+    expect(res.status).toBe(400);
+  });
+
+  test('200 + token si cookie valide, cookie effacé dans la réponse', async () => {
+    const res = await request(app)
+      .get('/api/auth/google/token')
+      .set('Cookie', `_gat=${encodeURIComponent(validJwt)}`);
+    expect(res.status).toBe(200);
+    expect(res.body.token).toBe(validJwt);
+    // Le serveur doit effacer le cookie
+    const clearCookies = res.headers['set-cookie'] || [];
+    expect(clearCookies.some(c => c.startsWith('_gat=;') || c.includes('_gat=; '))).toBe(true);
+  });
+
+  test('401 si cookie _gat contient un JWT expiré', async () => {
+    const res = await request(app)
+      .get('/api/auth/google/token')
+      .set('Cookie', `_gat=${encodeURIComponent(expiredJwt)}`);
+    expect(res.status).toBe(401);
+  });
+
+  test('401 si cookie _gat contient une valeur invalide', async () => {
+    const res = await request(app)
+      .get('/api/auth/google/token')
+      .set('Cookie', '_gat=pas.un.jwt');
+    expect(res.status).toBe(401);
   });
 });

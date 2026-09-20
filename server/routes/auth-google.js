@@ -138,7 +138,30 @@ router.get('/callback', async (req, res) => {
   if (user.banned) return res.redirect(`${app}/?auth_error=google_banned`);
 
   const token = sign(user);
-  res.redirect(`${app}/?google_token=${encodeURIComponent(token)}`);
+  // Cookie httpOnly éphémère (5 min) — le JWT ne transite jamais dans l'URL
+  res.cookie('_gat', token, {
+    httpOnly: true,
+    secure:   app.startsWith('https'),
+    sameSite: 'Lax',
+    maxAge:   5 * 60 * 1000,
+    path:     '/',
+  });
+  res.redirect(`${app}/?google_auth=1`);
+});
+
+// GET /api/auth/google/token — échange du cookie httpOnly contre le JWT (usage unique)
+router.get('/token', (req, res) => {
+  const hdr   = req.headers.cookie || '';
+  const entry = hdr.split(';').map(s => s.trim()).find(s => s.startsWith('_gat='));
+  const cookieToken = entry ? decodeURIComponent(entry.slice(5)) : null;
+
+  if (!cookieToken) return res.status(400).json({ error: 'Aucun token en attente.' });
+
+  try { jwt.verify(cookieToken, process.env.JWT_SECRET); }
+  catch { return res.status(401).json({ error: 'Token expiré ou invalide.' }); }
+
+  res.clearCookie('_gat', { path: '/' });
+  res.json({ token: cookieToken });
 });
 
 module.exports = router;
