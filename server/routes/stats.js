@@ -86,15 +86,22 @@ router.get('/host/earnings', auth, async (req, res) => {
   });
   transactions.sort((a, b) => String(b.paid_at).localeCompare(String(a.paid_at)));
 
+  // Summary calculé sur l'ensemble avant pagination (toujours exact)
   const totalGross = transactions.reduce((s, t) => s + t.gross, 0);
   const totalFee   = transactions.reduce((s, t) => s + t.fee,   0);
   const totalNet   = transactions.reduce((s, t) => s + t.net,   0);
 
+  const page  = Math.max(1, parseInt(req.query.page,  10) || 1);
+  const limit = Math.min(1000, Math.max(1, parseInt(req.query.limit, 10) || 20));
+  const total = transactions.length;
+  const pages = Math.ceil(total / limit) || 0;
+  const data  = transactions.slice((page - 1) * limit, page * limit);
+
   const user = await db.users.findById(req.user.id);
   res.json({
-    summary:      { gross: totalGross, fee: totalFee, net: totalNet, commission_pct: COMMISSION * 100 },
-    bank_info:    { rib: user?.rib || null, ccp: user?.ccp || null },
-    transactions,
+    summary:    { gross: totalGross, fee: totalFee, net: totalNet, commission_pct: COMMISSION * 100 },
+    bank_info:  { rib: user?.rib || null, ccp: user?.ccp || null },
+    data, pagination: { page, limit, total, pages },
   });
 });
 

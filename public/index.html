@@ -4066,7 +4066,8 @@ async function openResas() {
   fbar.innerHTML = '';
   list.innerHTML = '<p style="color:var(--g400);text-align:center;padding:24px">Chargement…</p>';
   try {
-    const data = await apiFetch('/reservations/mine');
+    const resp = await apiFetch('/reservations/mine?limit=200');
+    const data = resp.data ?? resp;
     if (!data.length) { list.innerHTML='<p style="color:var(--g400);text-align:center;padding:24px">Aucune réservation.</p>'; return; }
     window._guestResasData = data;
     _renderResaCards(data, 'all');
@@ -5043,10 +5044,10 @@ async function loadGains() {
   el.innerHTML = `<div class="stats-grid" style="grid-template-columns:repeat(3,1fr)">${'<div class="stat-card"><div class="skeleton skel-block" style="height:56px;margin:0"></div></div>'.repeat(3)}</div><div class="skeleton skel-block" style="height:80px;margin-top:20px"></div><div class="skeleton skel-block" style="height:120px;margin-top:12px"></div>`;
   try {
     const [data, payoutsData] = await Promise.all([
-      apiFetch('/stats/host/earnings'),
+      apiFetch('/stats/host/earnings?limit=1000'),
       apiFetch('/stats/host/payouts'),
     ]);
-    const { summary, bank_info, transactions } = data;
+    const { summary, bank_info, data: transactions } = data;
     window._gainsData = transactions;
     const fmt = n => Number(n).toLocaleString('fr-DZ') + ' DZD';
 
@@ -5265,20 +5266,27 @@ async function openMsgs() {
   openOverlay('ov-msgs');
   loadConversations();
 }
-async function loadConversations() {
+async function loadConversations(page) {
+  page = page || 1;
   const list = document.getElementById('conv-list');
-  list.innerHTML = '<div style="padding:16px;color:var(--g400);font-size:14px;text-align:center">Chargement…</div>';
-  const si = document.getElementById('conv-search-input');
-  if (si) si.value = '';
+  if (page === 1) {
+    list.innerHTML = '<div style="padding:16px;color:var(--g400);font-size:14px;text-align:center">Chargement…</div>';
+    const si = document.getElementById('conv-search-input');
+    if (si) si.value = '';
+    window._convData = [];
+  }
   try {
-    const convs = await apiFetch('/messages');
-    window._convData = convs;
-    _renderConvList(convs);
+    const resp = await apiFetch('/messages?page=' + page + '&limit=20');
+    const convs = resp.data ?? resp;
+    const pagination = resp.pagination || null;
+    window._convData = page === 1 ? convs : (window._convData || []).concat(convs);
+    _renderConvList(window._convData, pagination);
   } catch(e) { list.innerHTML='<div style="padding:16px;color:var(--red);font-size:14px">'+escHtml(e.message)+'</div>'; }
 }
-function _renderConvList(convs) {
+function _renderConvList(convs, pagination) {
   const list = document.getElementById('conv-list');
   if (!convs.length) { list.innerHTML='<div style="padding:24px;color:var(--g400);font-size:14px;text-align:center">Aucune conversation.</div>'; return; }
+  const hasMore = pagination && pagination.page < pagination.pages;
   list.innerHTML = convs.map(c => `
     <div class="conv-item" data-key="${c.key}" data-lid="${c.listing_id}" data-oid="${c.other_id}" data-oname="${escHtml(c.other_name)}">
       <div class="conv-avatar">${escHtml(c.other_name).charAt(0).toUpperCase()}</div>
@@ -5287,7 +5295,8 @@ function _renderConvList(convs) {
         <div class="conv-preview">${escHtml(c.listing_title)} · ${escHtml(c.last_msg)}</div>
       </div>
       ${c.unread > 0 ? `<div class="conv-badge">${c.unread}</div>` : ''}
-    </div>`).join('');
+    </div>`).join('') +
+    (hasMore ? `<div style="padding:12px;text-align:center"><button class="btn-sm" style="background:var(--g100);color:var(--text);border:none;padding:8px 20px;border-radius:8px;cursor:pointer" onclick="loadConversations(${pagination.page + 1})">Charger plus…</button></div>` : '');
   list.querySelectorAll('.conv-item').forEach(item => {
     item.addEventListener('click', () => {
       list.querySelectorAll('.conv-item').forEach(i => i.classList.remove('active'));

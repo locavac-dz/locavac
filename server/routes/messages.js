@@ -5,9 +5,12 @@ const ws     = require('../ws');
 
 // GET /api/messages — conversations de l'utilisateur — batch users+listings (anti N+1)
 router.get('/', auth, async (req, res) => {
+  const page  = Math.max(1, parseInt(req.query.page,  10) || 1);
+  const limit = Math.min(50,  Math.max(1, parseInt(req.query.limit, 10) || 20));
+
   const uid  = req.user.id;
   const msgs = await db.messages.findByUser(uid);
-  if (!msgs.length) return res.json([]);
+  if (!msgs.length) return res.json({ data: [], pagination: { page: 1, limit, total: 0, pages: 0 } });
 
   // Passe 1 (purement JS) : dernier message et compteur non-lus par conversation
   const convLatest = {};
@@ -43,7 +46,11 @@ router.get('/', auth, async (req, res) => {
     last_at:       c.last_at,
     unread:        unreadCount[c.key] || 0,
   }));
-  res.json(result.sort((a, b) => b.last_at.localeCompare(a.last_at)));
+  const sorted = result.sort((a, b) => b.last_at.localeCompare(a.last_at));
+  const total  = sorted.length;
+  const pages  = Math.ceil(total / limit) || 0;
+  const data   = sorted.slice((page - 1) * limit, page * limit);
+  res.json({ data, pagination: { page, limit, total, pages } });
 });
 
 // GET /api/messages/:listing_id/:other_id

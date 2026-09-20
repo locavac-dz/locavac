@@ -19,10 +19,11 @@ describe('GET /api/messages — liste des conversations', () => {
     expect(res.status).toBe(401);
   });
 
-  test('200 retourne un tableau (vide par défaut)', async () => {
+  test('200 retourne données paginées (vide par défaut)', async () => {
     const res = await request(app).get('/api/messages').set(AUTH_2);
     expect(res.status).toBe(200);
-    expect(Array.isArray(res.body)).toBe(true);
+    expect(Array.isArray(res.body.data)).toBe(true);
+    expect(res.body.pagination).toMatchObject({ page: 1, total: 0, pages: 0 });
   });
 });
 

@@ -121,10 +121,17 @@ router.post('/', auth, async (req, res) => {
 
 // GET /api/reservations/mine — batch listings + reviews pour éviter N+1
 router.get('/mine', auth, async (req, res) => {
+  const page  = Math.max(1, parseInt(req.query.page,  10) || 1);
+  const limit = Math.min(200, Math.max(1, parseInt(req.query.limit, 10) || 20));
+
   const resas = await db.reservations.findByGuest(req.user.id);
   resas.sort((a, b) => String(b.created_at).localeCompare(String(a.created_at)));
 
-  const listingIds = [...new Set(resas.map(r => r.listing_id))];
+  const total = resas.length;
+  const pages = Math.ceil(total / limit) || 0;
+  const paged = resas.slice((page - 1) * limit, page * limit);
+
+  const listingIds = [...new Set(paged.map(r => r.listing_id))];
   const [listings, reviewedIds] = await Promise.all([
     db.listings.findByIds(listingIds),
     db.reviews.reviewedListingIds(req.user.id),
@@ -132,7 +139,7 @@ router.get('/mine', auth, async (req, res) => {
   const listingMap = Object.fromEntries(listings.map(l => [l.id, l]));
   const now = new Date();
 
-  const result = resas.map(r => {
+  const data = paged.map(r => {
     const l      = listingMap[r.listing_id];
     const stayed = r.status === 'confirmed' && new Date(r.check_out) < now;
     return {
@@ -142,7 +149,7 @@ router.get('/mine', auth, async (req, res) => {
       can_review: stayed && !reviewedIds.has(r.listing_id),
     };
   });
-  res.json(result);
+  res.json({ data, pagination: { page, limit, total, pages } });
 });
 
 // GET /api/reservations/hosting — batch guests pour éviter N+1 (listings déjà en mémoire)
